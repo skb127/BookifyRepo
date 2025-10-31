@@ -1,0 +1,21 @@
+name: gate-from-dev
+
+on:
+  pull_request:
+    branches: [ main ]   # Destino del PR
+
+permissions:
+  contents: read
+
+jobs:
+  only-from-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Info
+        run: echo "Checking if the PR venga is coming from 'dev'..."
+
+      - name: Block if the PR doesn't come from 'dev'
+        if: ${{ github.head_ref != 'dev' }}
+        run: |
+          echo "❌ Only PRs from 'dev' to 'main' are allowed."
+          exit 1
