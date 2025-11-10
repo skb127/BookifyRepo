@@ -2,11 +2,6 @@
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings.Events;
 using Bookify.Domain.Shared;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Bookify.Domain.Bookings;
 public sealed class Booking : Entity
@@ -57,7 +52,7 @@ public sealed class Booking : Entity
         DateTime utcNow,
         PricingService pricingService)
     {
-        var pricingDetails = pricingService.CalculatePrice(apartment, duration);
+        PricingDetails pricingDetails = pricingService.CalculatePrice(apartment, duration);
 
         var booking = new Booking(
             Guid.CreateVersion7(),

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Bookify.Domain.Shared;
+﻿namespace Bookify.Domain.Shared;
 public record Currency
 {
     internal static readonly Currency None = new(""); // We aren't going to reutrn it from the list of all currencies, we dont't want to expose it, outside of the domain project (internal)
@@ -15,11 +9,9 @@ public record Currency
 
     public string Code { get; init; }
 
-    public static Currency FromCode(string code)
-    {
-        return All.FirstOrDefault(c => c.Equals(code)) ?? 
-               throw new ApplicationException("The currency code is invalid");
-    }
+    public static Currency FromCode(string code) =>
+        All.FirstOrDefault(c => c.Equals(code)) ?? 
+        throw new ApplicationException("The currency code is invalid");
 
     public static readonly IReadOnlyCollection<Currency> All = [
         Usd,

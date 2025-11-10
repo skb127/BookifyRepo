@@ -1,11 +1,6 @@
 ﻿using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Reviews.Events;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Bookify.Domain.Reviews;
 public sealed class Review : Entity

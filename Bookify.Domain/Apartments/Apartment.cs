@@ -1,6 +1,6 @@
-﻿using Bookify.Domain.Abstractions;
+﻿using System.Collections.ObjectModel;
+using Bookify.Domain.Abstractions;
 using Bookify.Domain.Shared;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Bookify.Domain.Apartments;
 
@@ -14,7 +14,7 @@ public sealed class Apartment : Entity
         Money price, 
         Money cleaningFee, 
         DateTime? lastBookedOnUtc, 
-        List<Amenity> amenities)
+        ReadOnlyCollection<Amenity> amenities)
         : base(id)
     {
         Name = name;
@@ -32,5 +32,5 @@ public sealed class Apartment : Entity
     public Money Price { get; private set; }
     public Money CleaningFee { get; private set; }
     public DateTime? LastBookedOnUtc { get; internal set; }
-    public List<Amenity> Amenities { get; set; } = [];
+    public ReadOnlyCollection<Amenity> Amenities { get; set; }
 }

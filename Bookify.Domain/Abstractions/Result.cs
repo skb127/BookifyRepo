@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace Bookify.Domain.Abstractions;
 public class Result
@@ -40,10 +35,8 @@ public class Result<TValue> : Result
     private readonly TValue? _value;
 
     protected internal Result(TValue? value, bool isSuccess, Error error) 
-        : base(isSuccess, error)
-    {
+        : base(isSuccess, error) =>
         _value = value;
-    }
 
     [NotNull]
     public TValue Value => IsSuccess

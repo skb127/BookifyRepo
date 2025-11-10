@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Transactions;
-
-namespace Bookify.Domain.Shared;
+﻿namespace Bookify.Domain.Shared;
 public record Money(decimal Amount, Currency Currency)
 {
     public static Money operator +(Money first, Money second)
