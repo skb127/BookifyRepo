@@ -26,5 +26,8 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.HasIndex(user => user.Email)
             .IsUnique(); // We are defining an index on the email property, this is a unique index, this is going to give us a database guaranteed constraint.
+
+        builder.HasIndex(user => user.IdentityId)
+            .IsUnique();
     }
 }

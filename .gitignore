@@ -419,3 +419,7 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 .idea/
+
+# Docker 
+.containers/*
+.files/*
