@@ -1,12 +1,15 @@
-﻿using Bookify.Application.Bookings.GetBooking;
+﻿using Bookify.Application.Bookings.ConfirmBooking;
+using Bookify.Application.Bookings.GetBooking;
 using Bookify.Application.Bookings.ReserveBooking;
 using Bookify.Domain.Abstractions;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bookify.Api.Controllers.Bookings;
 
+[Authorize]
 [ApiController]
 [Route("api/bookings")]
 public class BookingsController : ControllerBase
@@ -16,7 +19,7 @@ public class BookingsController : ControllerBase
     public BookingsController(ISender sender) => 
         _sender = sender;
 
-    [HttpGet]
+    [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetBooking(
         Guid id,
         CancellationToken cancellationToken)
@@ -29,7 +32,7 @@ public class BookingsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> ReserveBookig(
+    public async Task<IActionResult> ReserveBooking(
         ReserveBookingRequest request,
         CancellationToken cancellation)
     {
@@ -53,5 +56,22 @@ public class BookingsController : ControllerBase
                 id = result.Value
             },
             result.Value);
+    }
+
+    [HttpPost("{id:guid}/confirmation")]
+    public async Task<IActionResult> ConfirmBooking(
+        Guid id,
+        CancellationToken cancellation)
+    {
+        var command = new ConfirmBookingCommand(id);
+
+        Result result = await _sender.Send(command, cancellation);
+
+        if (result.IsFailure)
+        {
+            return BadRequest(result.Error);
+        }
+
+        return NoContent();
     }
 }

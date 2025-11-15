@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using Bookify.Application.Abstractions.Authentication;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Domain.Abstractions;
@@ -10,8 +11,13 @@ namespace Bookify.Application.Bookings.GetBooking;
 internal sealed class GetBookingQueryHandler : IQueryHandler<GetBookingQuery, BookingResponse>
 {
     private readonly ISqlConnectionFactory _sqlConnectionFactory;
+    private readonly IUserContext _userContext;
 
-    public GetBookingQueryHandler(ISqlConnectionFactory sqlConnectionFactory) => _sqlConnectionFactory = sqlConnectionFactory;
+    public GetBookingQueryHandler(ISqlConnectionFactory sqlConnectionFactory, IUserContext userContext)
+    {
+        _sqlConnectionFactory = sqlConnectionFactory;
+        _userContext = userContext;
+    }
 
     public async Task<Result<BookingResponse>> Handle(GetBookingQuery request, CancellationToken cancellationToken)
     {
@@ -20,7 +26,8 @@ internal sealed class GetBookingQueryHandler : IQueryHandler<GetBookingQuery, Bo
         const string sql = """
             SELECT
                 id AS Id,
-                apartment_id AS UserId,
+                apartment_id AS ApartmentId,
+                user_id AS UserId,
                 status AS Status,
                 price_for_period_amount AS PriceAmount,
                 price_for_period_currency AS PriceCurrency,
@@ -32,7 +39,7 @@ internal sealed class GetBookingQueryHandler : IQueryHandler<GetBookingQuery, Bo
                 total_price_currency AS TotalPriceCurrency,
                 duration_start AS DurationStart,
                 duration_end AS DurationEnd,
-                created_on-utc AS CreatedOnUtc
+                created_on_utc AS CreatedOnUtc
             FROM bookings
             WHERE id = @BookingId
             """;
@@ -44,6 +51,12 @@ internal sealed class GetBookingQueryHandler : IQueryHandler<GetBookingQuery, Bo
                 request.BookingId
             });
 
-        return booking ?? Result.Failure<BookingResponse>(BookingErrors.NotFound);
+        // Resource-based authorization check, maybe move to a generic pipeline/solution later in the future
+        if (booking is null || booking.UserId != _userContext.UserId)
+        {
+            return Result.Failure<BookingResponse>(BookingErrors.NotFound);
+        }
+
+        return booking;
     }
 }

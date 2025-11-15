@@ -8,4 +8,14 @@ internal sealed class UserRepository : Repository<User>, IUserRepository
         : base(dbContext)
     {
     }
+
+    public override void Add(User user)
+    {
+        foreach (Role role in user.Roles)
+        {
+            DbContext.Attach(role);
+        }
+
+        DbContext.Add(user);
+    }
 }
