@@ -1,4 +1,5 @@
-﻿using Bookify.Application.Abstractions.Authentication;
+﻿using Asp.Versioning;
+using Bookify.Application.Abstractions.Authentication;
 using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Data;
@@ -46,6 +47,10 @@ public static class DependencyInjection
         AddAuthorization(services);
 
         AddCaching(services, configuration);
+
+        AddHealthChecks(services, configuration);
+
+        AddApiVersioning(services);
 
         return services;
     }
@@ -134,4 +139,26 @@ public static class DependencyInjection
 
         services.AddSingleton<ICacheService, CacheService>();
     }
+
+    private static void AddHealthChecks(IServiceCollection services, IConfiguration configuration) =>
+        services.AddHealthChecks()
+            .AddNpgSql(configuration.GetConnectionString("Database")!)
+            .AddRedis(configuration.GetConnectionString("Cache")!)
+            .AddUrlGroup(new Uri(configuration["Keycloak:BaseUrl"]!), HttpMethod.Get, "keycloack");
+
+    private static void AddApiVersioning(IServiceCollection services) =>
+        // Add API Versioning to the services collection, this is going to allow us to version our API endpoints
+        services
+            .AddApiVersioning(options =>
+            {
+                options.DefaultApiVersion = new ApiVersion(1);
+                options.ReportApiVersions = true;
+                options.ApiVersionReader = new UrlSegmentApiVersionReader();
+            })
+            .AddMvc() // needed for ApiVersioning to work with controllers 
+            .AddApiExplorer(options =>
+            {
+                options.GroupNameFormat = "'v'V"; // e.g., v1, v2
+                options.SubstituteApiVersionInUrl = true; // replace the version in the URL
+            }); // needed for ApiVersioning to work with Swagger 
 }

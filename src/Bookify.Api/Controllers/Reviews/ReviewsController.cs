@@ -1,4 +1,5 @@
-﻿using Bookify.Application.Reviews.AddReview;
+﻿using Asp.Versioning;
+using Bookify.Application.Reviews.AddReview;
 using Bookify.Domain.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,8 @@ namespace Bookify.Api.Controllers.Reviews;
 
 [Authorize]
 [ApiController]
-[Route("api/reviews")]
+[ApiVersion(ApiVersions.V1)]
+[Route("api/v{version:apiVersion}/reviews")]
 public class ReviewsController : ControllerBase
 {
     private readonly ISender _sender;

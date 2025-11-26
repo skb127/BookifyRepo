@@ -1,6 +1,10 @@
+using Asp.Versioning.ApiExplorer;
 using Bookify.Api.Extensions;
+using Bookify.Api.OpenApi;
 using Bookify.Application;
 using Bookify.Infrastructure;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Serilog;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -9,11 +13,19 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration)); // Read configuration from appsettings.json
 
 builder.Services.AddControllers();
+
+builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
+
+// Add Health Checks
+//builder.Services.AddHealthChecks()
+//    .AddCheck<CustomSqlHealthCheck>("custom-sql");
 
 WebApplication app = builder.Build();
 
@@ -21,7 +33,17 @@ if (app.Environment.IsDevelopment())
 {
     //app.MapOpenApi();
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        IReadOnlyList<ApiVersionDescription> descriptions = app.DescribeApiVersions();
+
+        foreach (ApiVersionDescription description in descriptions)
+        {
+            string url = $"/swagger/{description.GroupName}/swagger.json";
+            string name = description.GroupName.ToUpperInvariant();
+            options.SwaggerEndpoint(url, name);
+        }
+    });
 
     app.ApplyMigrations();
 
@@ -45,4 +67,30 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Map Health Checks endpoint
+app.MapHealthChecks("health", new HealthCheckOptions
+{
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+
 app.Run();
+
+//public class CustomSqlHealthCheck(ISqlConnectionFactory sqlConnectionFactory) : IHealthCheck
+//{
+//    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context,
+//        CancellationToken cancellationToken = new CancellationToken())
+//    {
+//        try
+//        {
+//            using IDbConnection connection = sqlConnectionFactory.CreateConnection();
+
+//            await connection.ExecuteScalarAsync("SELECT 1;");
+
+//            return HealthCheckResult.Healthy("Database is reachable.");
+//        }
+//        catch (Exception e)
+//        {
+//            return HealthCheckResult.Unhealthy(exception: e);
+//        }
+//    }
+//}
