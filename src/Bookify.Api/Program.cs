@@ -1,7 +1,4 @@
-using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
-using Asp.Versioning.Builder;
-using Bookify.Api.Controllers.Bookings;
 using Bookify.Api.Extensions;
 using Bookify.Api.OpenApi;
 using Bookify.Application;
@@ -25,6 +22,10 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
+
+// Add Health Checks
+//builder.Services.AddHealthChecks()
+//    .AddCheck<CustomSqlHealthCheck>("custom-sql");
 
 WebApplication app = builder.Build();
 
@@ -66,17 +67,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Define API versioning
-ApiVersionSet apiVersionSet = app.NewApiVersionSet()
-    .HasApiVersion(new ApiVersion(1))
-    .ReportApiVersions()
-    .Build();
-
-RouteGroupBuilder routeGroupBuilder = app.MapGroup("api/v{version:apiVersion}")
-    .WithApiVersionSet(apiVersionSet);
-
-routeGroupBuilder.MapBookingEndpoints();
-
 // Map Health Checks endpoint
 app.MapHealthChecks("health", new HealthCheckOptions
 {
@@ -84,3 +74,23 @@ app.MapHealthChecks("health", new HealthCheckOptions
 });
 
 app.Run();
+
+//public class CustomSqlHealthCheck(ISqlConnectionFactory sqlConnectionFactory) : IHealthCheck
+//{
+//    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context,
+//        CancellationToken cancellationToken = new CancellationToken())
+//    {
+//        try
+//        {
+//            using IDbConnection connection = sqlConnectionFactory.CreateConnection();
+
+//            await connection.ExecuteScalarAsync("SELECT 1;");
+
+//            return HealthCheckResult.Healthy("Database is reachable.");
+//        }
+//        catch (Exception e)
+//        {
+//            return HealthCheckResult.Unhealthy(exception: e);
+//        }
+//    }
+//}
