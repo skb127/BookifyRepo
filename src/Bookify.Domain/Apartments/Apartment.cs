@@ -12,7 +12,6 @@ public sealed class Apartment : Entity
         Address address, 
         Money price, 
         Money cleaningFee, 
-        DateTime? lastBookedOnUtc, 
         List<Amenity> amenities)
         : base(id)
     {
@@ -21,7 +20,6 @@ public sealed class Apartment : Entity
         Address = address;
         Price = price;
         CleaningFee = cleaningFee;
-        LastBookedOnUtc = lastBookedOnUtc;
         Amenities = amenities;
     }
 
