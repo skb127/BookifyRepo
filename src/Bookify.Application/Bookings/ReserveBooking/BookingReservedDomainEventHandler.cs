@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Bookify.Application.Abstractions.Email;
+﻿using Bookify.Application.Abstractions.Email;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Bookings.Events;
 using Bookify.Domain.Users;
@@ -44,7 +39,7 @@ internal sealed class BookingReservedDomainEventHandler : INotificationHandler<B
 
         await _emailService.SendAsync(
             user.Email,
-            "Booking reeserved!",
+            "Booking reserved!",
             "You have 10 minutes to confirm this booking");
 
     }

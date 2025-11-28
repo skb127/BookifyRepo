@@ -1,17 +1,25 @@
-﻿using Bookify.Application.Exceptions;
+﻿using Bookify.Application.Abstractions.Clock;
+using Bookify.Application.Exceptions;
 using Bookify.Domain.Abstractions;
+using Bookify.Infrastructure.Outbox;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace Bookify.Infrastructure;
 
 public sealed class ApplicationDbContext : DbContext, IUnitOfWork
 {
-    private readonly IPublisher _publisher;
+    private static readonly JsonSerializerSettings JsonSerializerSettings = new()
+    {
+        TypeNameHandling = TypeNameHandling.All
+    };
 
-    public ApplicationDbContext(DbContextOptions options, IPublisher publisher)
+    private readonly IDateTimeProvider _dateTimeProvider;
+
+    public ApplicationDbContext(DbContextOptions options, IDateTimeProvider dateTimeProvider)
         : base(options) =>
-        _publisher = publisher;
+        _dateTimeProvider = dateTimeProvider;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,9 +32,10 @@ public sealed class ApplicationDbContext : DbContext, IUnitOfWork
     {
         try
         {
-            int result = await base.SaveChangesAsync(cancellationToken);
+            AddDomainEventsAsOutboxMessage(); // Make sure to add/load domain events as outbox messages and add then to the change tracker before saving changes
 
-            await PublishDomainEventsAsync();
+            int result = await base.SaveChangesAsync(cancellationToken); // When we call SaveChangesAsync, EF Core is going to go through the change tracker and persist all the changes (including the outbox messages) in a single transaction
+                                                                         // with give us atomic guarantee that either all changes are persisted or none of them are.
 
             return result;
         }
@@ -45,9 +54,9 @@ public sealed class ApplicationDbContext : DbContext, IUnitOfWork
     /// Finally, we just iterate over them one by one and call Publish to publish the domain event, triggering the respective domain event handlers defined in the application layer
     /// </summary>
     /// <returns></returns>
-    private async Task PublishDomainEventsAsync()
+    private void AddDomainEventsAsOutboxMessage()
     {
-        var domainEvents = ChangeTracker
+        var outboxMessages = ChangeTracker
             .Entries<Entity>()
             .Select(entry => entry.Entity)
             .SelectMany(entity =>
@@ -58,11 +67,13 @@ public sealed class ApplicationDbContext : DbContext, IUnitOfWork
 
                 return domainEvents;
             })
+            .Select(domainEvent => new OutboxMessage(
+                Guid.CreateVersion7(),
+                _dateTimeProvider.UtcNow,
+                domainEvent.GetType().Name,
+                JsonConvert.SerializeObject(domainEvent, JsonSerializerSettings)))
             .ToList();
 
-        foreach (IDomainEvent domainEvent in domainEvents)
-        {
-            await _publisher.Publish(domainEvent);
-        }
+        AddRange(outboxMessages);
     }
 }

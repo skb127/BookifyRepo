@@ -1,8 +1,6 @@
-﻿using Bookify.Application.Abstractions.Messaging;
-using Bookify.Domain.Abstractions;
+﻿using Bookify.Domain.Abstractions;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Logging;
 using Serilog.Context;
 
 namespace Bookify.Application.Abstractions.Behaviors;

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Bookify.Application.Abstractions.Caching;
-using Bookify.Application.Abstractions.Messaging;
+﻿using Bookify.Application.Abstractions.Caching;
 
 namespace Bookify.Application.Bookings.GetBooking;
 
