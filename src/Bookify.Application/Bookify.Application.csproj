@@ -16,4 +16,8 @@
     <Folder Include="Exceptions\" />
   </ItemGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="Bookify.Application.UnitTests" />
+	</ItemGroup> 	
+
 </Project>

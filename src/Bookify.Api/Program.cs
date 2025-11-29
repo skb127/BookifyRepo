@@ -23,10 +23,6 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 
-// Add Health Checks
-//builder.Services.AddHealthChecks()
-//    .AddCheck<CustomSqlHealthCheck>("custom-sql");
-
 WebApplication app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -74,23 +70,3 @@ app.MapHealthChecks("health", new HealthCheckOptions
 });
 
 app.Run();
-
-//public class CustomSqlHealthCheck(ISqlConnectionFactory sqlConnectionFactory) : IHealthCheck
-//{
-//    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context,
-//        CancellationToken cancellationToken = new CancellationToken())
-//    {
-//        try
-//        {
-//            using IDbConnection connection = sqlConnectionFactory.CreateConnection();
-
-//            await connection.ExecuteScalarAsync("SELECT 1;");
-
-//            return HealthCheckResult.Healthy("Database is reachable.");
-//        }
-//        catch (Exception e)
-//        {
-//            return HealthCheckResult.Unhealthy(exception: e);
-//        }
-//    }
-//}

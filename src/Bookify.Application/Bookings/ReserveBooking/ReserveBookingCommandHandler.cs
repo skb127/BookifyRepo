@@ -45,7 +45,7 @@ internal sealed class ReserveBookingCommandHandler : ICommandHandler<ReserveBook
 
         if (apartment is null)
         {
-            return Result.Failure<Guid>(BookingErrors.NotFound);
+            return Result.Failure<Guid>(ApartmentErrors.NotFound);
         }
 
         var duration = DateRange.Create(request.StartDate, request.EndDate);
