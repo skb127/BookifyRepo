@@ -43,7 +43,7 @@ if (app.Environment.IsDevelopment())
 
     app.ApplyMigrations();
 
-    //app.SeedData();
+    //app.SeedData(); // Uncomment this line for integration testing to seed data, and comment it out for local development to avoid duplicate key errors
 }
 
 app.UseHttpsRedirection();
@@ -70,3 +70,6 @@ app.MapHealthChecks("health", new HealthCheckOptions
 });
 
 app.Run();
+
+// Make the implicit Program class public so integration tests can access it
+public partial class Program { }
