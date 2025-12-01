@@ -32,9 +32,9 @@ public class PricingServiceTests
         var price = new Money(10.0m, Currency.Usd);
         var cleaningFee = new Money(99.99m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
-#pragma warning disable IDE0047 // Remove unnecessary brackets
-        var expectedTotalPrice = new Money((price.Amount * period.LengthInDays) + cleaningFee.Amount, price.Currency);
-#pragma warning restore IDE0047 // Remove unnecessary brackets
+
+        var expectedTotalPrice = new Money(price.Amount * period.LengthInDays + cleaningFee.Amount, price.Currency);
+
         Apartment apartment = ApartmentData.Create(price, cleaningFee);
         var pricingService = new PricingService();
 
