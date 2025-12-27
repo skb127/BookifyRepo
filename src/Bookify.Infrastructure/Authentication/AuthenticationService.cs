@@ -42,12 +42,8 @@ internal sealed class AuthenticationService : IAuthenticationService
     {
         const string usersSegmentName = "users/";
 
-        string? locationHeader = httpResponseMessage.Headers.Location?.PathAndQuery;
-
-        if (locationHeader is null)
-        {
-            throw new InvalidOperationException("Location header can't be null");
-        }
+        string? locationHeader = httpResponseMessage.Headers.Location?.PathAndQuery ?? 
+                                 throw new InvalidOperationException("Location header can't be null");
 
         int userSegmentValueIndex = locationHeader.IndexOf(
             usersSegmentName,

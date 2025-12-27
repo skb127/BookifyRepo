@@ -6,7 +6,7 @@ internal static class UserData
 {
     public static User Create() => User.Create(FirstName, LastName, Email);
 
-    public static readonly FirstName FirstName = new("Name");
-    public static readonly LastName LastName = new("Last");
-    public static readonly Email Email = new("test@test.com");
+    private static readonly FirstName FirstName = new("Name");
+    private static readonly LastName LastName = new("Last");
+    private static readonly Email Email = new("test@test.com");
 }

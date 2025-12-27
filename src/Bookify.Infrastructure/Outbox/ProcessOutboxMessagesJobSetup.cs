@@ -3,7 +3,7 @@ using Quartz;
 
 namespace Bookify.Infrastructure.Outbox;
 
-// 
+// This class configures Quartz to run the ProcessOutboxMessagesJob every specified interval
 internal class ProcessOutboxMessagesJobSetup : IConfigureOptions<QuartzOptions>
 {
     private readonly OutboxOptions _outboxOptions;

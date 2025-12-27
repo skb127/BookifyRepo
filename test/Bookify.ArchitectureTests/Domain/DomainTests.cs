@@ -32,7 +32,7 @@ public class DomainTests : BaseTest
             .That()
             .ImplementInterface(typeof(IDomainEvent))
             .Should()
-            .HaveNameEndingWith("DomainEvent")
+            .HaveNameEndingWith("DomainEvent", StringComparison.InvariantCulture)
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue();

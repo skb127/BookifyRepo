@@ -16,7 +16,7 @@ public class GetLoggedInUserTests : BaseFunctionalTest
     public async Task Get_ShouldReturnUnauthorized_WhenAccessTokenIsMissing()
     {
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync("api/v1/users/me");
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/users/me", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -26,13 +26,13 @@ public class GetLoggedInUserTests : BaseFunctionalTest
     public async Task Get_ShouldReturnUserInfo_WhenAccessTokenIsOK()
     {
         // Arrange
-        string accessToken = await GetAccessToken();
+        string accessToken = await GetAccessToken(UserData.RegisterTestUserRequest2.Email, UserData.RegisterTestUserRequest2.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
 
         // Act
-        HttpResponseMessage user = await HttpClient.GetAsync("api/v1/users/me");
+        HttpResponseMessage user = await HttpClient.GetAsync(new Uri("api/v1/users/me", UriKind.Relative));
 
         // Assert
         user.Should().NotBeNull();

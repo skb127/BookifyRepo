@@ -4,7 +4,7 @@ public sealed class AuthenticationOptions
 {
     public string Audience { get; init; } = "";
 
-    public string MetadataUrl { get; set; } = "";
+    public Uri MetadataUrl { get; set; } = null!;
 
     public bool RequiredHttpsMetadata { get; init; } 
 

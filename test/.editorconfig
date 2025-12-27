@@ -1,0 +1,10 @@
+﻿root = true
+
+# C# files
+[*.cs]
+
+# CA1707: Identifiers mustn't contain underscores
+dotnet_diagnostic.CA1707.severity = none
+
+# CA1515
+dotnet_diagnostic.CA1515.severity = none

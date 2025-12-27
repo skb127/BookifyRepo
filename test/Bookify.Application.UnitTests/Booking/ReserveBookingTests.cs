@@ -37,6 +37,7 @@ public class ReserveBookingTests
         _apartmentRepositoryMock = Substitute.For<IApartmentRepository>();
         _bookingRepositoryMock = Substitute.For<IBookingRepository>();
         _unitOfWorkMock = Substitute.For<IUnitOfWork>();
+        _pricingService = Substitute.For<PricingService>();
         
         _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
         _dateTimeProviderMock.UtcNow.Returns(UtcNow);
@@ -45,7 +46,7 @@ public class ReserveBookingTests
             _apartmentRepositoryMock,
             _bookingRepositoryMock,
             _unitOfWorkMock,
-            new PricingService(),
+            _pricingService,
             _dateTimeProviderMock);
     }
 
@@ -130,7 +131,7 @@ public class ReserveBookingTests
 
         _unitOfWorkMock
             .SaveChangesAsync()
-            .ThrowsAsync(new ConcurrencyException("Concurrency", new Exception()));
+            .ThrowsAsync(new ConcurrencyException("Concurrency", new InvalidOperationException()));
 
         // Act 
         Result<Guid> result = await _handler.Handle(Command, CancellationToken.None);

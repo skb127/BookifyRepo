@@ -5,7 +5,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bookify.Api.OpenApi;
 
-public sealed class ConfigureSwaggerOptions : IConfigureNamedOptions<SwaggerGenOptions>
+internal sealed class ConfigureSwaggerOptions : IConfigureNamedOptions<SwaggerGenOptions>
 {
     private readonly IApiVersionDescriptionProvider _provider; // This allows us to access the API version descriptions
 

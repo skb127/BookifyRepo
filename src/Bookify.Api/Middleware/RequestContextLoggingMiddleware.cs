@@ -3,7 +3,7 @@ using Serilog.Context;
 
 namespace Bookify.Api.Middleware;
 
-public class RequestContextLoggingMiddleware
+internal sealed class RequestContextLoggingMiddleware
 {
     private const string CorrelationIdHeaderName = "X-Correlation-Id";
 

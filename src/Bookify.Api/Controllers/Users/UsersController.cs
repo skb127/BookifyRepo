@@ -1,6 +1,9 @@
 ﻿using Asp.Versioning;
+using Bookify.Application.Users;
 using Bookify.Application.Users.GetLoggedInUser;
 using Bookify.Application.Users.LoginUser;
+using Bookify.Application.Users.LogoutUser;
+using Bookify.Application.Users.RefreshTokenUser;
 using Bookify.Application.Users.RegisterUser;
 using Bookify.Domain.Abstractions;
 using Bookify.Infrastructure.Authorization;
@@ -13,7 +16,7 @@ namespace Bookify.Api.Controllers.Users;
 [ApiController]
 [ApiVersion(ApiVersions.V1)]
 [Route("api/v{version:apiVersion}/users")]
-public class UsersController : ControllerBase
+public sealed class UsersController : ControllerBase
 {
     private readonly ISender _sender;
 
@@ -72,6 +75,72 @@ public class UsersController : ControllerBase
             return Unauthorized(result.Error);
         }
 
-        return Ok(result.Value);
+        // Set the new refresh token in the cookie
+        SetRefreshTokenCookie(result.Value);
+
+        return Ok(new AccessTokenOnlyResponse(result.Value.AccessToken));
+    }
+
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
+    {
+        if (!Request.Cookies.TryGetValue("refreshToken", out string? refreshToken) ||
+            string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return Unauthorized();
+        }
+
+        var command = new LogoutUserCommand(refreshToken);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Unauthorized(result.Error);
+        }
+        
+        // Delete the refresh token cookie
+        Response.Cookies.Delete("refreshToken");
+        
+        return NoContent();
+    }
+
+    [AllowAnonymous]
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
+    {
+        if (!Request.Cookies.TryGetValue("refreshToken", out string? refreshToken) ||
+            string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return Unauthorized();
+        }
+
+        var command = new RefreshTokenUserCommand(refreshToken);
+
+        Result<AccessTokenResponse> result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Unauthorized(result.Error);
+        }
+
+        // Set the new refresh token in the cookie
+        SetRefreshTokenCookie(result.Value);
+
+        return Ok(new AccessTokenOnlyResponse(result.Value.AccessToken));
+    }
+
+    private void SetRefreshTokenCookie(AccessTokenResponse accessTokenResponse)
+    {
+        var cookieOptions = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Lax,
+            Expires = DateTimeOffset.UtcNow.AddSeconds(accessTokenResponse.RefreshExpiresIn)
+        };
+
+        Response.Cookies.Append("refreshToken", accessTokenResponse.RefreshToken, cookieOptions);
     }
 }

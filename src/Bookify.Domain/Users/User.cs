@@ -14,16 +14,20 @@ public sealed class User : Entity
         Email = email;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the User class. This constructor is intended for internal use and prevents
+    /// external instantiation.
+    /// </summary>
     private User()
     {
         
     }
 
-    public FirstName FirstName { get; private set; }
-    public LastName LastName { get; private set; }
-    public Email Email { get; private set; }
+    public FirstName FirstName { get; private set; } = null!;
+    public LastName LastName { get; private set; } = null!;
+    public Email Email { get; private set; } = null!;
     public string IdentityId { get; private set; } = "";
-    public IReadOnlyCollection<Role> Roles => _roles.ToList();
+    public IReadOnlyCollection<Role> Roles => _roles.AsReadOnly();
 
     public static User Create(FirstName firstName, LastName lastName, Email email)
     {

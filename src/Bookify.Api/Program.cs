@@ -15,7 +15,6 @@ builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Confi
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
-//builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddApplication();
@@ -27,23 +26,20 @@ WebApplication app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    //app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
-        IReadOnlyList<ApiVersionDescription> descriptions = app.DescribeApiVersions();
-
-        foreach (ApiVersionDescription description in descriptions)
+        foreach (string groupName in app.DescribeApiVersions().Select(x => x.GroupName))
         {
-            string url = $"/swagger/{description.GroupName}/swagger.json";
-            string name = description.GroupName.ToUpperInvariant();
+            string url = $"/swagger/{groupName}/swagger.json";
+            string name = groupName.ToUpperInvariant();
             options.SwaggerEndpoint(url, name);
         }
     });
 
     app.ApplyMigrations();
 
-    //app.SeedData(); // Uncomment this line for integration testing to seed data, and comment it out for local development to avoid duplicate key errors
+    app.SeedData(); // Uncomment this line for integration testing to seed data and comment it out for local development to avoid duplicate key errors
 }
 
 app.UseHttpsRedirection();
@@ -69,7 +65,14 @@ app.MapHealthChecks("health", new HealthCheckOptions
     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
 });
 
-app.Run();
+await app.RunAsync();
 
 // Make the implicit Program class public so integration tests can access it
-public partial class Program { }
+#pragma warning disable CA1515
+public partial class Program
+{
+    protected Program()
+    {
+    }
+}
+#pragma warning restore CA1515

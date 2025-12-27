@@ -12,7 +12,7 @@ public class LayerTests : BaseTest
     [Fact]
     public void DomainLayer_ShouldNotHaveDependencyOn_ApplicationLayer()
     {
-        // check that Domain layer does not depend on Application layer
+        // check that the Domain layer does not depend on the Application layer
         TestResult? result = Types.InAssembly(DomainAssembly)
             .Should()
             .NotHaveDependencyOn(ApplicationAssembly.GetName().Name)
@@ -24,7 +24,7 @@ public class LayerTests : BaseTest
     [Fact]
     public void DomainLayer_ShouldNotHaveDependencyOn_InfrastructureLayer()
     {
-        // check that Domain layer does not depend on Infrastructure layer
+        // check that the Domain layer does not depend on the Infrastructure layer
         TestResult? result = Types.InAssembly(DomainAssembly)
             .Should()
             .NotHaveDependencyOn(InfrastructureAssembly.GetName().Name)
@@ -36,7 +36,7 @@ public class LayerTests : BaseTest
     [Fact]
     public void ApplicationLayer_ShouldNotHaveDependencyOn_InfrastructureLayer()
     {
-        // check that Application layer does not depend on Infrastructure layer
+        // check that the Application layer does not depend on the Infrastructure layer
         TestResult? result = Types.InAssembly(ApplicationAssembly)
             .Should()
             .NotHaveDependencyOn(InfrastructureAssembly.GetName().Name)
@@ -48,7 +48,7 @@ public class LayerTests : BaseTest
     [Fact]
     public void ApplicationLayer_ShouldNotHaveDependencyOn_PresentationLayer()
     {
-        // check that Application layer does not depend on Presentation layer
+        // check that the Application layer does not depend on the Presentation layer
         TestResult? result = Types.InAssembly(ApplicationAssembly)
             .Should()
             .NotHaveDependencyOn(PresentationAssembly.GetName().Name)
@@ -60,7 +60,7 @@ public class LayerTests : BaseTest
     [Fact]
     public void InfrastructureLayer_ShouldNotHaveDependencyOn_PresentationLayer()
     {
-        // check that Domain layer does not depend on Presentation layer
+        // check that the Domain layer does not depend on the Presentation layer
         TestResult? result = Types.InAssembly(InfrastructureAssembly)
             .Should()
             .NotHaveDependencyOn(PresentationAssembly.GetName().Name)

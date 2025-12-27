@@ -1,4 +1,5 @@
-﻿using Bookify.Domain.Abstractions;
+﻿using System.Diagnostics.CodeAnalysis;
+using Bookify.Domain.Abstractions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Serilog.Context;
@@ -16,6 +17,7 @@ public class LoggingBehavior<TRequest, TResponse>
     public LoggingBehavior(ILogger<LoggingBehavior<TRequest, TResponse>> logger) => 
         _logger = logger;
 
+    [SuppressMessage("Sonar Quality", "S2139: Exceptions should be either logged and handled or rethrown with context", Justification = "Exception is logged here and handled by global exception middleware.")]
     public async Task<TResponse> Handle(TRequest request, 
         RequestHandlerDelegate<TResponse> next,
         CancellationToken cancellationToken)
@@ -34,7 +36,6 @@ public class LoggingBehavior<TRequest, TResponse>
             }
             else
             {
-                //_logger.LogInformation("Request {Request} processed with {@Error}", name, result.Error);
                 using (LogContext.PushProperty("Error", result.Error, true)) // DestructureObjects, tells Serilog to serialize the object Error into a JSON object when writing structured logs
                 {
                     _logger.LogError("Request {Request} processed with error", name);

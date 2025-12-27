@@ -7,7 +7,9 @@ using FluentAssertions;
 
 namespace Bookify.Api.FunctionalTests.Users;
 
+#pragma warning disable CA1515
 public class RegisterUsersTests : BaseFunctionalTest
+#pragma warning restore CA1515
 {
     public RegisterUsersTests(FunctionalTestWebAppFactory factory) : base(factory)
     {

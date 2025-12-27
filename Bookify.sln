@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{F3097205-A90C-43EA-A8C0-870F31C71489}"
+	ProjectSection(SolutionItems) = preProject
+		test\.editorconfig = test\.editorconfig
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Elementos de la solución", "Elementos de la solución", "{D107F4C8-89CC-BEA8-D3D7-CA6B7733353D}"
 	ProjectSection(SolutionItems) = preProject

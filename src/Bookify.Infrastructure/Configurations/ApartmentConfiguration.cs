@@ -23,17 +23,15 @@ internal sealed class ApartmentConfiguration : IEntityTypeConfiguration<Apartmen
             .HasMaxLength(2000)
             .HasConversion(description => description.Value, value => new Description(value));
 
-        builder.OwnsOne(apartment => apartment.Price, priceBuilder =>
-        {
-            priceBuilder.Property(money => money.Currency)
-                .HasConversion(currency => currency.Code, code => Currency.FromCode(code));
-        });
+        builder.OwnsOne(apartment => apartment.Price, priceBuilder => priceBuilder.Property(money => money.Currency)
+            .HasConversion(currency => currency.Code, code => Currency.FromCode(code)));
 
-        builder.OwnsOne(apartment => apartment.CleaningFee, priceBuilder =>
-        {
-            priceBuilder.Property(money => money.Currency)
-                .HasConversion(currency => currency.Code, code => Currency.FromCode(code));
-        });
+        builder.OwnsOne(apartment => apartment.CleaningFee, priceBuilder => priceBuilder.Property(money => money.Currency)
+            .HasConversion(currency => currency.Code, code => Currency.FromCode(code)));
+
+        builder.Property(apartment => apartment.Amenities)
+            .HasColumnType("integer[]")
+            .HasColumnName("amenities");
 
         builder.Property<uint>("Version").IsRowVersion(); // Shadow property for optimistic concurrency control
     }

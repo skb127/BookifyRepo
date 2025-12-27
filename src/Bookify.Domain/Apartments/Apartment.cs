@@ -5,14 +5,16 @@ namespace Bookify.Domain.Apartments;
 
 public sealed class Apartment : Entity
 {
+    private List<Amenity> _amenities = [];
+
     public Apartment(
         Guid id, 
         Name name, 
         Description description, 
         Address address, 
         Money price, 
-        Money cleaningFee, 
-        List<Amenity> amenities)
+        Money cleaningFee,
+        IReadOnlyCollection<Amenity> amenities)
         : base(id)
     {
         Name = name;
@@ -20,19 +22,29 @@ public sealed class Apartment : Entity
         Address = address;
         Price = price;
         CleaningFee = cleaningFee;
-        Amenities = amenities;
+        _amenities = new List<Amenity>(amenities ?? []);
     }
 
+    /// <summary>
+    /// Initializes a new instance of the Apartment class. This constructor is intended for internal use and prevents
+    /// external instantiation.
+    /// </summary>
     private Apartment()
     {
         
     }
 
-    public Name Name { get; private set; }
-    public Description Description { get; private set; }
-    public Address Address { get; private set; }
-    public Money Price { get; private set; }
-    public Money CleaningFee { get; private set; }
+    public Name Name { get; private set; } = null!;
+    public Description Description { get; private set; } = null!;
+    public Address Address { get; private set; } = null!;
+    public Money Price { get; private set; } = null!;
+    public Money CleaningFee { get; private set; } = null!;
     public DateTime? LastBookedOnUtc { get; internal set; }
-    public List<Amenity> Amenities { get; set; }
+    public IReadOnlyList<Amenity> Amenities
+    {
+        get => _amenities.AsReadOnly();
+#pragma warning disable S1144 // Unused private types or members should be removed - Used by EF Core
+        private set => _amenities = [..value ?? []];
+#pragma warning restore S1144
+    }
 }

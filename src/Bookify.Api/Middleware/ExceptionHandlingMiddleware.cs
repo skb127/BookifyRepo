@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bookify.Api.Middleware;
 
-public class ExceptionHandlingMiddleware
+internal sealed class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger;
@@ -61,7 +61,7 @@ public class ExceptionHandlingMiddleware
             null)
     };
 
-    internal record ExceptionDetails(
+    internal sealed record ExceptionDetails(
         int Status,
         string Type,
         string Title,

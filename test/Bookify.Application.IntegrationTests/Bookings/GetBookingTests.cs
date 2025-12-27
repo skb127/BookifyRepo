@@ -15,6 +15,7 @@ public class GetBookingTests : BaseIntegrationTest
     {
     }
 
+    [Fact]
     public async Task GetBookings_ShouldReturnFailure_WhenBookingIsNotFound()
     {
         // Arrange

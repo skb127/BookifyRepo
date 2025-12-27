@@ -15,29 +15,17 @@ internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
 
         builder.HasKey(booking => booking.Id);
 
-        builder.OwnsOne(booking => booking.PriceForPeriod, priceBuilder =>
-        {
-            priceBuilder.Property(money => money.Currency)
-                .HasConversion(currency => currency.Code, code => Currency.FromCode(code));
-        });
+        builder.OwnsOne(booking => booking.PriceForPeriod, priceBuilder => priceBuilder.Property(money => money.Currency)
+            .HasConversion(currency => currency.Code, code => Currency.FromCode(code)));
 
-        builder.OwnsOne(booking => booking.CleaningFee, feeBuilder =>
-        {
-            feeBuilder.Property(money => money.Currency)
-                .HasConversion(currency => currency.Code, code => Currency.FromCode(code));
-        });
+        builder.OwnsOne(booking => booking.CleaningFee, feeBuilder => feeBuilder.Property(money => money.Currency)
+            .HasConversion(currency => currency.Code, code => Currency.FromCode(code)));
 
-        builder.OwnsOne(booking => booking.AmenitiesUpCharge, upChargeBuilder =>
-        {
-            upChargeBuilder.Property(money => money.Currency)
-                .HasConversion(currency => currency.Code, code => Currency.FromCode(code));
-        });
+        builder.OwnsOne(booking => booking.AmenitiesUpCharge, upChargeBuilder => upChargeBuilder.Property(money => money.Currency)
+            .HasConversion(currency => currency.Code, code => Currency.FromCode(code)));
 
-        builder.OwnsOne(booking => booking.TotalPrice, totalPriceBuilder =>
-        {
-            totalPriceBuilder.Property(money => money.Currency)
-                .HasConversion(currency => currency.Code, code => Currency.FromCode(code));
-        });
+        builder.OwnsOne(booking => booking.TotalPrice, totalPriceBuilder => totalPriceBuilder.Property(money => money.Currency)
+            .HasConversion(currency => currency.Code, code => Currency.FromCode(code)));
 
         builder.OwnsOne(booking => booking.Duration);
 

@@ -11,7 +11,7 @@ public record Currency
 
     public static Currency FromCode(string code) =>
         All.FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase)) ??
-        throw new ApplicationException("The currency code is invalid");
+        throw new InvalidOperationException("The currency code is invalid");
 
     public static readonly IReadOnlyCollection<Currency> All =
     [

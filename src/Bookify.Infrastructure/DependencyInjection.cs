@@ -75,12 +75,12 @@ public static class DependencyInjection
 
         services.AddTransient<AdminAuthorizationDelegatingHandler>();
 
-        // Configure the delegating handler and AuthenticationService as typed HTTP client
+        // Configure the delegating handler and AuthenticationService as a typed HTTP client
         services.AddHttpClient<IAuthenticationService, AuthenticationService>((sp, httpClient) =>
             {
                 KeycloakOptions keycloakOptions = sp.GetRequiredService<IOptions<KeycloakOptions>>().Value;
 
-                httpClient.BaseAddress = new Uri(keycloakOptions.AdminUrl);
+                httpClient.BaseAddress = keycloakOptions.AdminUrl;
             })
             .AddHttpMessageHandler<AdminAuthorizationDelegatingHandler>();
 
@@ -89,7 +89,7 @@ public static class DependencyInjection
         {
             KeycloakOptions keycloakOptions = sp.GetRequiredService<IOptions<KeycloakOptions>>().Value;
 
-            httpClient.BaseAddress = new Uri(keycloakOptions.TokenUrl);
+            httpClient.BaseAddress = keycloakOptions.OidcBaseUrl;
         });
 
         services.AddHttpContextAccessor();
@@ -99,7 +99,7 @@ public static class DependencyInjection
 
     private static void AddPersistence(IServiceCollection services, IConfiguration configuration)
     {
-        string? connectionString =
+        string connectionString =
             configuration.GetConnectionString("Database") ??
             throw new ArgumentNullException(nameof(configuration));
 

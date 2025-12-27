@@ -1,6 +1,6 @@
 ﻿namespace Bookify.Api.Controllers;
 
-public static class Permissions
+internal static class Permissions
 {
     public const string UsersRead = "users:read";
 }

@@ -6,7 +6,7 @@ using Dapper;
 
 namespace Bookify.Api.Extensions;
 
-public static class SeedDataExtensions
+internal static class SeedDataExtensions
 {
     public static void SeedData(this IApplicationBuilder app)
     {

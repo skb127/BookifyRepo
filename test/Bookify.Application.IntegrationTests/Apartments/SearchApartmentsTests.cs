@@ -26,8 +26,12 @@ public class SearchApartmentsTests : BaseIntegrationTest
         result.Value.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// To test this properly, the database should be seeded with apartments that are available, uncomment app.SeedData(); in Program.cs
+    /// before running the tests
+    /// </summary>
     [Fact]
-    public async Task SearchApartments_ShouldReturnEmptyList_WhenDateRangeIsValid()
+    public async Task SearchApartments_ShouldReturnApartments_WhenDateRangeIsValid()
     {
         // Arrange
         var query = new SearchApartmentsQuery(new DateOnly(2026, 2, 12), new DateOnly(2026, 2, 20));

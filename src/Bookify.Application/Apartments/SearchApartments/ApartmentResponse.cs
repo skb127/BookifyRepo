@@ -12,5 +12,5 @@ public class ApartmentResponse
 
     public string Currency { get; init; } = "";
 
-    public AddressResponse Address { get; set; }
+    public AddressResponse Address { get; set; } = null!;
 }

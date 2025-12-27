@@ -22,6 +22,10 @@ public sealed class Review : Entity
         CreatedOnUtc = createdOnUtc;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the Review class. This constructor is intended for internal use and prevents
+    /// external instantiation.
+    /// </summary>
     private Review()
     {
         
@@ -29,8 +33,8 @@ public sealed class Review : Entity
     public Guid ApartmentId { get; private set; }
     public Guid BookingId { get; private set; }
     public Guid UserId { get; private set; }
-    public Rating Rating { get; private set; }
-    public Comment Comment { get; private set; }
+    public Rating Rating { get; private set; } = null!;
+    public Comment Comment { get; private set; } = null!;
     public DateTime CreatedOnUtc { get; private set; }
 
     public static Result<Review> Create(

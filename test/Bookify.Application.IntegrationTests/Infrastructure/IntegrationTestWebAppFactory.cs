@@ -1,4 +1,6 @@
-﻿using Bookify.Application.Abstractions.Data;
+﻿using System.Net.Http.Json;
+using Bookify.Application.Abstractions.Data;
+using Bookify.Application.IntegrationTests.Users;
 using Bookify.Infrastructure;
 using Bookify.Infrastructure.Authentication;
 using Bookify.Infrastructure.Data;
@@ -38,13 +40,13 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
     protected override void ConfigureWebHost(IWebHostBuilder builder) =>
         builder.ConfigureTestServices(services =>
         {
-            services.RemoveAll(typeof(DbContextOptions<ApplicationDbContext>));
+            services.RemoveAll<DbContextOptions<ApplicationDbContext>>();
 
             services.AddDbContext<ApplicationDbContext>(options => 
                 options.UseNpgsql(_dbContainer.GetConnectionString())
                     .UseSnakeCaseNamingConvention());
 
-            services.RemoveAll(typeof(ISqlConnectionFactory));
+            services.RemoveAll<ISqlConnectionFactory>();
 
             services.AddSingleton<ISqlConnectionFactory>(_ =>
                 new SqlConnectionFactory(_dbContainer.GetConnectionString()));
@@ -56,23 +58,50 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
 
             services.Configure<KeycloakOptions>(options =>
             {
-                options.AdminUrl = $"{keycloakAddress}admin/realms/bookify/";
-                options.TokenUrl = $"{keycloakAddress}realms/bookify/protocol/openid-connect/token";
+                options.AdminUrl = new Uri($"{keycloakAddress}admin/realms/bookify/");
+                options.TokenUrl = new Uri($"{keycloakAddress}realms/bookify/protocol/openid-connect/token");
+                options.OidcBaseUrl = new Uri($"{keycloakAddress}realms/bookify/protocol/openid-connect/");
+            });
+            
+            
+            services.Configure<AuthenticationOptions>(options =>
+            {
+                options.Issuer = $"{keycloakAddress}realms/bookify/";
+                options.MetadataUrl = new Uri($"{keycloakAddress}realms/bookify/.well-known/openid-configuration");
             });
         });
 
     public async Task InitializeAsync()
     {
-        await _dbContainer.StartAsync();
-        await _redisContainer.StartAsync();
-        await _keycloakContainer.StartAsync();
+        await _dbContainer.StartAsync().ConfigureAwait(false);
+        await _redisContainer.StartAsync().ConfigureAwait(false);
+        await _keycloakContainer.StartAsync().ConfigureAwait(false);
+        
+        await InitializeTestUserAsync().ConfigureAwait(false);
     }
 
-    // We decorate DisposeAsync with 'new' keyword, because the WebApplicationFactory already implements IAsyncLifetime
+    // We decorate DisposeAsync with a 'new' keyword because the WebApplicationFactory already implements IAsyncLifetime
     public new async Task DisposeAsync()
     {
-        await _dbContainer.StopAsync();
-        await _redisContainer.StopAsync();
-        await _keycloakContainer.StopAsync();
+        await _dbContainer.StopAsync().ConfigureAwait(false);
+        await _redisContainer.StopAsync().ConfigureAwait(false);
+        await _keycloakContainer.StopAsync().ConfigureAwait(false);
+        
+        await _dbContainer.DisposeAsync().ConfigureAwait(false);
+        await _redisContainer.DisposeAsync().ConfigureAwait(false);
+        await _keycloakContainer.DisposeAsync().ConfigureAwait(false);
+    }
+    
+    /// <summary>
+    /// Initialize a test user in the Keycloak server
+    /// </summary>
+    /// <returns></returns>
+    private async Task InitializeTestUserAsync()
+    {
+        using HttpClient httpClient = CreateClient();
+
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest2).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest3).ConfigureAwait(false);
     }
 }

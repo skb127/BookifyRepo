@@ -32,7 +32,7 @@ public class UserTests : BaseTest
             UserData.Email);
 
         // Assert
-        UserCreatedDomainEvent? domainEvent = AssertDomainEventWasPublished<UserCreatedDomainEvent>(user);
+        UserCreatedDomainEvent domainEvent = AssertDomainEventWasPublished<UserCreatedDomainEvent>(user);
 
         domainEvent.UserId.Should().Be(user.Id);
     }

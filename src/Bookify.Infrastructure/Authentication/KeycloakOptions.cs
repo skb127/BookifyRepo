@@ -2,8 +2,9 @@
 
 public sealed class KeycloakOptions
 {
-    public string AdminUrl { get; set; } = "";
-    public string TokenUrl { get; set; } = "";
+    public Uri AdminUrl { get; set; } = null!;
+    public Uri TokenUrl { get; set; } = null!;
+    public Uri OidcBaseUrl { get; set; } = null!;
     public string AdminClientId { get; init; } = "";
     public string AdminClientSecret { get; init; } = "";
     public string AuthClientId { get; init; } = "";

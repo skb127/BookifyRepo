@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.Api.Extensions;
 
-public static class ApplicationBuilderExtensions
+internal static class ApplicationBuilderExtensions
 {
     /// <summary>
     /// Applies any pending migrations for the context to the database. Will create the database if it does not already exist.

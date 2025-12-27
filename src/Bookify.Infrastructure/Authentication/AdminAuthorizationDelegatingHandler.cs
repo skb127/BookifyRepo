@@ -44,7 +44,7 @@ public class AdminAuthorizationDelegatingHandler : DelegatingHandler
 
         using var authorizationRequest = new HttpRequestMessage(
             HttpMethod.Post,
-            new Uri(_keycloakOptions.TokenUrl))
+            _keycloakOptions.TokenUrl)
         {
             Content = authorizationRequestContent
         };
@@ -54,6 +54,6 @@ public class AdminAuthorizationDelegatingHandler : DelegatingHandler
         authorizationResponse.EnsureSuccessStatusCode();
 
         return await authorizationResponse.Content.ReadFromJsonAsync<AuthorizationToken>(cancellationToken: cancellationToken) ??
-               throw new ApplicationException();
+               throw new InvalidOperationException("The authorization server returned an empty token response.");
     }
 }

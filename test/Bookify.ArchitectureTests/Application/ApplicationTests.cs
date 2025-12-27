@@ -18,7 +18,7 @@ public class ApplicationTests : BaseTest
             .Or()
             .ImplementInterface(typeof(ICommandHandler<,>))
             .Should()
-            .HaveNameEndingWith("CommandHandler")
+            .HaveNameEndingWith("CommandHandler", StringComparison.InvariantCulture)
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue();
@@ -48,7 +48,7 @@ public class ApplicationTests : BaseTest
             .That()
             .ImplementInterface(typeof(IQueryHandler<,>))
             .Should()
-            .HaveNameEndingWith("QueryHandler")
+            .HaveNameEndingWith("QueryHandler", StringComparison.InvariantCulture)
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue();
@@ -76,7 +76,7 @@ public class ApplicationTests : BaseTest
             .That()
             .Inherit(typeof(AbstractValidator<>))
             .Should()
-            .HaveNameEndingWith("Validator")
+            .HaveNameEndingWith("Validator", StringComparison.InvariantCulture)
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue();
