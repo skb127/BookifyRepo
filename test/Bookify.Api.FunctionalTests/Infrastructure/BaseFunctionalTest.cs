@@ -1,6 +1,5 @@
 ﻿using System.Net.Http.Json;
 using Bookify.Api.Controllers.Users;
-using Bookify.Api.FunctionalTests.Users;
 using Bookify.Application.Users;
 
 namespace Bookify.Api.FunctionalTests.Infrastructure;

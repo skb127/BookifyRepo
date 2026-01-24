@@ -27,7 +27,10 @@ public sealed class ReviewsController : ControllerBase
 
         if (result.IsFailure)
         {
-            return BadRequest(result.Error);
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
         }
 
         return Ok();

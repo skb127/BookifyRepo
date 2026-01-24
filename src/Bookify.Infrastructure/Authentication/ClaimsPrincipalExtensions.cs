@@ -16,4 +16,8 @@ internal static class ClaimsPrincipalExtensions
         return Guid.TryParse(userId, out Guid parsedUserId) ? parsedUserId :
                throw new InvalidOperationException("User ID is unavailable");
     }
+    
+    public static string GetEmail(this ClaimsPrincipal? principal) =>
+        principal?.FindFirstValue(ClaimTypes.Email) ??
+        throw new InvalidOperationException("User email is unavailable");
 }

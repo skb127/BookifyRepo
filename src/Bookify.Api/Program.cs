@@ -1,4 +1,3 @@
-using Asp.Versioning.ApiExplorer;
 using Bookify.Api.Extensions;
 using Bookify.Api.OpenApi;
 using Bookify.Application;
@@ -21,6 +20,8 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
+
+builder.Services.AddProblemDetail();
 
 WebApplication app = builder.Build();
 
@@ -52,6 +53,9 @@ app.UseRequestContextLogging();
 app.UseSerilogRequestLogging();
 
 app.UseCustomExceptionHandler();
+
+// Returns the Problem Details response for (empty) non-successful responses
+app.UseStatusCodePages();
 
 app.UseAuthentication();
 

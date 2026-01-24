@@ -4,6 +4,7 @@ using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Email;
+using Bookify.Application.Common.Interfaces;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
@@ -15,6 +16,7 @@ using Bookify.Infrastructure.Caching;
 using Bookify.Infrastructure.Clock;
 using Bookify.Infrastructure.Data;
 using Bookify.Infrastructure.Email;
+using Bookify.Infrastructure.Identity;
 using Bookify.Infrastructure.Outbox;
 using Bookify.Infrastructure.Repositories;
 using Dapper;
@@ -46,6 +48,8 @@ public static class DependencyInjection
 
         AddAuthentication(services, configuration);
 
+        AddIdentity(services);
+        
         AddAuthorization(services);
 
         AddCaching(services, configuration);
@@ -97,6 +101,13 @@ public static class DependencyInjection
         services.AddScoped<IUserContext, UserContext>();
     }
 
+    private static void AddIdentity(IServiceCollection services)
+    {
+        // Register the Keycloak client factory, also register the IdentityProvider as a scoped service
+        services.AddSingleton<IKeycloakClientFactory, KeycloakClientFactory>();
+        services.AddScoped<IIdentityProvider, KeycloakIdentityProvider>();
+    }
+    
     private static void AddPersistence(IServiceCollection services, IConfiguration configuration)
     {
         string connectionString =

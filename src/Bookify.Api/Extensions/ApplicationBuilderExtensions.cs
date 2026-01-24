@@ -1,5 +1,7 @@
-﻿using Bookify.Api.Middleware;
+﻿using System.Diagnostics;
+using Bookify.Api.Middleware;
 using Bookify.Infrastructure;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.Api.Extensions;
@@ -28,4 +30,15 @@ internal static class ApplicationBuilderExtensions
 
         return app;
     }
+
+    public static IServiceCollection AddProblemDetail(this IServiceCollection services) =>
+        // Adds services for using problem details format
+        services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
+        {
+            context.ProblemDetails.Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path}";
+            context.ProblemDetails.Extensions.TryAdd("timestamp", DateTime.UtcNow.ToString("o"));
+            context.ProblemDetails.Extensions.TryAdd("requestId", context.HttpContext.TraceIdentifier);
+            Activity? activity = context.HttpContext.Features.Get<IHttpActivityFeature>()?.Activity;
+            context.ProblemDetails.Extensions.TryAdd("traceId", activity?.Id);
+        });
 }

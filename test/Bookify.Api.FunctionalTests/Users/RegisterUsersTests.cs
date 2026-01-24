@@ -2,7 +2,6 @@
 using System.Net.Http.Json;
 using Bookify.Api.Controllers.Users;
 using Bookify.Api.FunctionalTests.Infrastructure;
-using Bookify.Domain.Users;
 using FluentAssertions;
 
 namespace Bookify.Api.FunctionalTests.Users;
@@ -19,7 +18,7 @@ public class RegisterUsersTests : BaseFunctionalTest
     public async Task Register_ShouldReturnOk_WhenRequestIsValid()
     {
         // Arrange
-        var request = new RegisterUserRequest("user@test.com", "name", "lastname", "123456");
+        var request = new RegisterUserRequest("user@test.com", "name", "lastname", "ClaveSegura123?");
 
         // Act
         HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/users/register", request);
@@ -37,9 +36,9 @@ public class RegisterUsersTests : BaseFunctionalTest
     [InlineData("test@test.com", "name", "", "123456")] 
     [InlineData("test@test.com", "name", "lastname", "")] 
     [InlineData("test@test.com", "name", "lastname", "1")] 
-    [InlineData("test@test.com", "name", "lastname", "12")] 
-    [InlineData("test@test.com", "name", "lastname", "123")] 
-    [InlineData("test@test.com", "name", "lastname", "1234")] 
+    [InlineData("test@test.com", "name", "lastname", "ClaveSegura?")] 
+    [InlineData("test@test.com", "name", "lastname", "ClaveSegura1")] 
+    [InlineData("test@test.com", "name", "lastname", "clavesegura1?")] 
     public async Task Register_ShouldReturnBadRequest_WhenRequestIsInvalid(string email,
         string firstName,
         string lastName,

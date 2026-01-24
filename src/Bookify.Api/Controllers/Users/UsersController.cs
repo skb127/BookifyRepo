@@ -1,5 +1,7 @@
-﻿using Asp.Versioning;
+﻿﻿using System.Net;
+using Asp.Versioning;
 using Bookify.Application.Users;
+using Bookify.Application.Users.ChangeUserPassword;
 using Bookify.Application.Users.GetLoggedInUser;
 using Bookify.Application.Users.LoginUser;
 using Bookify.Application.Users.LogoutUser;
@@ -52,7 +54,10 @@ public sealed class UsersController : ControllerBase
 
         if (result.IsFailure)
         {
-            return BadRequest(result.Error);
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
         }
 
         return Ok(result.Value);
@@ -72,7 +77,10 @@ public sealed class UsersController : ControllerBase
 
         if (result.IsFailure)
         {
-            return Unauthorized(result.Error);
+            return Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                detail: result.Error.Name,
+                title: result.Error.Code);
         }
 
         // Set the new refresh token in the cookie
@@ -97,7 +105,10 @@ public sealed class UsersController : ControllerBase
 
         if (result.IsFailure)
         {
-            return Unauthorized(result.Error);
+            return Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                detail: result.Error.Name,
+                title: result.Error.Code);
         }
         
         // Delete the refresh token cookie
@@ -122,13 +133,39 @@ public sealed class UsersController : ControllerBase
 
         if (result.IsFailure)
         {
-            return Unauthorized(result.Error);
+            return Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                detail: result.Error.Name,
+                title: result.Error.Code);
         }
 
         // Set the new refresh token in the cookie
         SetRefreshTokenCookie(result.Value);
 
         return Ok(new AccessTokenOnlyResponse(result.Value.AccessToken));
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(
+        ChangeUserPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new ChangeUserPasswordCommand(
+            request.CurrentPassword,
+            request.NewPassword);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok();
     }
 
     private void SetRefreshTokenCookie(AccessTokenResponse accessTokenResponse)

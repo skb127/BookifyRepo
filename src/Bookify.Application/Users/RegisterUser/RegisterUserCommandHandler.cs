@@ -1,5 +1,6 @@
 ﻿using Bookify.Application.Abstractions.Authentication;
 using Bookify.Application.Abstractions.Messaging;
+using Bookify.Application.Common.Interfaces;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Users;
 
@@ -10,22 +11,39 @@ internal sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserC
     private readonly IAuthenticationService _authenticationService;
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IIdentityProvider _identityProvider;
 
     public RegisterUserCommandHandler(IAuthenticationService authenticationService,
         IUserRepository userRepository, 
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IIdentityProvider identityProvider)
     {
         _authenticationService = authenticationService;
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
+        _identityProvider = identityProvider;
     }
 
     public async Task<Result<Guid>> Handle(
         RegisterUserCommand request,
         CancellationToken cancellationToken)
     {
-        // TO DO: Check if the user exists
+        // Check if the user exists (in both identity provider and local database)
+        User? userAlreadyExistsDb = await _userRepository.FindOneAsync(user => user.Email == new Email(request.Email), cancellationToken);
+        
+        if (userAlreadyExistsDb is not null)
+        {
+            return Result.Failure<Guid>(UserErrors.AlreadyExists);
+        }
+        
+        bool userAlreadyExistsInProvider = await _identityProvider
+            .CheckUserByEmailExistsAsync(request.Email, cancellationToken);
 
+        if (userAlreadyExistsInProvider)
+        {
+            return Result.Failure<Guid>(UserErrors.AlreadyExists);
+        }
+        
         var user = User.Create(
             new FirstName(request.FirstName),
             new LastName(request.LastName),

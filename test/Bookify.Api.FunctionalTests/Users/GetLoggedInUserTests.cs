@@ -26,7 +26,7 @@ public class GetLoggedInUserTests : BaseFunctionalTest
     public async Task Get_ShouldReturnUserInfo_WhenAccessTokenIsOK()
     {
         // Arrange
-        string accessToken = await GetAccessToken(UserData.RegisterTestUserRequest2.Email, UserData.RegisterTestUserRequest2.Password);
+        string accessToken = await GetAccessToken(UserData.RegisterTestUserRequest3.Email, UserData.RegisterTestUserRequest3.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);

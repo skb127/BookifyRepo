@@ -9,7 +9,7 @@ namespace Bookify.Api.FunctionalTests.Users;
 public class LoginUserTests : BaseFunctionalTest
 {
     private const string Email = "login@test.com";
-    private const string Password = "123456";
+    private const string Password = "ClaveSegura1?";
 
     public LoginUserTests(FunctionalTestWebAppFactory factory) 
         : base(factory)

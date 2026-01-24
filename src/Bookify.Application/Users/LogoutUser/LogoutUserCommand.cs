@@ -1,5 +1,4 @@
 ﻿using Bookify.Application.Abstractions.Messaging;
-using Bookify.Domain.Abstractions;
 
 namespace Bookify.Application.Users.LogoutUser;
 

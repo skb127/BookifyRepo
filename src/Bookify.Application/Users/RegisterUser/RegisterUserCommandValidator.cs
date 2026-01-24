@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using Bookify.Application.Extensions;
+using FluentValidation;
 
 namespace Bookify.Application.Users.RegisterUser;
 
@@ -14,6 +15,6 @@ internal sealed class RegisterUserCommandValidator : AbstractValidator<RegisterU
 
         RuleFor(c => c.Password)
             .NotEmpty()
-            .MinimumLength(5);
+            .StrongPassword();
     }
 }

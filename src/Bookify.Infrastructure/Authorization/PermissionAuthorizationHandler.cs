@@ -1,5 +1,4 @@
-﻿using System.Reflection.Metadata.Ecma335;
-using Bookify.Infrastructure.Authentication;
+﻿using Bookify.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 

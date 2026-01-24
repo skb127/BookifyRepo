@@ -9,7 +9,7 @@ services:
       - bookify-db
 
   bookify-db:
-    image: postgres:latest
+    image: postgres:17
     container_name: Bookify.Db
     environment:
       - POSTGRES_DB=bookify

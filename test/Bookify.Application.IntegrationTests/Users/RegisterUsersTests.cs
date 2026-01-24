@@ -17,7 +17,7 @@ public class RegisterUsersTests : BaseIntegrationTest
     public async Task Register_ShouldReturnOk_WhenRequestIsValid()
     {
         // Arrange
-        var request = new RegisterUserRequest("user@test.com", "name", "lastname", "123456");
+        var request = new RegisterUserRequest("user@test.com", "name", "lastname", "ClaveSegura1$");
 
         // Act
         HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/users/register", request);

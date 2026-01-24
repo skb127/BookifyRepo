@@ -1,4 +1,5 @@
-﻿using Bookify.Domain.Abstractions;
+﻿using System.Linq.Expressions;
+using Bookify.Domain.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.Infrastructure.Repositories;
@@ -19,4 +20,9 @@ internal abstract class Repository<T>
 
     public virtual void Add(T entity) => 
         DbContext.Add(entity);
+    
+    public async Task<T?> FindOneAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken) => 
+        await DbContext.Set<T>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(predicate, cancellationToken);
 }

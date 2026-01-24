@@ -1,8 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using Bookify.Application.IntegrationTests.Infrastructure;
-using Bookify.Application.Users;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 

@@ -5,7 +5,6 @@ using Bookify.Application.Bookings.ReserveBooking;
 using Bookify.Domain.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bookify.Api.Controllers.Bookings;
@@ -30,7 +29,15 @@ public sealed class BookingsController : ControllerBase
 
         Result<BookingResponse> result = await _sender.Send(query, cancellationToken);
 
-        return result.IsSuccess ? Ok(result.Value) : NotFound();
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok(result.Value);
     }
 
     [HttpPost]
@@ -48,7 +55,10 @@ public sealed class BookingsController : ControllerBase
 
         if (result.IsFailure)
         {
-            return BadRequest(result.Error);
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
         }
 
         return CreatedAtAction(
@@ -71,7 +81,10 @@ public sealed class BookingsController : ControllerBase
 
         if (result.IsFailure)
         {
-            return BadRequest(result.Error);
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
         }
 
         return NoContent();

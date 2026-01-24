@@ -42,7 +42,7 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
         {
             services.RemoveAll<DbContextOptions<ApplicationDbContext>>();
 
-            services.AddDbContext<ApplicationDbContext>(options => 
+            services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(_dbContainer.GetConnectionString())
                     .UseSnakeCaseNamingConvention());
 
@@ -51,7 +51,7 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             services.AddSingleton<ISqlConnectionFactory>(_ =>
                 new SqlConnectionFactory(_dbContainer.GetConnectionString()));
 
-            services.Configure<RedisCacheOptions>(redisCacheOptions => 
+            services.Configure<RedisCacheOptions>(redisCacheOptions =>
                 redisCacheOptions.Configuration = _redisContainer.GetConnectionString());
 
             string? keycloakAddress = _keycloakContainer.GetBaseAddress();
@@ -61,9 +61,10 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
                 options.AdminUrl = new Uri($"{keycloakAddress}admin/realms/bookify/");
                 options.TokenUrl = new Uri($"{keycloakAddress}realms/bookify/protocol/openid-connect/token");
                 options.OidcBaseUrl = new Uri($"{keycloakAddress}realms/bookify/protocol/openid-connect/");
+                options.BaseUrl = new Uri(keycloakAddress);
             });
-            
-            
+
+
             services.Configure<AuthenticationOptions>(options =>
             {
                 options.Issuer = $"{keycloakAddress}realms/bookify/";
@@ -76,7 +77,7 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
         await _dbContainer.StartAsync().ConfigureAwait(false);
         await _redisContainer.StartAsync().ConfigureAwait(false);
         await _keycloakContainer.StartAsync().ConfigureAwait(false);
-        
+
         await InitializeTestUserAsync().ConfigureAwait(false);
     }
 
@@ -86,12 +87,12 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
         await _dbContainer.StopAsync().ConfigureAwait(false);
         await _redisContainer.StopAsync().ConfigureAwait(false);
         await _keycloakContainer.StopAsync().ConfigureAwait(false);
-        
+
         await _dbContainer.DisposeAsync().ConfigureAwait(false);
         await _redisContainer.DisposeAsync().ConfigureAwait(false);
         await _keycloakContainer.DisposeAsync().ConfigureAwait(false);
     }
-    
+
     /// <summary>
     /// Initialize a test user in the Keycloak server
     /// </summary>
@@ -103,5 +104,6 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest).ConfigureAwait(false);
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest2).ConfigureAwait(false);
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest3).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterChangePasswordUserRequest).ConfigureAwait(false);
     }
 }
