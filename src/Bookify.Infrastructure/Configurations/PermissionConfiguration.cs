@@ -13,5 +13,6 @@ internal sealed class PermissionConfiguration : IEntityTypeConfiguration<Permiss
         builder.HasKey(p => p.Id);
 
         builder.HasData(Permission.UsersRead);
+        builder.HasData(Permission.UsersAdminRead);
     }
 }

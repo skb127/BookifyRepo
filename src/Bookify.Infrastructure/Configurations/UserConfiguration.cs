@@ -1,4 +1,5 @@
-﻿using Bookify.Domain.Users;
+﻿using Bookify.Domain.Shared;
+using Bookify.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -28,12 +29,32 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMaxLength(1)
             .HasConversion(status => status.Code, code => UserStatus.FromCode(code))
             .HasDefaultValueSql($"'{UserStatus.Active.Code}'");
-        
+
+        builder.Property(user => user.PhoneNumber)
+            .HasMaxLength(20)
+            .HasConversion(phoneNumber => phoneNumber != null ? phoneNumber.Value : null, value => PhoneNumber.Create(value!));
+
+        builder.Property(user => user.DateOfBirth)
+            .HasConversion(dateOfBirth => dateOfBirth.Value, value => DateOfBirth.Create(value)!)
+            .HasDefaultValue(DateOfBirth.Create(new DateOnly(1900, 1, 1)));
+
+        builder.Property(user => user.LastModifiedOn);
+
         builder.HasIndex(user => user.Email)
             .IsUnique(); // We are defining an index on the email property, this is a unique index, this is going to give us a database guaranteed constraint.
 
         builder.HasIndex(user => user.IdentityId)
             .IsUnique();
+
+        builder.HasOne(user => user.PasswordResetToken)
+            .WithOne()
+            .HasForeignKey<PasswordResetToken>(prt => prt.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(user => user.EmailChangeToken)
+            .WithOne()
+            .HasForeignKey<EmailChangeToken>(ect => ect.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasQueryFilter(user => user.Status != UserStatus.Deleted);
     }

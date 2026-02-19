@@ -18,7 +18,7 @@ public abstract class BaseIntegrationTest : IClassFixture<IntegrationTestWebAppF
     protected BaseIntegrationTest(IntegrationTestWebAppFactory factory)
     {
         ArgumentNullException.ThrowIfNull(factory);
-        
+
         _scope = factory.Services.CreateScope();
 
         Sender = _scope.ServiceProvider.GetRequiredService<ISender>();
@@ -28,7 +28,7 @@ public abstract class BaseIntegrationTest : IClassFixture<IntegrationTestWebAppF
             BaseAddress = new Uri("https://localhost")
         });
     }
-    
+
     protected async Task<string> GetAccessToken(string userEmail, string userPassword)
     {
         HttpResponseMessage loginResponse = await HttpClient.PostAsJsonAsync(

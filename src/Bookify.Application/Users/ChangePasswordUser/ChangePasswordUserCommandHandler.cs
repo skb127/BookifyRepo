@@ -1,19 +1,19 @@
 using Bookify.Application.Abstractions.Authentication;
+using Bookify.Application.Abstractions.Identity;
 using Bookify.Application.Abstractions.Messaging;
-using Bookify.Application.Common.Interfaces;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Users;
 
-namespace Bookify.Application.Users.ChangeUserPassword;
+namespace Bookify.Application.Users.ChangePasswordUser;
 
-internal class ChangeUserPasswordCommandHandler : ICommandHandler<ChangeUserPasswordCommand>
+internal sealed class ChangePasswordUserCommandHandler : ICommandHandler<ChangePasswordUserCommand>
 {
     private readonly IIdentityProvider _identityProvider;
     private readonly IUserContext _userContext;
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     
-    public ChangeUserPasswordCommandHandler(IIdentityProvider identityProvider,
+    public ChangePasswordUserCommandHandler(IIdentityProvider identityProvider,
         IUserContext userContext,
         IUserRepository userRepository, 
         IUnitOfWork unitOfWork)
@@ -24,7 +24,7 @@ internal class ChangeUserPasswordCommandHandler : ICommandHandler<ChangeUserPass
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result> Handle(ChangeUserPasswordCommand request, 
+    public async Task<Result> Handle(ChangePasswordUserCommand request, 
         CancellationToken cancellationToken)
     {
         // Get the user from the database

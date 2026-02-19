@@ -1,10 +1,12 @@
 ﻿using Bookify.Application.Abstractions.Email;
+using Bookify.Application.Abstractions.Email.Models;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Bookings.Events;
 using Bookify.Domain.Users;
 using MediatR;
 
 namespace Bookify.Application.Bookings.ReserveBooking;
+
 internal sealed class BookingReservedDomainEventHandler : INotificationHandler<BookingReservedDomainEvent>
 {
     private readonly IBookingRepository _bookingRepository;
@@ -12,8 +14,8 @@ internal sealed class BookingReservedDomainEventHandler : INotificationHandler<B
     private readonly IEmailService _emailService;
 
     public BookingReservedDomainEventHandler(
-        IBookingRepository bookingRepository, 
-        IUserRepository userRepository, 
+        IBookingRepository bookingRepository,
+        IUserRepository userRepository,
         IEmailService emailService)
     {
         _bookingRepository = bookingRepository;
@@ -37,10 +39,11 @@ internal sealed class BookingReservedDomainEventHandler : INotificationHandler<B
             return;
         }
 
-        await _emailService.SendAsync(
-            user.Email,
+        var emailMessage = new EmailMessage(
+            user.Email.Value,
             "Booking reserved!",
             "You have 10 minutes to confirm this booking");
 
+        await _emailService.SendAsync(emailMessage, cancellationToken);
     }
 }

@@ -4,7 +4,7 @@ namespace Bookify.Application.UnitTests.Users;
 
 internal static class UserData
 {
-    public static User Create() => User.Create(FirstName, LastName, Email);
+    public static User Create() => User.Create(FirstName, LastName, Email, DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
 
     private static readonly FirstName FirstName = new("Name");
     private static readonly LastName LastName = new("Last");

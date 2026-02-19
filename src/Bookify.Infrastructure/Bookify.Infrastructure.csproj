@@ -7,6 +7,7 @@
 	<PackageReference Include="AspNetCore.HealthChecks.Redis" />
 	<PackageReference Include="AspNetCore.HealthChecks.Uris" />
 	<PackageReference Include="Keycloak.NETCore.Client" />
+	<PackageReference Include="MailKit" />
 	<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
 	<PackageReference Include="Microsoft.EntityFrameworkCore" />
 	<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
@@ -21,6 +22,7 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Quartz.Extensions.Hosting" />
+    <PackageReference Include="Scriban" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,8 +30,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Email\" />
     <Folder Include="Data\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="EmailTemplates\*.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

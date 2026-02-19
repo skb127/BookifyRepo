@@ -18,7 +18,7 @@ public class RegisterUsersTests : BaseFunctionalTest
     public async Task Register_ShouldReturnOk_WhenRequestIsValid()
     {
         // Arrange
-        var request = new RegisterUserRequest("user@test.com", "name", "lastname", "ClaveSegura123?");
+        var request = new RegisterUserRequest("user@test.com", "name", "lastname", "ClaveSegura123?", new DateOnly(2000, 1, 1));
 
         // Act
         HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/users/register", request);
@@ -29,22 +29,22 @@ public class RegisterUsersTests : BaseFunctionalTest
 
     [Theory]
     [InlineData("", "name", "lastname", "123456")] // Empty email
-    [InlineData("test.com", "name", "lastname", "123456")] 
-    [InlineData("@test.com", "name", "lastname", "123456")] 
-    [InlineData("test@", "name", "lastname", "123456")] 
-    [InlineData("test@test.com", "", "lastname", "123456")] 
-    [InlineData("test@test.com", "name", "", "123456")] 
-    [InlineData("test@test.com", "name", "lastname", "")] 
-    [InlineData("test@test.com", "name", "lastname", "1")] 
-    [InlineData("test@test.com", "name", "lastname", "ClaveSegura?")] 
-    [InlineData("test@test.com", "name", "lastname", "ClaveSegura1")] 
-    [InlineData("test@test.com", "name", "lastname", "clavesegura1?")] 
+    [InlineData("test.com", "name", "lastname", "123456")]
+    [InlineData("@test.com", "name", "lastname", "123456")]
+    [InlineData("test@", "name", "lastname", "123456")]
+    [InlineData("test@test.com", "", "lastname", "123456")]
+    [InlineData("test@test.com", "name", "", "123456")]
+    [InlineData("test@test.com", "name", "lastname", "")]
+    [InlineData("test@test.com", "name", "lastname", "1")]
+    [InlineData("test@test.com", "name", "lastname", "ClaveSegura?")]
+    [InlineData("test@test.com", "name", "lastname", "ClaveSegura1")]
+    [InlineData("test@test.com", "name", "lastname", "clavesegura1?")]
     public async Task Register_ShouldReturnBadRequest_WhenRequestIsInvalid(string email,
         string firstName,
         string lastName,
         string password)
     {
-        var request = new RegisterUserRequest(email, firstName, lastName, password);
+        var request = new RegisterUserRequest(email, firstName, lastName, password, new DateOnly(2000, 1, 1));
 
         // Act
         HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/users/register", request);

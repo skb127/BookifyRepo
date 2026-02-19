@@ -1,5 +1,8 @@
-﻿namespace Bookify.Application.Abstractions.Email;
+﻿using Bookify.Application.Abstractions.Email.Models;
+
+namespace Bookify.Application.Abstractions.Email;
+    
 public interface IEmailService
 {
-    Task SendAsync(Domain.Users.Email recipient, string subject, string body);
+    Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default);
 }

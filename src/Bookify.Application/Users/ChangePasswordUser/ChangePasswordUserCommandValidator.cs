@@ -1,11 +1,11 @@
 ﻿using Bookify.Application.Extensions;
 using FluentValidation;
 
-namespace Bookify.Application.Users.ChangeUserPassword;
+namespace Bookify.Application.Users.ChangePasswordUser;
 
-internal class ChangeUserPasswordCommandValidator : AbstractValidator<ChangeUserPasswordCommand>
+internal sealed class ChangePasswordUserCommandValidator : AbstractValidator<ChangePasswordUserCommand>
 {
-    public ChangeUserPasswordCommandValidator()
+    public ChangePasswordUserCommandValidator()
     {
         RuleFor(x => x.CurrentPassword)
             .NotEmpty()

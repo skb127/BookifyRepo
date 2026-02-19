@@ -161,6 +161,82 @@ namespace Bookify.Infrastructure.Migrations
                     b.ToTable("reviews", (string)null);
                 });
 
+            modelBuilder.Entity("Bookify.Domain.Users.EmailChangeToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("ExpirationUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expiration_utc");
+
+                    b.Property<string>("PendingEmail")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("pending_email");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_email_change_tokens");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_email_change_tokens_token_hash");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_email_change_tokens_user_id");
+
+                    b.ToTable("email_change_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Bookify.Domain.Users.PasswordResetToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("ExpirationUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expiration_utc");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_password_reset_tokens");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_password_reset_tokens_token_hash");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_password_reset_tokens_user_id");
+
+                    b.ToTable("password_reset_tokens", (string)null);
+                });
+
             modelBuilder.Entity("Bookify.Domain.Users.Permission", b =>
                 {
                     b.Property<int>("Id")
@@ -185,6 +261,11 @@ namespace Bookify.Infrastructure.Migrations
                         {
                             Id = 1,
                             Name = "users:read"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "users:admin-read"
                         });
                 });
 
@@ -212,6 +293,11 @@ namespace Bookify.Infrastructure.Migrations
                         {
                             Id = 1,
                             Name = "Registered"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Admin"
                         });
                 });
 
@@ -238,6 +324,16 @@ namespace Bookify.Infrastructure.Migrations
                         {
                             RoleId = 1,
                             PermissionId = 1
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            PermissionId = 1
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            PermissionId = 2
                         });
                 });
 
@@ -248,6 +344,12 @@ namespace Bookify.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateOnly>("DateOfBirth")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("date")
+                        .HasDefaultValue(new DateOnly(1900, 1, 1))
+                        .HasColumnName("date_of_birth");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
@@ -257,6 +359,10 @@ namespace Bookify.Infrastructure.Migrations
                         .HasMaxLength(400)
                         .HasColumnType("character varying(400)")
                         .HasColumnName("email");
+
+                    b.Property<DateTime?>("EmailChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("email_changed_at");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
@@ -269,15 +375,32 @@ namespace Bookify.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("identity_id");
 
+                    b.Property<DateTime?>("LastModifiedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_modified_on");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("last_name");
 
+                    b.Property<DateTime?>("LastRecoveryRequestAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_recovery_request_at");
+
                     b.Property<DateTime?>("PasswordChangedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("password_changed_at");
+
+                    b.Property<DateTime?>("PasswordResetAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("password_reset_at");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("phone_number");
 
                     b.Property<char>("Status")
                         .ValueGeneratedOnAdd()
@@ -629,6 +752,26 @@ namespace Bookify.Infrastructure.Migrations
                         .HasConstraintName("fk_reviews_user_user_id");
                 });
 
+            modelBuilder.Entity("Bookify.Domain.Users.EmailChangeToken", b =>
+                {
+                    b.HasOne("Bookify.Domain.Users.User", null)
+                        .WithOne("EmailChangeToken")
+                        .HasForeignKey("Bookify.Domain.Users.EmailChangeToken", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_email_change_tokens_user_user_id");
+                });
+
+            modelBuilder.Entity("Bookify.Domain.Users.PasswordResetToken", b =>
+                {
+                    b.HasOne("Bookify.Domain.Users.User", null)
+                        .WithOne("PasswordResetToken")
+                        .HasForeignKey("Bookify.Domain.Users.PasswordResetToken", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_password_reset_tokens_user_user_id");
+                });
+
             modelBuilder.Entity("Bookify.Domain.Users.RolePermission", b =>
                 {
                     b.HasOne("Bookify.Domain.Users.Permission", null)
@@ -661,6 +804,13 @@ namespace Bookify.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_role_user_user_users_id");
+                });
+
+            modelBuilder.Entity("Bookify.Domain.Users.User", b =>
+                {
+                    b.Navigation("EmailChangeToken");
+
+                    b.Navigation("PasswordResetToken");
                 });
 #pragma warning restore 612, 618
         }

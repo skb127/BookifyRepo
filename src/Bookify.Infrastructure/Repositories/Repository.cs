@@ -11,18 +11,39 @@ internal abstract class Repository<T>
 
     protected Repository(ApplicationDbContext dbContext) => DbContext = dbContext;
 
-    public async Task<T?> GetByIdAsync(
+    public virtual async Task<T?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken) =>
             await DbContext
                 .Set<T>()
                 .FirstOrDefaultAsync(user => user.Id == id, cancellationToken);
 
-    public virtual void Add(T entity) => 
+    public virtual void Add(T entity) =>
         DbContext.Add(entity);
-    
-    public async Task<T?> FindOneAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken) => 
-        await DbContext.Set<T>()
-            .AsNoTracking()
-            .FirstOrDefaultAsync(predicate, cancellationToken);
+
+    public virtual void Update(T entity) =>
+        DbContext.Update(entity);
+
+    public virtual void Delete(T entity) =>
+        DbContext.Remove(entity);
+
+    public async Task<T?> FindOneAsync(
+        Expression<Func<T, bool>> predicate,
+        CancellationToken cancellationToken = default) =>
+            await DbContext.Set<T>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(predicate, cancellationToken);
+
+    public async Task<T?> GetOneWithIncludesAsync(
+        Expression<Func<T, bool>> predicate,
+        CancellationToken cancellationToken,
+        params Expression<Func<T, object?>>[] includes)
+    {
+        IQueryable<T> query = DbContext.Set<T>();
+
+        query = includes.Aggregate(query, (current, include) => 
+            current.Include(include));
+
+        return await query.FirstOrDefaultAsync(predicate, cancellationToken);
+    }
 }

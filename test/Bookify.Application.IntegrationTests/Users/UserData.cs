@@ -4,8 +4,24 @@ namespace Bookify.Application.IntegrationTests.Users;
 
 internal static class UserData
 {
-    public static readonly RegisterUserRequest RegisterTestUserRequest = new("test@test.com", "name", "lastname", "ClaveSegura1$");
-    public static readonly RegisterUserRequest RegisterTestUserRequest2 = new("test2@test.com", "name2", "lastname", "ClaveSegura2$");
-    public static readonly RegisterUserRequest RegisterTestUserRequest3 = new("test3@test.com", "name1", "lastname", "ClaveSegura3$");
-    public static readonly RegisterUserRequest RegisterChangePasswordUserRequest = new("changepassword@test.com", "Change", "User", "TestPassword123!");
+    public static readonly RegisterUserRequest RegisterTestUserRequest = new("test@test.com", "name", "lastname", "ClaveSegura1$", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest LoginUserRequest = new("login@test.com", "Login", "User", "LoginPass123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest RefreshTokenUserRequest = new("refresh@test.com", "Refresh", "User", "RefreshPass123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest ExistingUserRequest = new("existing@test.com", "Existing", "User", "ExistingPass123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest LogoutTestUserRequest = new("logout@test.com", "logout", "lastname", "ClaveSegura6$", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest ChangePasswordUserRequest = new("changepassword@test.com", "Change", "User", "TestPassword123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest ChangePasswordUserRequest2 = new("changepassword2@test.com", "Change2", "User", "TestPassword123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest ChangeEmailUserRequest = new("changeemail@test.com", "Email", "Changer", "EmailChange123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest ChangeEmailUserRequest2 = new("changeemail2@test.com", "Email2", "Changer2", "EmailChange456!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest ChangeEmailPendingUserRequest = new("changeemail_pending@test.com", "Pending", "EmailChanger", "PendingEmail123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest PasswordRecoveryUserRequest = new("recovery@test.com", "Recovery", "User", "RecoveryPass123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest PasswordResetUserRequest = new("reset@test.com", "Reset", "User", "ResetPass123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest UpdateProfileUserRequest = new("updateprofile@test.com", "Profile", "User", "ProfilePass123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest UpdateProfileUserRequest2 = new("updateprofile2@test.com", "Profile2", "User2", "ProfilePass456!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest GetUserByIdUserRequest = new("getuserbyid@test.com", "Admin", "User", "AdminPass123!", new DateOnly(1995, 6, 15));
+    public static readonly RegisterUserRequest RevokeSessionsUserRequest = new("revokesessions@test.com", "Revoke", "User", "RevokePass123!", new DateOnly(2000, 1, 1));
+
+    public const string FirstName = "Test";
+    public const string LastName = "User";
+    public const string Email = "test@test.com";
 }

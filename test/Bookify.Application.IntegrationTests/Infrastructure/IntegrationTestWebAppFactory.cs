@@ -1,9 +1,12 @@
 ﻿using System.Net.Http.Json;
 using Bookify.Application.Abstractions.Data;
+using Bookify.Application.Abstractions.Email;
 using Bookify.Application.IntegrationTests.Users;
+using Bookify.Application.Options;
 using Bookify.Infrastructure;
 using Bookify.Infrastructure.Authentication;
 using Bookify.Infrastructure.Data;
+using Bookify.Infrastructure.Outbox;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -20,7 +23,7 @@ namespace Bookify.Application.IntegrationTests.Infrastructure;
 public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
-        .WithImage("postgres:latest")
+        .WithImage("postgres:17")
         .WithDatabase("bookify")
         .WithUsername("postgres")
         .WithPassword("postgrespw")
@@ -37,7 +40,12 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
         .WithCommand("--import-realm")
         .Build();
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder) =>
+    public MockEmailService MockEmailService { get; } = new();
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<DbContextOptions<ApplicationDbContext>>();
@@ -54,6 +62,16 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             services.Configure<RedisCacheOptions>(redisCacheOptions =>
                 redisCacheOptions.Configuration = _redisContainer.GetConnectionString());
 
+            // Speed up Outbox processing for integration tests (default is 10s)
+            services.Configure<OutboxOptions>(o =>
+                o.IntervalInSeconds = 1);
+
+            services.Configure<ExpirationOptions>(options =>
+            {
+                options.EmailChangeExpirationSeconds = 20;
+                options.PasswordRecoveryExpirationSeconds = 20;
+            });
+
             string? keycloakAddress = _keycloakContainer.GetBaseAddress();
 
             services.Configure<KeycloakOptions>(options =>
@@ -64,13 +82,15 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
                 options.BaseUrl = new Uri(keycloakAddress);
             });
 
-
             services.Configure<AuthenticationOptions>(options =>
             {
                 options.Issuer = $"{keycloakAddress}realms/bookify/";
                 options.MetadataUrl = new Uri($"{keycloakAddress}realms/bookify/.well-known/openid-configuration");
             });
+
+            services.AddSingleton<IEmailService>(MockEmailService);
         });
+    }
 
     public async Task InitializeAsync()
     {
@@ -102,8 +122,20 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
         using HttpClient httpClient = CreateClient();
 
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest2).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest3).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterChangePasswordUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.LoginUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RefreshTokenUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ExistingUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.LogoutTestUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangePasswordUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangePasswordUserRequest2).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangeEmailUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangeEmailUserRequest2).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangeEmailPendingUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.PasswordRecoveryUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.PasswordResetUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.UpdateProfileUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.UpdateProfileUserRequest2).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.GetUserByIdUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RevokeSessionsUserRequest).ConfigureAwait(false);
     }
 }

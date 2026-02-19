@@ -1,4 +1,4 @@
-using Bookify.Application.Common.Interfaces;
+using Bookify.Application.Abstractions.Identity;
 using Bookify.Application.Users.GetLoggedInUser;
 using Bookify.Domain.Abstractions;
 using Bookify.Infrastructure.Authentication;
@@ -19,13 +19,13 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
     private readonly ILogger<KeycloakIdentityProvider> _logger;
 
     private static readonly Error UserDeletionFailed = new(
-        "Keycloak.UserDeletionFailed", 
+        "Keycloak.UserDeletionFailed",
         "Failed to delete the user");
 
     private static readonly Error UserCreationFailed = new(
-        "Keycloak.UserCreationFailed", 
+        "Keycloak.UserCreationFailed",
         "Failed to create the user");
-    
+
     public KeycloakIdentityProvider(
         IKeycloakClientFactory clientFactory,
         IOptions<KeycloakOptions> options,
@@ -58,17 +58,17 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
                 Enabled = true,
                 EmailVerified = true
             };
-            
-            KcResponse<object>? response = await client.Users.CreateAsync(realm, token, kcUser, cancellationToken);
-            
+
+            KcResponse<object> response = await client.Users.CreateAsync(realm, token, kcUser, cancellationToken);
+
             if (response.IsError)
             {
                 _logger.LogWarning(
                     response.Exception
-                    ,"Failed to create user {Email} in identity provider. Error: {Error}", 
-                    email, 
+                    , "Failed to create user {Email} in identity provider. Error: {Error}",
+                    email,
                     response.ErrorMessage);
-                
+
                 return Result.Failure<string>(UserCreationFailed);
             }
 
@@ -82,7 +82,7 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
             }
 
             Guid userId = userInfo.Id;
-            
+
             var credential = new KcCredentials
             {
                 Type = "password",
@@ -91,34 +91,35 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
             };
 
             KcResponse<object>? passwordResponse = await client.Users.ResetPasswordAsync(realm, token, userId.ToString(), credential, cancellationToken);
-            
-            if (passwordResponse.IsError)
-            {
-                _logger.LogWarning(passwordResponse.Exception,
-                    "Failed to set password for user {UserId}. Deleting user",
-                    userId);
 
-                // Cleanup - delete the user if password setting fails
-                await client.Users.DeleteAsync(realm, token, userId.ToString(), cancellationToken);
-                
-                return Result.Failure<string>(new Error(
-                    "Keycloak.PasswordSetFailed", 
-                    "Failed to set password in identity provider"));
+            if (!passwordResponse.IsError)
+            {
+                return Result.Success(userId.ToString());
             }
-            
-            return Result.Success(userId.ToString());
+
+            _logger.LogWarning(passwordResponse.Exception,
+                "Failed to set password for user {UserId}/{Email} in identity provider. Deleting user",
+                userId, email);
+
+            // Cleanup - delete the user if password setting fails
+            await client.Users.DeleteAsync(realm, token, userId.ToString(), cancellationToken);
+
+            return Result.Failure<string>(new Error(
+                "Keycloak.PasswordSetFailed",
+                "Failed to set password in identity provider"));
+
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating user {Email} in Keycloak", email);
             return Result.Failure<string>(new Error(
-                "Keycloak.UnexpectedError", 
+                "Keycloak.UnexpectedError",
                 "An unexpected error occurred while creating the user"));
         }
     }
 
     public async Task<Result> DeleteUserAsync(
-        string identityId, 
+        string identityId,
         CancellationToken cancellationToken = default)
     {
         try
@@ -128,31 +129,32 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
             string realm = _clientFactory.GetRealm();
 
             KcResponse<object>? response = await client.Users.DeleteAsync(realm, token, identityId, cancellationToken);
-            
-            if (response.IsError)
+
+            if (!response.IsError)
             {
-                _logger.LogWarning(response.Exception,
-                    "Failed to delete user {IdentityId}. Error: {Error}", 
-                    identityId,
-                    response.ErrorMessage);
-                
-                return Result.Failure(UserDeletionFailed);
+                return Result.Success();
             }
 
-            return Result.Success();
+            _logger.LogWarning(response.Exception,
+                "Failed to delete user {IdentityId}. Error: {Error}",
+                identityId,
+                response.ErrorMessage);
+
+            return Result.Failure(UserDeletionFailed);
+
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting user {IdentityId} from Keycloak", identityId);
             return Result.Failure(new Error(
-                "Keycloak.UnexpectedError", 
+                "Keycloak.UnexpectedError",
                 "An unexpected error occurred while deleting the user"));
         }
     }
 
     public async Task<Result> ResetPasswordAsync(
-        string identityId, 
-        string newPassword, 
+        string identityId,
+        string newPassword,
         CancellationToken cancellationToken = default)
     {
         try
@@ -161,9 +163,6 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
             string? token = await _clientFactory.GetAccessToken();
             string realm = _clientFactory.GetRealm();
 
-            _logger.LogDebug("Resetting password for user {IdentityId} in realm {Realm}", 
-                identityId, realm);
-
             var credential = new KcCredentials
             {
                 Type = "password",
@@ -171,17 +170,17 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
                 Temporary = false
             };
 
-            KcResponse<object>? response = await client.Users.ResetPasswordAsync(realm, token, identityId, credential, cancellationToken);
-            
+            KcResponse<object> response = await client.Users.ResetPasswordAsync(realm, token, identityId, credential, cancellationToken);
+
             if (response.IsError)
             {
                 _logger.LogWarning(response.Exception,
-                    "Failed to reset password for user {IdentityId}. Error: {Error}", 
+                    "Failed to reset password for user {IdentityId}. Error: {Error}",
                     identityId,
                     response.ErrorMessage);
-                
+
                 return Result.Failure(new Error(
-                    "Keycloak.PasswordResetFailed", 
+                    "Keycloak.PasswordResetFailed",
                     "Failed to reset password in identity provider"));
             }
 
@@ -192,13 +191,13 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
         {
             _logger.LogError(ex, "Error resetting password for user {IdentityId}", identityId);
             return Result.Failure(new Error(
-                "Keycloak.UnexpectedError", 
+                "Keycloak.UnexpectedError",
                 "An unexpected error occurred while resetting the password"));
         }
     }
 
     public async Task<UserResponse?> GetUserByIdentityIdAsync(
-        string identityId, 
+        string identityId,
         CancellationToken cancellationToken = default)
     {
         try
@@ -206,8 +205,8 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
             IKeycloakClient client = await _clientFactory.GetClientAsync();
             string? token = await _clientFactory.GetAccessToken();
             string realm = _clientFactory.GetRealm();
-            
-            KcResponse<KcUser>? kcUser = await client.Users.GetAsync(realm, token, identityId, cancellationToken);
+
+            KcResponse<KcUser> kcUser = await client.Users.GetAsync(realm, token, identityId, cancellationToken);
 
             if (!kcUser.IsError && kcUser.Response != null)
             {
@@ -254,16 +253,15 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
                 return null;
             }
 
-            KcUser? user = existsResponse.Response?.FirstOrDefault();
+            KcUser? user = existsResponse.Response.FirstOrDefault();
 
-            if (user?.Id == null)
+            if (user?.Id != null)
             {
-                _logger.LogWarning("User with email {Email} not found.", email); 
-                return null;
+                return MapToUserResponseDto(user);
             }
 
-            // If the count is greater than 0, the user exists
-            return MapToUserResponseDto(user);
+            _logger.LogWarning("User with email {Email} not found.", email);
+            return null;
         }
         catch (Exception ex)
         {
@@ -280,28 +278,29 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
             IKeycloakClient client = await _clientFactory.GetClientAsync();
             string? token = await _clientFactory.GetAccessToken();
             string realm = _clientFactory.GetRealm();
-            
-            KcResponse<bool> existsResponse = await client.Users.IsUserExistsByEmailAsync(realm, token, email, cancellationToken);
-            
-            if (existsResponse.IsError)
-            {
-                _logger.LogWarning(
-                    existsResponse.Exception,
-                    "There's been an error while checking if the user with email {Email} exists. Error: {Error}", 
-                    email,
-                    existsResponse.ErrorMessage);
 
-                return false;
+            KcResponse<bool> existsResponse = await client.Users.IsUserExistsByEmailAsync(realm, token, email, cancellationToken);
+
+            if (!existsResponse.IsError)
+            {
+                return existsResponse.Response;
             }
-            
-            return existsResponse.Response;
+
+            _logger.LogWarning(
+                existsResponse.Exception,
+                "There's been an error while checking if the user with email {Email} exists. Error: {Error}",
+                email,
+                existsResponse.ErrorMessage);
+
+            return false;
+
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while checking existence of user with email {Email} in Keycloak", email);
             return false;
         }
-        
+
     }
 
     public async Task<bool> ValidateCredentialsAsync(string email,
@@ -312,7 +311,7 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
         {
             IKeycloakClient client = await _clientFactory.GetClientAsync();
             string realm = _clientFactory.GetRealm();
-            
+
             KcOperationResponse<bool>? validateResponse = await client.Auth.ValidatePasswordAsync(
                 realm,
                 new KcClientCredentials
@@ -330,13 +329,13 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
             {
                 _logger.LogWarning(
                     validateResponse.Exception,
-                    "Failed to validate the password for user {Email}. Error: {Error}", 
+                    "Failed to validate the password for user {Email}. Error: {Error}",
                     email,
                     validateResponse.ErrorMessage);
 
                 return false;
             }
-            
+
             return validateResponse.Response;
         }
         catch (Exception ex)
@@ -346,11 +345,113 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
         }
     }
 
-    private static UserResponse? MapToUserResponseDto(KcUser kcUser) =>
+    private static UserResponse MapToUserResponseDto(KcUser kcUser) =>
         new(
             Guid.Parse(kcUser.Id),
             kcUser.FirstName,
             kcUser.LastName,
-            kcUser.Email
+            kcUser.Email,
+            DateOnly.MinValue,
+            null
         );
+
+    public async Task<Result> UpdateUserEmailAsync(string identityId, string newEmail, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            IKeycloakClient client = await _clientFactory.GetClientAsync();
+            string? token = await _clientFactory.GetAccessToken();
+            string realm = _clientFactory.GetRealm();
+
+            var userUpdate = new KcUser
+            {
+                Email = newEmail,
+                UserName = newEmail,
+                EmailVerified = true
+            };
+
+            KcResponse<object> response = await client.Users.UpdateAsync(realm, token, identityId, userUpdate, cancellationToken);
+
+            if (!response.IsError)
+            {
+                return Result.Success();
+            }
+
+            _logger.LogWarning(response.Exception,
+                "Failed to update email for user {IdentityId}. Error: {Error}",
+                identityId,
+                response.ErrorMessage);
+
+            return Result.Failure(new Error("Keycloak.EmailUpdateFailed", "Failed to update email in identity provider"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking existence of user with id {IdentityId} in Keycloak", identityId);
+            return Result.Failure(new Error("Keycloak.UnexpectedError", "An unexpected error occurred while updating the user email"));
+        }
+    }
+
+    public async Task<Result> LogoutAllSessionsAsync(string identityId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            IKeycloakClient client = await _clientFactory.GetClientAsync();
+            string? token = await _clientFactory.GetAccessToken();
+            string realm = _clientFactory.GetRealm();
+
+            KcResponse<object> response = await client.Users.LogoutFromAllSessionsAsync(realm, token, identityId, cancellationToken);
+
+            if (!response.IsError)
+            {
+                return Result.Success();
+            }
+
+            _logger.LogWarning(response.Exception,
+                "Failed to logout sessions for user {IdentityId}. Error: {Error}",
+                identityId,
+                response.ErrorMessage);
+
+            return Result.Failure(new Error("Keycloak.LogoutFailed", "Failed to logout user sessions"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error logging out user {IdentityId} from Keycloak", identityId);
+            return Result.Failure(new Error("Keycloak.UnexpectedError", "An unexpected error occurred while logging out the user"));
+        }
+    }
+
+    public async Task<Result> UpdateUserProfileAsync(string identityId, string firstName, string lastName, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            IKeycloakClient client = await _clientFactory.GetClientAsync();
+            string? token = await _clientFactory.GetAccessToken();
+            string realm = _clientFactory.GetRealm();
+
+            var userUpdate = new KcUser
+            {
+                FirstName = firstName,
+                LastName = lastName
+            };
+
+            KcResponse<object> response = await client.Users.UpdateAsync(realm, token, identityId, userUpdate, cancellationToken);
+
+            if (!response.IsError)
+            {
+                return Result.Success();
+            }
+
+            _logger.LogWarning(response.Exception,
+                "Failed to update profile for user {IdentityId}. Error: {Error}",
+                identityId,
+                response.ErrorMessage);
+
+            return Result.Failure(new Error("Keycloak.ProfileUpdateFailed", "Failed to update profile in identity provider"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating profile for user {IdentityId} in Keycloak", identityId);
+            return Result.Failure(new Error("Keycloak.UnexpectedError", "An unexpected error occurred while updating the user profile"));
+        }
+    }
 }

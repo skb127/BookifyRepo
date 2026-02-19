@@ -1,12 +1,18 @@
-﻿﻿using System.Net;
-using Asp.Versioning;
+﻿using Asp.Versioning;
 using Bookify.Application.Users;
-using Bookify.Application.Users.ChangeUserPassword;
+using Bookify.Application.Users.ChangePasswordUser;
+using Bookify.Application.Users.ConfirmEmailChange;
 using Bookify.Application.Users.GetLoggedInUser;
+using Bookify.Application.Users.GetUserById;
+using Bookify.Application.Users.InitiateEmailChange;
 using Bookify.Application.Users.LoginUser;
 using Bookify.Application.Users.LogoutUser;
+using Bookify.Application.Users.PasswordRecovery;
+using Bookify.Application.Users.PasswordReset;
 using Bookify.Application.Users.RefreshTokenUser;
 using Bookify.Application.Users.RegisterUser;
+using Bookify.Application.Users.RevokeAllSessions;
+using Bookify.Application.Users.UpdateUserProfile;
 using Bookify.Domain.Abstractions;
 using Bookify.Infrastructure.Authorization;
 using MediatR;
@@ -22,20 +28,76 @@ public sealed class UsersController : ControllerBase
 {
     private readonly ISender _sender;
 
-    public UsersController(ISender sender) => 
+    public UsersController(ISender sender) =>
         _sender = sender;
 
-    [HttpGet("me")]
-    //[MapToApiVersion(ApiVersions.V1)]
-    //[Authorize(Roles = Roles.Registered)] // Role-based
-    [HasPermission(Permissions.UsersRead)] // Permission-based
-    public async Task<IActionResult> GetLoggedInUser(CancellationToken cancellationToken)
+    [AllowAnonymous]
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(
+        LoginUserRequest request,
+        CancellationToken cancellationToken)
     {
-        var query = new GetLoggedInUserQuery();
+        var command = new LoginUserCommand(
+            request.Email,
+            request.Password);
 
-        Result<UserResponse> result = await _sender.Send(query, cancellationToken);
+        Result<AccessTokenResponse> result = await _sender.Send(command, cancellationToken);
 
-        return Ok(result.Value);
+
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        // Set the new refresh token in the cookie
+        SetRefreshTokenCookie(result.Value);
+
+        return Ok(new AccessTokenOnlyResponse(result.Value.AccessToken));
+    }
+
+    [Authorize]
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
+    {
+        if (!Request.Cookies.TryGetValue("refreshToken", out string? refreshToken))
+        {
+            return Unauthorized();
+        }
+
+        var command = new RefreshTokenUserCommand(refreshToken);
+
+        Result<AccessTokenResponse> result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Unauthorized();
+        }
+
+        // Set the new refresh token in the cookie
+        SetRefreshTokenCookie(result.Value);
+
+        return Ok(new AccessTokenOnlyResponse(result.Value.AccessToken));
+    }
+
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
+    {
+        if (!Request.Cookies.TryGetValue("refreshToken", out string? refreshToken))
+        {
+            return NoContent();
+        }
+
+        var command = new LogoutUserCommand(refreshToken);
+
+        await _sender.Send(command, cancellationToken);
+
+        Response.Cookies.Delete("refreshToken");
+
+        return NoContent();
     }
 
     [AllowAnonymous]
@@ -48,7 +110,8 @@ public sealed class UsersController : ControllerBase
             request.Email,
             request.FirstName,
             request.LastName,
-            request.Password);
+            request.Password,
+            request.DateOfBirth);
 
         Result<Guid> result = await _sender.Send(command, cancellationToken);
 
@@ -63,86 +126,82 @@ public sealed class UsersController : ControllerBase
         return Ok(result.Value);
     }
 
-    [AllowAnonymous]
-    [HttpPost("login")]
-    public async Task<IActionResult> Login(
-        LoginUserRequest request,
-        CancellationToken cancellationToken)
-    {
-        var command = new LoginUserCommand(
-            request.Email,
-            request.Password);
+    // ... (rest of methods)
 
-        Result<AccessTokenResponse> result = await _sender.Send(command, cancellationToken);
+    [HasPermission(Permissions.UsersAdminRead)]
+    [HttpGet("{userId:guid}")]
+    public async Task<IActionResult> GetUserById(Guid userId, CancellationToken cancellationToken)
+    {
+        var query = new GetUserByIdQuery(userId);
+
+        Result<UserResponse> result = await _sender.Send(query, cancellationToken);
 
         if (result.IsFailure)
         {
-            return Problem(
-                statusCode: StatusCodes.Status401Unauthorized,
-                detail: result.Error.Name,
-                title: result.Error.Code);
+            return NotFound();
         }
 
-        // Set the new refresh token in the cookie
-        SetRefreshTokenCookie(result.Value);
-
-        return Ok(new AccessTokenOnlyResponse(result.Value.AccessToken));
+        return Ok(result.Value);
     }
 
-    [HttpPost("logout")]
     [Authorize]
-    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
+    [HttpPost("revoke-all-sessions")]
+    public async Task<IActionResult> RevokeAllSessions(CancellationToken cancellationToken)
     {
-        if (!Request.Cookies.TryGetValue("refreshToken", out string? refreshToken) ||
-            string.IsNullOrWhiteSpace(refreshToken))
-        {
-            return Unauthorized();
-        }
-
-        var command = new LogoutUserCommand(refreshToken);
+        var command = new RevokeAllSessionsCommand();
 
         Result result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {
             return Problem(
-                statusCode: StatusCodes.Status401Unauthorized,
+                statusCode: StatusCodes.Status500InternalServerError,
                 detail: result.Error.Name,
                 title: result.Error.Code);
         }
-        
-        // Delete the refresh token cookie
+
         Response.Cookies.Delete("refreshToken");
-        
+
         return NoContent();
     }
 
-    [AllowAnonymous]
-    [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
+    [HttpGet("me")]
+    //[MapToApiVersion(ApiVersions.V1)]
+    //[Authorize(Roles = Roles.Registered)] // Role-based
+    [HasPermission(Permissions.UsersRead)] // Permission-based
+    public async Task<IActionResult> GetLoggedInUser(CancellationToken cancellationToken)
     {
-        if (!Request.Cookies.TryGetValue("refreshToken", out string? refreshToken) ||
-            string.IsNullOrWhiteSpace(refreshToken))
-        {
-            return Unauthorized();
-        }
+        var query = new GetLoggedInUserQuery();
 
-        var command = new RefreshTokenUserCommand(refreshToken);
+        Result<UserResponse> result = await _sender.Send(query, cancellationToken);
 
-        Result<AccessTokenResponse> result = await _sender.Send(command, cancellationToken);
+        return Ok(result.Value);
+    }
+
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile(
+        UpdateUserProfileRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new UpdateUserProfileCommand(
+            request.FirstName,
+            request.LastName,
+            request.PhoneNumber,
+            request.DateOfBirth,
+            request.Password);
+
+        Result result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {
             return Problem(
-                statusCode: StatusCodes.Status401Unauthorized,
+                statusCode: StatusCodes.Status400BadRequest,
                 detail: result.Error.Name,
                 title: result.Error.Code);
         }
 
-        // Set the new refresh token in the cookie
-        SetRefreshTokenCookie(result.Value);
-
-        return Ok(new AccessTokenOnlyResponse(result.Value.AccessToken));
+        return Ok();
     }
 
     [Authorize]
@@ -151,7 +210,7 @@ public sealed class UsersController : ControllerBase
         ChangeUserPasswordRequest request,
         CancellationToken cancellationToken)
     {
-        var command = new ChangeUserPasswordCommand(
+        var command = new ChangePasswordUserCommand(
             request.CurrentPassword,
             request.NewPassword);
 
@@ -166,6 +225,88 @@ public sealed class UsersController : ControllerBase
         }
 
         return Ok();
+    }
+
+    [AllowAnonymous]
+    //[Turnstile]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+        PasswordRecoveryRequest recoveryRequest,
+        CancellationToken cancellationToken)
+    {
+        var command = new PasswordRecoveryCommand(recoveryRequest.Email);
+
+        _ = await _sender.Send(command, cancellationToken);
+
+        return Ok();
+    }
+
+    [AllowAnonymous]
+    //[Turnstile]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(
+        PasswordResetRequest resetRequest,
+        CancellationToken cancellationToken)
+    {
+        var command = new PasswordResetCommand(resetRequest.Token, resetRequest.NewPassword);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok();
+    }
+
+    [Authorize]
+    [HttpPost("change-email")]
+    public async Task<IActionResult> InitiateEmailChange(
+        InitiateEmailChangeRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new InitiateEmailChangeCommand(
+            request.NewEmail,
+            request.CurrentPassword);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok();
+    }
+
+    [AllowAnonymous]
+    [HttpPost("confirm-email-change")]
+    public async Task<IActionResult> ConfirmEmailChange(
+        ConfirmEmailChangeRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new ConfirmEmailChangeCommand(request.Token);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Content(
+            "<html><body><h1>Success</h1><p>Your email has been successfully changed! You can now login with your new email.</p></body></html>",
+            "text/html");
     }
 
     private void SetRefreshTokenCookie(AccessTokenResponse accessTokenResponse)

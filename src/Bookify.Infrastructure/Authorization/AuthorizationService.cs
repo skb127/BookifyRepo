@@ -53,10 +53,10 @@ internal sealed class AuthorizationService
             return cachedPermissions;
         }
 
-        ICollection <Permission> permissions = await _dbContext.Set<User>()
+        ICollection<Permission> permissions = await _dbContext.Set<User>()
             .Where(user => user.IdentityId == identityId)
-            .SelectMany(user => user.Roles.Select(role => role.Permissions))
-            .FirstAsync();
+            .SelectMany(user => user.Roles.SelectMany(role => role.Permissions))
+            .ToArrayAsync();
 
         // We are using a HasSet to get rid of any duplicate values
         var permissionSet = permissions.Select(p => p.Name).ToHashSet();

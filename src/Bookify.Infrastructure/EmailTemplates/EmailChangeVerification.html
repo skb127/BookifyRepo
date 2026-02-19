@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Your New Email Address</title>
+</head>
+
+<body
+    style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 40px 0;">
+                <table role="presentation"
+                    style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td
+                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">Confirm Email
+                                Change
+                            </h1>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+                                Hi <strong>{{ FirstName }}</strong>,
+                            </p>
+                            <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+                                You've requested to change your Bookify account email to <strong>{{ NewEmail
+                                    }}</strong>.
+                            </p>
+                            <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
+                                Click the button below to confirm this email address:
+                            </p>
+
+                            <!-- CTA Button -->
+                            <table role="presentation" style="margin: 0 auto;">
+                                <tr>
+                                    <td
+                                        style="border-radius: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                        <a href="{{ ConfirmEmailUrl }}"
+                                            style="display: inline-block; padding: 14px 30px; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600;">
+                                            Confirm Email Address
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Warning -->
+                            <div
+                                style="margin-top: 30px; padding: 20px; background-color: #fff8e6; border-left: 4px solid #ffc107; border-radius: 4px;">
+                                <p style="color: #856404; font-size: 14px; margin: 0;">
+                                    <strong>⏰ Important:</strong> This link will expire in <strong>{{ ExpirationMinutes
+                                        }}</strong> minutes.
+                                </p>
+                            </div>
+
+                            <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 30px 0 0;">
+                                If you didn't request this email change, please ignore this email. Your
+                                account email will remain unchanged.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td
+                            style="background-color: #f8f9fa; padding: 30px; text-align: center; border-radius: 0 0 8px 8px;">
+                            <p style="color: #888888; font-size: 14px; margin: 0 0 10px;">
+                                Need help? Contact our <a href="mailto:{{ SupportEmail }}">support team</a> anytime.
+                            </p>
+                            <p style="color: #aaaaaa; font-size: 12px; margin: 0;">
+                                © {{ date.now | date.to_string "%Y" }} Bookify.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

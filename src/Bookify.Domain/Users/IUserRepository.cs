@@ -1,11 +1,24 @@
 ﻿using System.Linq.Expressions;
 
 namespace Bookify.Domain.Users;
+
 public interface IUserRepository
 {
+    /// <summary>
+    /// Gets a user by ID without loading related entities.
+    /// </summary>
     Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     void Add(User user);
 
-    Task<User?> FindOneAsync(Expression<Func<User, bool>> predicate, CancellationToken cancellationToken);
+    void AddEmailChangeToken(User user);
+
+    void AddPasswordResetToken(User user);
+    
+    Task<User?> FindOneAsync(Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default);
+
+    Task<User?> GetOneWithIncludesAsync(
+        Expression<Func<User, bool>> predicate,
+        CancellationToken cancellationToken,
+        params Expression<Func<User, object?>>[] includes);
 }

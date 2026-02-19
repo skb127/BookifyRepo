@@ -4,7 +4,9 @@ using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Email;
-using Bookify.Application.Common.Interfaces;
+using Bookify.Application.Abstractions.Identity;
+using Bookify.Application.Abstractions.Security;
+using Bookify.Application.Options;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
@@ -19,7 +21,9 @@ using Bookify.Infrastructure.Email;
 using Bookify.Infrastructure.Identity;
 using Bookify.Infrastructure.Outbox;
 using Bookify.Infrastructure.Repositories;
+using Bookify.Infrastructure.Security;
 using Dapper;
+using MailKit.Net.Smtp;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -42,7 +46,7 @@ public static class DependencyInjection
     {
         services.AddTransient<IDateTimeProvider, DateTimeProvider>();
 
-        services.AddTransient<IEmailService, EmailService>();
+        AddEmail(services, configuration);
 
         AddPersistence(services, configuration);
 
@@ -60,7 +64,22 @@ public static class DependencyInjection
 
         AddBackgroundJobs(services, configuration);
 
+        AddTurnstile(services, configuration);
+        
+        AddOptions(services, configuration);
+
         return services;
+    }
+
+    private static void AddEmail(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<EmailOptions>(configuration.GetSection("Email"));
+        
+        services.AddSingleton<IEmailTemplateService, ScribanTemplateService>();
+
+        services.AddTransient<IEmailService, SmtpEmailService>();
+
+        services.AddTransient<ISmtpClient, SmtpClient>();
     }
 
     private static void AddAuthentication(IServiceCollection services, IConfiguration configuration)
@@ -107,7 +126,8 @@ public static class DependencyInjection
         services.AddSingleton<IKeycloakClientFactory, KeycloakClientFactory>();
         services.AddScoped<IIdentityProvider, KeycloakIdentityProvider>();
     }
-    
+
+
     private static void AddPersistence(IServiceCollection services, IConfiguration configuration)
     {
         string connectionString =
@@ -126,7 +146,8 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
-        services.AddSingleton<ISqlConnectionFactory>(_ => 
+        services.AddSingleton<ISqlConnectionFactory>(_ =>
+
             new SqlConnectionFactory(connectionString));
 
         SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
@@ -159,7 +180,7 @@ public static class DependencyInjection
         services.AddHealthChecks()
             .AddNpgSql(configuration.GetConnectionString("Database")!)
             .AddRedis(configuration.GetConnectionString("Cache")!)
-            .AddUrlGroup(new Uri(configuration["Keycloak:BaseUrl"]!), HttpMethod.Get, "keycloack");
+            .AddUrlGroup(new Uri(configuration["Keycloak:BaseUrl"]!), HttpMethod.Get, "keycloak");
 
     private static void AddApiVersioning(IServiceCollection services) =>
         // Add API Versioning to the services collection, this is going to allow us to version our API endpoints
@@ -186,5 +207,23 @@ public static class DependencyInjection
         services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true); // Ensure that Quartz jobs are gracefully shutdown when the application stops
 
         services.ConfigureOptions<ProcessOutboxMessagesJobSetup>(); // Configure the Quartz job to process outbox messages, this is going to be triggered based on the schedule defined in the OutboxOptions
+    }
+
+    private static void AddTurnstile(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<TurnstileOptions>(configuration.GetSection("Turnstile"));
+
+        services.AddHttpClient<ITurnstileValidator, TurnstileService>((sp, httpClient) =>
+        {
+            TurnstileOptions options = sp.GetRequiredService<IOptions<TurnstileOptions>>().Value;
+            
+            httpClient.BaseAddress = options.BaseUrl;
+        });
+    }
+
+    private static void AddOptions(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<BookifyAppOptions>(configuration.GetSection("BookifyApp"));
+        services.Configure<ExpirationOptions>(configuration.GetSection("Expiration"));
     }
 }

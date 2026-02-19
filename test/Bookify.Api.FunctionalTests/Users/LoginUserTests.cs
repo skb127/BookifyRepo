@@ -11,7 +11,7 @@ public class LoginUserTests : BaseFunctionalTest
     private const string Email = "login@test.com";
     private const string Password = "ClaveSegura1?";
 
-    public LoginUserTests(FunctionalTestWebAppFactory factory) 
+    public LoginUserTests(FunctionalTestWebAppFactory factory)
         : base(factory)
     {
     }
@@ -33,7 +33,7 @@ public class LoginUserTests : BaseFunctionalTest
     public async Task Login_ShouldReturnOk_WhenUserDoesExists()
     {
         // Arrange
-        var registerRequest = new RegisterUserRequest(Email, "name", "last", Password);
+        var registerRequest = new RegisterUserRequest(Email, "name", "last", Password, new DateOnly(2000, 1, 1));
         await HttpClient.PostAsJsonAsync("api/v1/users/register", registerRequest);
 
         var request = new LoginUserRequest(Email, Password);

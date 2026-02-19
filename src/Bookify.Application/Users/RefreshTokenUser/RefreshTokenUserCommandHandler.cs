@@ -5,7 +5,7 @@ using Bookify.Domain.Users;
 
 namespace Bookify.Application.Users.RefreshTokenUser;
 
-internal class RefreshTokenUserCommandHandler : ICommandHandler<RefreshTokenUserCommand, AccessTokenResponse>
+internal sealed class RefreshTokenUserCommandHandler : ICommandHandler<RefreshTokenUserCommand, AccessTokenResponse>
 {
     private readonly IJwtService _jwtService;
 

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Bookify.Application.IntegrationTests.Users;
 
+[Collection("IntegrationTests")]
 public class LogoutUserTests : BaseIntegrationTest
 {
     public LogoutUserTests(IntegrationTestWebAppFactory factory) : base(factory)
@@ -26,7 +27,7 @@ public class LogoutUserTests : BaseIntegrationTest
     public async Task Logout_ShouldReturnNoContent_WhenUserLogoutSucceeds()
     {
         // Arrange
-        string accessToken = await GetAccessToken(UserData.RegisterTestUserRequest3.Email, UserData.RegisterTestUserRequest3.Password);
+        string accessToken = await GetAccessToken(UserData.LogoutTestUserRequest.Email, UserData.LogoutTestUserRequest.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);

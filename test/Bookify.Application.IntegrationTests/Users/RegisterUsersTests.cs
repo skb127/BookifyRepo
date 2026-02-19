@@ -6,6 +6,7 @@ using FluentAssertions;
 
 namespace Bookify.Application.IntegrationTests.Users;
 
+[Collection("IntegrationTests")]
 public class RegisterUsersTests : BaseIntegrationTest
 {
     public RegisterUsersTests(IntegrationTestWebAppFactory factory) : base(factory)
@@ -17,7 +18,7 @@ public class RegisterUsersTests : BaseIntegrationTest
     public async Task Register_ShouldReturnOk_WhenRequestIsValid()
     {
         // Arrange
-        var request = new RegisterUserRequest("user@test.com", "name", "lastname", "ClaveSegura1$");
+        var request = new RegisterUserRequest($"user-{Guid.NewGuid()}@test.com", "name", "lastname", "ClaveSegura1$", new DateOnly(2000, 1, 1));
 
         // Act
         HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/users/register", request);
@@ -33,7 +34,7 @@ public class RegisterUsersTests : BaseIntegrationTest
         string lastName,
         string password)
     {
-        var request = new RegisterUserRequest(email, firstName, lastName, password);
+        var request = new RegisterUserRequest(email, firstName, lastName, password, new DateOnly(2000, 1, 1));
 
         // Act
         HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/users/register", request);

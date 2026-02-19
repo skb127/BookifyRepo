@@ -1,7 +1,7 @@
 using Bookify.Application.Abstractions.Messaging;
 
-namespace Bookify.Application.Users.ChangeUserPassword;
+namespace Bookify.Application.Users.ChangePasswordUser;
 
-public sealed record ChangeUserPasswordCommand(
+public sealed record ChangePasswordUserCommand(
     string CurrentPassword,
     string NewPassword) : ICommand;

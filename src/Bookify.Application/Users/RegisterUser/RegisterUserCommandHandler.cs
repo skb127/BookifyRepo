@@ -1,6 +1,6 @@
 ﻿using Bookify.Application.Abstractions.Authentication;
+using Bookify.Application.Abstractions.Identity;
 using Bookify.Application.Abstractions.Messaging;
-using Bookify.Application.Common.Interfaces;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Users;
 
@@ -14,7 +14,7 @@ internal sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserC
     private readonly IIdentityProvider _identityProvider;
 
     public RegisterUserCommandHandler(IAuthenticationService authenticationService,
-        IUserRepository userRepository, 
+        IUserRepository userRepository,
         IUnitOfWork unitOfWork,
         IIdentityProvider identityProvider)
     {
@@ -30,12 +30,12 @@ internal sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserC
     {
         // Check if the user exists (in both identity provider and local database)
         User? userAlreadyExistsDb = await _userRepository.FindOneAsync(user => user.Email == new Email(request.Email), cancellationToken);
-        
+
         if (userAlreadyExistsDb is not null)
         {
             return Result.Failure<Guid>(UserErrors.AlreadyExists);
         }
-        
+
         bool userAlreadyExistsInProvider = await _identityProvider
             .CheckUserByEmailExistsAsync(request.Email, cancellationToken);
 
@@ -43,11 +43,12 @@ internal sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserC
         {
             return Result.Failure<Guid>(UserErrors.AlreadyExists);
         }
-        
+
         var user = User.Create(
             new FirstName(request.FirstName),
             new LastName(request.LastName),
-            new Email(request.Email));
+            new Email(request.Email),
+            DateOfBirth.Create(request.DateOfBirth!.Value));
 
         string identityId = await _authenticationService.RegisterAsync(
             user,

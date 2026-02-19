@@ -16,5 +16,9 @@ internal sealed class RegisterUserCommandValidator : AbstractValidator<RegisterU
         RuleFor(c => c.Password)
             .NotEmpty()
             .StrongPassword();
+
+        RuleFor(c => c.DateOfBirth)
+            .NotNull()
+            .MustBeAtLeast18YearsOld();
     }
 }

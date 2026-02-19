@@ -54,11 +54,6 @@ internal sealed class KeycloakClientFactory : IKeycloakClientFactory, IDisposabl
         {
             string realm = _options.Realm;
 
-            _logger.LogDebug(
-                "Obtaining Keycloak admin access token. Realm: {Realm}, ClientId: {ClientId}",
-                realm,
-                _options.AdminClientId);
-
             ArgumentNullException.ThrowIfNull(_client);
 
             KcResponse<KcIdentityProviderToken>? tokenResponse = await _client.Auth.GetClientCredentialsTokenAsync(

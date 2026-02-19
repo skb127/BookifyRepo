@@ -32,7 +32,9 @@ internal sealed class GetLoggedInUserQueryHandler
                                id AS Id,
                                first_name AS FirstName,
                                last_name AS LastName,
-                               email AS Email
+                               email AS Email,
+                               date_of_birth AS DateOfBirth,
+                               phone_number AS PhoneNumber
                            FROM users
                            WHERE identity_id = @IdentityId
                            """;

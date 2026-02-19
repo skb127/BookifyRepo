@@ -16,7 +16,7 @@ public class BookingTests : BaseTest
     public void Reserve_ShouldRaiseBookingReservedDomainEvent()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email);
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -35,7 +35,7 @@ public class BookingTests : BaseTest
     public void Reserve_ShouldSetApartmentLastBookedOnUtc()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email);
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);

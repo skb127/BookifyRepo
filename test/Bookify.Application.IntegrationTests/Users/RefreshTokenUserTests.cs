@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Bookify.Application.IntegrationTests.Users;
 
+[Collection("IntegrationTests")]
 public class RefreshTokenUserTests : BaseIntegrationTest
 {
     private readonly IntegrationTestWebAppFactory _factory;
@@ -22,11 +23,11 @@ public class RefreshTokenUserTests : BaseIntegrationTest
     public async Task Refresh_ShouldReturnOk_AndNewAccessToken_AndSetRefreshTokenCookie_WhenFlowIsCorrect()
     {
         // Arrange: Login to get the accessToken and refreshToken
-        string accessToken = await GetAccessToken(UserData.RegisterTestUserRequest2.Email, UserData.RegisterTestUserRequest2.Password);
+        string accessToken = await GetAccessToken(UserData.RefreshTokenUserRequest.Email, UserData.RefreshTokenUserRequest.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
-        
+
         // Act: call refresh endpoint with the same HttpClient (sends cookie automatically)
         using HttpResponseMessage refreshResponse = await HttpClient.PostAsync(
             new Uri("api/v1/users/refresh", UriKind.Relative),
@@ -37,7 +38,7 @@ public class RefreshTokenUserTests : BaseIntegrationTest
 
         // Assert 2: body contains a non-empty accessToken
         var accessTokenResponse = await refreshResponse.Content.ReadFromJsonAsync<AccessTokenOnlyResponse>();
-        
+
         accessTokenResponse.Should().BeOfType<AccessTokenOnlyResponse>();
         accessTokenResponse.AccessToken.Should().NotBeNullOrWhiteSpace();
 
@@ -61,7 +62,7 @@ public class RefreshTokenUserTests : BaseIntegrationTest
 
         // Act
         using var response = await clientWithoutCookies.PostAsync(
-            new Uri("api/v1/users/refresh", UriKind.Relative), 
+            new Uri("api/v1/users/refresh", UriKind.Relative),
             null);
 
         // Assert

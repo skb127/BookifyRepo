@@ -12,10 +12,21 @@ internal sealed class RolePermissionConfiguration : IEntityTypeConfiguration<Rol
 
         builder.HasKey(rolePermission => new { rolePermission.RoleId, rolePermission.PermissionId });
 
-        builder.HasData(new RolePermission
-        {
-            RoleId = Role.Registered.Id,
-            PermissionId = Permission.UsersRead.Id
-        });
+        builder.HasData(
+            new RolePermission
+            {
+                RoleId = Role.Registered.Id,
+                PermissionId = Permission.UsersRead.Id
+            },
+            new RolePermission
+            {
+                RoleId = Role.Admin.Id,
+                PermissionId = Permission.UsersRead.Id
+            },
+            new RolePermission
+            {
+                RoleId = Role.Admin.Id,
+                PermissionId = Permission.UsersAdminRead.Id
+            });
     }
 }
