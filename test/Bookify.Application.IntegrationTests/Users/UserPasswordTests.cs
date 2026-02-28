@@ -31,7 +31,7 @@ public class UserPasswordTests : BaseIntegrationTest
     {
         // Arrange
         var user = UserData.PasswordRecoveryUserRequest;
-        _mockEmailService.Clear();
+        DateTime since = DateTime.UtcNow;
 
         // Act
         var request = new PasswordRecoveryRequest(user.Email);
@@ -41,7 +41,7 @@ public class UserPasswordTests : BaseIntegrationTest
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Verify email sent
-        EmailMessage recoveryEmail = await _mockEmailService.WaitForEmailToAsync(user.Email);
+        EmailMessage recoveryEmail = await _mockEmailService.WaitForEmailToAsync(user.Email, since: since);
         recoveryEmail.Subject.Should().Be("Password Recovery Request");
         recoveryEmail.Body.Should().Contain("/users/reset-password/");
     }
@@ -50,7 +50,7 @@ public class UserPasswordTests : BaseIntegrationTest
     public async Task ForgotPassword_ShouldReturnOk_WhenEmailDoesNotExist()
     {
         // Arrange
-        _mockEmailService.Clear();
+        DateTime since = DateTime.UtcNow;
         string unknownEmail = $"unknown-{Guid.NewGuid()}@test.com";
 
         // Act
@@ -61,8 +61,7 @@ public class UserPasswordTests : BaseIntegrationTest
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Verify NO email sent to this address
-        await Task.Delay(1000);
-        _mockEmailService.HasEmailTo(unknownEmail).Should().BeFalse();
+        await _mockEmailService.EnsureNoEmailToAsync(unknownEmail, since: since);
     }
 
     [Fact]
@@ -84,11 +83,11 @@ public class UserPasswordTests : BaseIntegrationTest
     {
         // Arrange
         var user = UserData.PasswordResetUserRequest;
-        _mockEmailService.Clear();
+        DateTime since = DateTime.UtcNow;
 
         await HttpClient.PostAsJsonAsync("api/v1/users/forgot-password", new PasswordRecoveryRequest(user.Email));
 
-        EmailMessage recoveryEmail = await _mockEmailService.WaitForEmailToAsync(user.Email);
+        EmailMessage recoveryEmail = await _mockEmailService.WaitForEmailToAsync(user.Email, since: since);
         string token = EmailTestUtils.ExtractToken(recoveryEmail.Body, "reset-password");
 
         string newPassword = "NewPassword123!";
@@ -171,7 +170,7 @@ public class UserPasswordTests : BaseIntegrationTest
         // Act - Forgot Password
         await customClient.PostAsJsonAsync("api/v1/users/forgot-password", new PasswordRecoveryRequest(user.Email));
 
-        EmailMessage recoveryEmail = await customEmailService.WaitForEmailToAsync(user.Email);
+        EmailMessage recoveryEmail = await customEmailService.WaitForEmailToAsync(user.Email, "Password Recovery Request");
         string token = EmailTestUtils.ExtractToken(recoveryEmail.Body, "reset-password");
 
         // Act - Reset Password

@@ -1,6 +1,7 @@
 ﻿using Bookify.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using IAuthorizationService = Bookify.Application.Abstractions.Authorization.IAuthorizationService;
 
 namespace Bookify.Infrastructure.Authorization;
 
@@ -22,7 +23,7 @@ internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<Perm
 
         using IServiceScope scope = _serviceProvider.CreateScope();
 
-        AuthorizationService authorizationService = scope.ServiceProvider.GetRequiredService<AuthorizationService>();
+        IAuthorizationService authorizationService = scope.ServiceProvider.GetRequiredService<IAuthorizationService>();
 
         string identityId = context.User.GetIdentityId();
 

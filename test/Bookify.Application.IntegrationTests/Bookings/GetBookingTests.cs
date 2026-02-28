@@ -6,11 +6,12 @@ using FluentAssertions;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 
+[Collection("IntegrationTests")]
 public class GetBookingTests : BaseIntegrationTest
 {
     private static readonly Guid BookingId = Guid.CreateVersion7();
 
-    public GetBookingTests(IntegrationTestWebAppFactory factory) 
+    public GetBookingTests(IntegrationTestWebAppFactory factory)
         : base(factory)
     {
     }

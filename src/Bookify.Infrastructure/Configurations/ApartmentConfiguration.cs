@@ -1,5 +1,6 @@
 ﻿using Bookify.Domain.Apartments;
 using Bookify.Domain.Shared;
+using Bookify.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -12,6 +13,14 @@ internal sealed class ApartmentConfiguration : IEntityTypeConfiguration<Apartmen
         builder.ToTable("apartments");
 
         builder.HasKey(apartment => apartment.Id);
+
+        builder.Property(apartment => apartment.OwnerId)
+            .IsRequired();
+
+        builder.HasOne<User>()
+            .WithMany()
+            .HasForeignKey(apartment => apartment.OwnerId)
+            .OnDelete(DeleteBehavior.Restrict); // Prevent deleting a User if they still own Apartments
 
         builder.OwnsOne(apartment => apartment.Address); // The value object is going to be mapped into a set of columns in the same table as the owning entity, in this case the Address columns are going to be in the apartments table
 

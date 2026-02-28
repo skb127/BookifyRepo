@@ -8,15 +8,17 @@ public sealed class Apartment : Entity
     private List<Amenity> _amenities = [];
 
     public Apartment(
-        Guid id, 
-        Name name, 
-        Description description, 
-        Address address, 
-        Money price, 
+        Guid id,
+        Guid ownerId,
+        Name name,
+        Description description,
+        Address address,
+        Money price,
         Money cleaningFee,
         IReadOnlyCollection<Amenity> amenities)
         : base(id)
     {
+        OwnerId = ownerId;
         Name = name;
         Description = description;
         Address = address;
@@ -31,9 +33,10 @@ public sealed class Apartment : Entity
     /// </summary>
     private Apartment()
     {
-        
+
     }
 
+    public Guid OwnerId { get; private set; }
     public Name Name { get; private set; } = null!;
     public Description Description { get; private set; } = null!;
     public Address Address { get; private set; } = null!;
@@ -44,7 +47,29 @@ public sealed class Apartment : Entity
     {
         get => _amenities.AsReadOnly();
 #pragma warning disable S1144 // Unused private types or members should be removed - Used by EF Core
-        private set => _amenities = [..value ?? []];
+        private set => _amenities = [.. value ?? []];
 #pragma warning restore S1144
+    }
+
+    public static Apartment Create(
+        Guid ownerId,
+        Name name,
+        Description description,
+        Address address,
+        Money price,
+        Money cleaningFee,
+        IReadOnlyCollection<Amenity> amenities)
+    {
+        var apartment = new Apartment(
+            Guid.CreateVersion7(),
+            ownerId,
+            name,
+            description,
+            address,
+            price,
+            cleaningFee,
+            amenities);
+
+        return apartment;
     }
 }

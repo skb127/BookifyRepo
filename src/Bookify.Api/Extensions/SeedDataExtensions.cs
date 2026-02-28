@@ -15,6 +15,26 @@ internal static class SeedDataExtensions
         ISqlConnectionFactory sqlConnectionFactory = scope.ServiceProvider.GetRequiredService<ISqlConnectionFactory>();
         using IDbConnection connection = sqlConnectionFactory.CreateConnection();
 
+        // Ensure System User exists to own the seeded apartments
+        const string insertSystemUserSql = """
+            INSERT INTO public.users (id, first_name, last_name, email, identity_id, status, date_of_birth)
+            VALUES (@Id, @FirstName, @LastName, @Email, @IdentityId, @Status, @DateOfBirth)
+            ON CONFLICT (id) DO NOTHING;
+            """;
+
+        var systemUser = new
+        {
+            Id = Guid.Empty,
+            FirstName = "System",
+            LastName = "User",
+            Email = "system@bookify.internal",
+            IdentityId = "00000000-0000-0000-0000-000000000000",
+            Status = 'A',
+            DateOfBirth = new DateOnly(1900, 1, 1)
+        };
+
+        connection.Execute(insertSystemUserSql, systemUser);
+
         var faker = new Faker();
 
         List<object> apartments = new();
@@ -23,6 +43,7 @@ internal static class SeedDataExtensions
             apartments.Add(new
             {
                 Id = Guid.NewGuid(),
+                OwnerId = systemUser.Id,
                 Name = faker.Company.CompanyName(),
                 Description = "Amazing view",
                 Country = faker.Address.Country(),
@@ -41,8 +62,8 @@ internal static class SeedDataExtensions
 
         const string sql = """
             INSERT INTO public.apartments
-            (id, "name", description, address_country, address_state, address_zip_code, address_city, address_street, price_amount, price_currency, cleaning_fee_amount, cleaning_fee_currency, amenities, last_booked_on_utc)
-            VALUES(@Id, @Name, @Description, @Country, @State, @ZipCode, @City, @Street, @PriceAmount, @PriceCurrency, @CleaningFeeAmount, @CleaningFeeCurrency, @Amenities, @LastBookedOn);
+            (id, owner_id, "name", description, address_country, address_state, address_zip_code, address_city, address_street, price_amount, price_currency, cleaning_fee_amount, cleaning_fee_currency, amenities, last_booked_on_utc)
+            VALUES(@Id, @OwnerId, @Name, @Description, @Country, @State, @ZipCode, @City, @Street, @PriceAmount, @PriceCurrency, @CleaningFeeAmount, @CleaningFeeCurrency, @Amenities, @LastBookedOn);
             """;
 
         connection.Execute(sql, apartments);

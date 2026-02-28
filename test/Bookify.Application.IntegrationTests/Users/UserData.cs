@@ -1,4 +1,4 @@
-﻿using Bookify.Api.Controllers.Users;
+using Bookify.Api.Controllers.Users;
 
 namespace Bookify.Application.IntegrationTests.Users;
 
@@ -20,6 +20,10 @@ internal static class UserData
     public static readonly RegisterUserRequest UpdateProfileUserRequest2 = new("updateprofile2@test.com", "Profile2", "User2", "ProfilePass456!", new DateOnly(2000, 1, 1));
     public static readonly RegisterUserRequest GetUserByIdUserRequest = new("getuserbyid@test.com", "Admin", "User", "AdminPass123!", new DateOnly(1995, 6, 15));
     public static readonly RegisterUserRequest RevokeSessionsUserRequest = new("revokesessions@test.com", "Revoke", "User", "RevokePass123!", new DateOnly(2000, 1, 1));
+
+    // Dedicated Users for Apartment tests
+    public static readonly RegisterUserRequest CreateApartmentStandardUserRequest = new("createapt_std@test.com", "AptStd", "User", "CreateApt123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest CreateApartmentAdminUserRequest = new("createapt_admin@test.com", "AptAdmin", "User", "CreateApt123!", new DateOnly(1995, 6, 15));
 
     public const string FirstName = "Test";
     public const string LastName = "User";

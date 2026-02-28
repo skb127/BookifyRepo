@@ -7,4 +7,8 @@ public static class ApartmentErrors
     public static readonly Error NotFound = new(
         "Apartment.NotFound",
         "The apartment with the specified identifier was not found");
+
+    public static readonly Error InvalidCurrency = new(
+        "Apartment.InvalidCurrency",
+        "The provided currency is invalid");
 }

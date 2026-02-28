@@ -1,4 +1,5 @@
-﻿using Bookify.Domain.Apartments;
+﻿using Bookify.Domain.Abstractions;
+using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Bookings.Events;
 using Bookify.Domain.Shared;
@@ -47,5 +48,179 @@ public class BookingTests : BaseTest
 
         // Assert
         apartment.LastBookedOnUtc.Should().Be(utcNow);
+    }
+
+    [Fact]
+    public void Cancel_ShouldReturnFailure_WhenStatusIsNotConfirmed()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = DateTime.UtcNow;
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+
+        // Act
+        Result result = booking.Cancel(utcNow);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.NotConfirmed);
+    }
+
+    [Fact]
+    public void Cancel_ShouldReturnFailure_WhenDateHasStarted()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = DateTime.UtcNow;
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.Confirm(utcNow);
+
+        DateTime cancellationDate = new(2025, 12, 2, 12, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        Result result = booking.Cancel(cancellationDate);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.AlreadyStarted);
+    }
+
+    [Fact]
+    public void Cancel_ShouldSucceed_WhenValid()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = DateTime.UtcNow;
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.Confirm(utcNow);
+
+        DateTime cancellationDate = new(2025, 11, 30, 12, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        Result result = booking.Cancel(cancellationDate);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        booking.Status.Should().Be(BookingStatus.Cancelled);
+        booking.CancelledOnUtc.Should().Be(cancellationDate);
+
+        BookingCancelledDomainEvent domainEvent = AssertDomainEventWasPublished<BookingCancelledDomainEvent>(booking);
+
+        domainEvent.BookingId.Should().Be(booking.Id);
+    }
+
+    [Fact]
+    public void Reject_ShouldReturnFailure_WhenStatusIsNotReserved()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = DateTime.UtcNow;
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.Confirm(utcNow); // Change status to Confirmed
+
+        // Act
+        Result result = booking.Reject(utcNow);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.NotReserved);
+    }
+
+    [Fact]
+    public void Reject_ShouldSucceed_WhenStatusIsReserved()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = DateTime.UtcNow;
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+
+        DateTime rejectionDate = new(2025, 11, 30, 12, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        Result result = booking.Reject(rejectionDate);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        booking.Status.Should().Be(BookingStatus.Rejected);
+        booking.RejectedOnUtc.Should().Be(rejectionDate);
+
+        BookingRejectedDomainEvent domainEvent = AssertDomainEventWasPublished<BookingRejectedDomainEvent>(booking);
+
+        domainEvent.BookingId.Should().Be(booking.Id);
+    }
+
+    [Fact]
+    public void Complete_ShouldReturnFailure_WhenStatusIsNotConfirmed()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = DateTime.UtcNow;
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+
+        // Act
+        Result result = booking.Complete(utcNow);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.NotConfirmed);
+    }
+
+    [Fact]
+    public void Complete_ShouldSucceed_WhenStatusIsConfirmed()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = DateTime.UtcNow;
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.Confirm(utcNow);
+
+        DateTime completionDate = new(2025, 12, 16, 12, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        Result result = booking.Complete(completionDate);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        booking.Status.Should().Be(BookingStatus.Completed);
+        booking.CompletedOnUtc.Should().Be(completionDate);
+
+        BookingCompletedDomainEvent domainEvent = AssertDomainEventWasPublished<BookingCompletedDomainEvent>(booking);
+
+        domainEvent.BookingId.Should().Be(booking.Id);
     }
 }

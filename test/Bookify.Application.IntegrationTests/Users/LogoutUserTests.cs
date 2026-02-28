@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using FluentAssertions;
@@ -31,13 +31,13 @@ public class LogoutUserTests : BaseIntegrationTest
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
-        
+
         // Act: Call logout endpoint with the Access Token
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
         var logoutResponse = await HttpClient.PostAsync(new Uri("api/v1/users/logout", UriKind.Relative), null);
-        
+
         // Assert
         logoutResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }

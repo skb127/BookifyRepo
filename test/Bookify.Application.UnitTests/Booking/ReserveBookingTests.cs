@@ -1,4 +1,5 @@
-﻿using Bookify.Application.Abstractions.Clock;
+﻿using Bookify.Application.Abstractions.Authentication;
+using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Bookings.ReserveBooking;
 using Bookify.Application.Exceptions;
 using Bookify.Application.UnitTests.Apartment;
@@ -18,7 +19,6 @@ public class ReserveBookingTests
     private static readonly DateTime UtcNow = DateTime.UtcNow;
     private static readonly ReserveBookingCommand Command = new(
         Guid.CreateVersion7(),
-        Guid.CreateVersion7(),
         new DateOnly(2026, 1, 1),
         new DateOnly(2026, 1, 10));
 
@@ -30,6 +30,7 @@ public class ReserveBookingTests
     private readonly IUnitOfWork _unitOfWorkMock;
     private readonly PricingService _pricingService;
     private readonly IDateTimeProvider _dateTimeProviderMock;
+    private readonly IUserContext _userContextMock;
 
     public ReserveBookingTests()
     {
@@ -38,7 +39,8 @@ public class ReserveBookingTests
         _bookingRepositoryMock = Substitute.For<IBookingRepository>();
         _unitOfWorkMock = Substitute.For<IUnitOfWork>();
         _pricingService = Substitute.For<PricingService>();
-        
+        _userContextMock = Substitute.For<IUserContext>();
+
         _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
         _dateTimeProviderMock.UtcNow.Returns(UtcNow);
 
@@ -47,15 +49,17 @@ public class ReserveBookingTests
             _bookingRepositoryMock,
             _unitOfWorkMock,
             _pricingService,
-            _dateTimeProviderMock);
+            _dateTimeProviderMock,
+            _userContextMock);
     }
 
     [Fact]
     public async Task Handle_ShouldReturnFailure_WhenTheUserIsNull()
     {
         // Arrange
+        _userContextMock.UserId.Returns(Guid.CreateVersion7());
         _userRepositoryMock
-            .GetByIdAsync(Command.UserId, Arg.Any<CancellationToken>())
+            .GetByIdAsync(_userContextMock.UserId, Arg.Any<CancellationToken>())
             .Returns((User?)null);
 
         // Act 
@@ -69,9 +73,11 @@ public class ReserveBookingTests
     public async Task Handle_ShouldReturnFailure_WhenTheApartmentIsNull()
     {
         // Arrange
+        var user = UserData.Create();
+        _userContextMock.UserId.Returns(user.Id);
         _userRepositoryMock
-            .GetByIdAsync(Command.UserId, Arg.Any<CancellationToken>())
-            .Returns(UserData.Create());
+            .GetByIdAsync(_userContextMock.UserId, Arg.Any<CancellationToken>())
+            .Returns(user);
 
         _apartmentRepositoryMock
             .GetByIdAsync(Command.ApartmentId, CancellationToken.None)
@@ -91,10 +97,12 @@ public class ReserveBookingTests
         Domain.Apartments.Apartment apartment = ApartmentData.Create();
         var duration = DateRange.Create(Command.StartDate, Command.EndDate);
 
+        var user = UserData.Create();
+        _userContextMock.UserId.Returns(user.Id);
         _userRepositoryMock
-            .GetByIdAsync(Command.UserId, Arg.Any<CancellationToken>())
-            .Returns(UserData.Create());
-        
+            .GetByIdAsync(_userContextMock.UserId, Arg.Any<CancellationToken>())
+            .Returns(user);
+
         _apartmentRepositoryMock
             .GetByIdAsync(Command.ApartmentId, Arg.Any<CancellationToken>())
             .Returns(apartment);
@@ -117,9 +125,11 @@ public class ReserveBookingTests
         Domain.Apartments.Apartment apartment = ApartmentData.Create();
         var duration = DateRange.Create(Command.StartDate, Command.EndDate);
 
+        var user = UserData.Create();
+        _userContextMock.UserId.Returns(user.Id);
         _userRepositoryMock
-            .GetByIdAsync(Command.UserId, Arg.Any<CancellationToken>())
-            .Returns(UserData.Create());
+            .GetByIdAsync(_userContextMock.UserId, Arg.Any<CancellationToken>())
+            .Returns(user);
 
         _apartmentRepositoryMock
             .GetByIdAsync(Command.ApartmentId, Arg.Any<CancellationToken>())
@@ -127,7 +137,7 @@ public class ReserveBookingTests
 
         _bookingRepositoryMock
             .IsOverlappingAsync(apartment, duration, Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(false);
 
         _unitOfWorkMock
             .SaveChangesAsync()
@@ -147,9 +157,11 @@ public class ReserveBookingTests
         Domain.Apartments.Apartment apartment = ApartmentData.Create();
         var duration = DateRange.Create(Command.StartDate, Command.EndDate);
 
+        var user = UserData.Create();
+        _userContextMock.UserId.Returns(user.Id);
         _userRepositoryMock
-            .GetByIdAsync(Command.UserId, Arg.Any<CancellationToken>())
-            .Returns(UserData.Create());
+            .GetByIdAsync(_userContextMock.UserId, Arg.Any<CancellationToken>())
+            .Returns(user);
 
         _apartmentRepositoryMock
             .GetByIdAsync(Command.ApartmentId, Arg.Any<CancellationToken>())
@@ -173,9 +185,11 @@ public class ReserveBookingTests
         Domain.Apartments.Apartment apartment = ApartmentData.Create();
         var duration = DateRange.Create(Command.StartDate, Command.EndDate);
 
+        var user = UserData.Create();
+        _userContextMock.UserId.Returns(user.Id);
         _userRepositoryMock
-            .GetByIdAsync(Command.UserId, Arg.Any<CancellationToken>())
-            .Returns(UserData.Create());
+            .GetByIdAsync(_userContextMock.UserId, Arg.Any<CancellationToken>())
+            .Returns(user);
 
         _apartmentRepositoryMock
             .GetByIdAsync(Command.ApartmentId, Arg.Any<CancellationToken>())
@@ -192,5 +206,34 @@ public class ReserveBookingTests
         _bookingRepositoryMock
             .Received(1)
             .Add(Arg.Is<Domain.Bookings.Booking>(b => b.Id == result.Value));
+    }
+
+    [Fact]
+    public async Task Handle_ShouldCallUnitOfWork_WhenBookingIsReserved()
+    {
+        // Arrange
+        Domain.Apartments.Apartment apartment = ApartmentData.Create();
+        var duration = DateRange.Create(Command.StartDate, Command.EndDate);
+
+        var user = UserData.Create();
+        _userContextMock.UserId.Returns(user.Id);
+        _userRepositoryMock
+            .GetByIdAsync(_userContextMock.UserId, Arg.Any<CancellationToken>())
+            .Returns(user);
+
+        _apartmentRepositoryMock
+            .GetByIdAsync(Command.ApartmentId, Arg.Any<CancellationToken>())
+            .Returns(apartment);
+
+        _bookingRepositoryMock
+            .IsOverlappingAsync(apartment, duration, Arg.Any<CancellationToken>())
+            .Returns(false);
+
+        // Act 
+        Result<Guid> result = await _handler.Handle(Command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

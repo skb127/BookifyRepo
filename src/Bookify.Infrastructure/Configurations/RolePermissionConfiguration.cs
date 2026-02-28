@@ -27,6 +27,21 @@ internal sealed class RolePermissionConfiguration : IEntityTypeConfiguration<Rol
             {
                 RoleId = Role.Admin.Id,
                 PermissionId = Permission.UsersAdminRead.Id
+            },
+            new RolePermission
+            {
+                RoleId = Role.Admin.Id,
+                PermissionId = Permission.ApartmentsWrite.Id
+            },
+            new RolePermission
+            {
+                RoleId = Role.Admin.Id,
+                PermissionId = Permission.BookingsWrite.Id
+            },
+            new RolePermission
+            {
+                RoleId = Role.Admin.Id,
+                PermissionId = Permission.BookingsRead.Id
             });
     }
 }

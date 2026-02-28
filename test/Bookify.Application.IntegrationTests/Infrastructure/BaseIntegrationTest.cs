@@ -1,19 +1,22 @@
 ﻿using System.Net.Http.Json;
 using Bookify.Api.Controllers.Users;
+using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Users;
+using Bookify.Domain.Users;
 using Bookify.Infrastructure;
 using MediatR;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bookify.Application.IntegrationTests.Infrastructure;
 
-public abstract class BaseIntegrationTest : IClassFixture<IntegrationTestWebAppFactory>
+public abstract class BaseIntegrationTest
 {
     private readonly IServiceScope _scope; // To allow resolving scoped services
-    protected ISender Sender { get; } // To send commands/queries via MediatR
-    protected ApplicationDbContext DbContext { get; }  // To interact with the database
-    protected HttpClient HttpClient { get; } // To make HTTP requests to the test server
+    public ISender Sender { get; } // To send commands/queries via MediatR
+    public ApplicationDbContext DbContext { get; }  // To interact with the database
+    public HttpClient HttpClient { get; } // To make HTTP requests to the test server
 
     protected BaseIntegrationTest(IntegrationTestWebAppFactory factory)
     {
@@ -29,7 +32,7 @@ public abstract class BaseIntegrationTest : IClassFixture<IntegrationTestWebAppF
         });
     }
 
-    protected async Task<string> GetAccessToken(string userEmail, string userPassword)
+    public async Task<string> GetAccessToken(string userEmail, string userPassword)
     {
         HttpResponseMessage loginResponse = await HttpClient.PostAsJsonAsync(
             "api/v1/users/login",
@@ -40,5 +43,33 @@ public abstract class BaseIntegrationTest : IClassFixture<IntegrationTestWebAppF
         AccessTokenOnlyResponse? accessTokenResponse = await loginResponse.Content.ReadFromJsonAsync<AccessTokenOnlyResponse>().ConfigureAwait(false);
 
         return accessTokenResponse?.AccessToken ?? throw new InvalidOperationException("Unable to get access token");
+    }
+
+    public async Task PromoteToAdminAsync(string email)
+    {
+        var cacheService = _scope.ServiceProvider.GetRequiredService<ICacheService>();
+
+        User user = await DbContext.Set<User>()
+            .AsNoTracking()
+            .FirstAsync(u => u.Email == new Email(email))
+            .ConfigureAwait(false);
+
+        // Check if the user already has the Admin role to avoid duplicate key errors
+        bool alreadyAdmin = await DbContext.Database
+            .SqlQuery<int>($"SELECT COUNT(1) AS \"Value\" FROM role_user WHERE roles_id = {Role.Admin.Id} AND users_id = {user.Id}")
+            .AnyAsync(c => c > 0)
+            .ConfigureAwait(false);
+
+        if (!alreadyAdmin)
+        {
+            await DbContext.Database.ExecuteSqlInterpolatedAsync(
+                $"INSERT INTO role_user (roles_id, users_id) VALUES ({Role.Admin.Id}, {user.Id})")
+                .ConfigureAwait(false);
+        }
+
+        // Invalidate cached roles/permissions so the authorization pipeline re-reads from DB
+        string identityId = user.IdentityId;
+        await cacheService.RemoveAsync($"auth:roles-{identityId}").ConfigureAwait(false);
+        await cacheService.RemoveAsync($"auth:permissions-{identityId}").ConfigureAwait(false);
     }
 }

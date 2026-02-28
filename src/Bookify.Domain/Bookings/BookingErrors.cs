@@ -1,6 +1,7 @@
 ﻿using Bookify.Domain.Abstractions;
 
 namespace Bookify.Domain.Bookings;
+
 public static class BookingErrors
 {
     public static Error NotFound { get; } = new(
@@ -22,4 +23,8 @@ public static class BookingErrors
     public static Error AlreadyStarted { get; } = new(
         "Booking.AlreadyStarted",
         "The booking has already started");
+
+    public static Error Unauthorized { get; } = new(
+        "Booking.Unauthorized",
+        "You do not have permission to perform this action on this booking");
 }

@@ -50,6 +50,10 @@ namespace Bookify.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_id");
+
                     b.Property<uint>("Version")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -58,6 +62,9 @@ namespace Bookify.Infrastructure.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_apartments");
+
+                    b.HasIndex("OwnerId")
+                        .HasDatabaseName("ix_apartments_owner_id");
 
                     b.ToTable("apartments", (string)null);
                 });
@@ -266,6 +273,21 @@ namespace Bookify.Infrastructure.Migrations
                         {
                             Id = 2,
                             Name = "users:admin-read"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "apartments:write"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "bookings:write"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "bookings:read"
                         });
                 });
 
@@ -334,6 +356,21 @@ namespace Bookify.Infrastructure.Migrations
                         {
                             RoleId = 2,
                             PermissionId = 2
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            PermissionId = 3
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            PermissionId = 4
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            PermissionId = 5
                         });
                 });
 
@@ -479,6 +516,13 @@ namespace Bookify.Infrastructure.Migrations
 
             modelBuilder.Entity("Bookify.Domain.Apartments.Apartment", b =>
                 {
+                    b.HasOne("Bookify.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_apartments_user_owner_id");
+
                     b.OwnsOne("Bookify.Domain.Apartments.Address", "Address", b1 =>
                         {
                             b1.Property<Guid>("ApartmentId")

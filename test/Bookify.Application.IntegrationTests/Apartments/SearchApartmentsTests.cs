@@ -5,9 +5,10 @@ using FluentAssertions;
 
 namespace Bookify.Application.IntegrationTests.Apartments;
 
+[Collection("IntegrationTests")]
 public class SearchApartmentsTests : BaseIntegrationTest
 {
-    public SearchApartmentsTests(IntegrationTestWebAppFactory factory) 
+    public SearchApartmentsTests(IntegrationTestWebAppFactory factory)
         : base(factory)
     {
     }

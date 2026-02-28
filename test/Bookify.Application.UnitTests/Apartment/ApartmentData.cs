@@ -7,6 +7,7 @@ internal static class ApartmentData
 {
     public static Domain.Apartments.Apartment Create() =>
         new(Guid.CreateVersion7(),
+            Guid.NewGuid(),
             new Name("Apartment 1"),
             new Description("Apartment 1 description"),
             new Address("Country", "State", "ZipCode", "City", "Street"),

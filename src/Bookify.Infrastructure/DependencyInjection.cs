@@ -35,6 +35,7 @@ using Quartz;
 using AuthenticationOptions = Bookify.Infrastructure.Authentication.AuthenticationOptions;
 using AuthenticationService = Bookify.Infrastructure.Authentication.AuthenticationService;
 using IAuthenticationService = Bookify.Application.Abstractions.Authentication.IAuthenticationService;
+using IAuthorizationService = Bookify.Application.Abstractions.Authorization.IAuthorizationService;
 
 namespace Bookify.Infrastructure;
 
@@ -155,7 +156,7 @@ public static class DependencyInjection
 
     private static void AddAuthorization(IServiceCollection services)
     {
-        services.AddScoped<AuthorizationService>();
+        services.AddScoped<IAuthorizationService, AuthorizationService>();
 
         services.AddTransient<IClaimsTransformation, CustomClaimsTransformation>();
 

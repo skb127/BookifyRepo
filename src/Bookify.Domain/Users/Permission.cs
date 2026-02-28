@@ -6,6 +6,9 @@ public sealed class Permission
     // them from the database for more flexibility. Updating permissions would not require code changes
     public static readonly Permission UsersRead = new(1, "users:read");
     public static readonly Permission UsersAdminRead = new(2, "users:admin-read");
+    public static readonly Permission ApartmentsWrite = new(3, "apartments:write");
+    public static readonly Permission BookingsWrite = new(4, "bookings:write");
+    public static readonly Permission BookingsRead = new(5, "bookings:read");
 
     public Permission(int id, string name)
     {

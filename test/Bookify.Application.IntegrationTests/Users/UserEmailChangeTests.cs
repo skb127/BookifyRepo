@@ -39,7 +39,7 @@ public class UserEmailChangeTests : BaseIntegrationTest
         HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, accessToken);
 
-        _mockEmailService.Clear();
+        DateTime since = DateTime.UtcNow;
 
         // Act 1 - Initiate email change
         var initiateRequest = new InitiateEmailChangeRequest(newEmail, user.Password);
@@ -50,12 +50,12 @@ public class UserEmailChangeTests : BaseIntegrationTest
         initiateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Wait for Outbox to process and send emails (Quartz job runs every 1s in tests)
-        EmailMessage verificationEmail = await _mockEmailService.WaitForEmailToAsync(newEmail);
-        await _mockEmailService.WaitForEmailToAsync(user.Email);
+        EmailMessage verificationEmail = await _mockEmailService.WaitForEmailToAsync(newEmail, since: since);
+        await _mockEmailService.WaitForEmailToAsync(user.Email, since: since);
 
         // Assert - Both emails were sent (verification to new email + security alert to current email)
-        _mockEmailService.HasEmailTo(user.Email).Should().BeTrue("A security alert should be sent to the current email");
-        _mockEmailService.HasEmailTo(newEmail).Should().BeTrue("A verification email should be sent to the new email");
+        _mockEmailService.HasEmailTo(user.Email, since).Should().BeTrue("A security alert should be sent to the current email");
+        _mockEmailService.HasEmailTo(newEmail, since).Should().BeTrue("A verification email should be sent to the new email");
 
         verificationEmail.Subject.Should().Be("Confirm Your New Email Address");
 
@@ -109,7 +109,7 @@ public class UserEmailChangeTests : BaseIntegrationTest
         customClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, accessToken);
 
-        customEmailService!.Clear();
+        DateTime since = DateTime.UtcNow;
 
         // Act 1 - Initiate email change
         string newEmail = "expired_test@test.com";
@@ -120,8 +120,8 @@ public class UserEmailChangeTests : BaseIntegrationTest
         initiateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Wait for Outbox to process and send emails
-        EmailMessage verificationEmail = await customEmailService.WaitForEmailToAsync(newEmail);
-        await customEmailService.WaitForEmailToAsync(user.Email);
+        EmailMessage verificationEmail = await customEmailService!.WaitForEmailToAsync(newEmail, since: since);
+        await customEmailService.WaitForEmailToAsync(user.Email, since: since);
 
         // Extract token
         string token = EmailTestUtils.ExtractToken(verificationEmail.Body, "confirm-email-change");

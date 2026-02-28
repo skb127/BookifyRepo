@@ -1,4 +1,5 @@
-﻿using Bookify.Application.Abstractions.Clock;
+﻿using Bookify.Application.Abstractions.Authentication;
+using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Application.Exceptions;
 using Bookify.Domain.Abstractions;
@@ -16,6 +17,7 @@ internal sealed class ReserveBookingCommandHandler : ICommandHandler<ReserveBook
     private readonly IUnitOfWork _unitOfWork;
     private readonly PricingService _pricingService;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IUserContext _userContext;
 
     public ReserveBookingCommandHandler(
         IUserRepository userRepository,
@@ -23,7 +25,8 @@ internal sealed class ReserveBookingCommandHandler : ICommandHandler<ReserveBook
         IBookingRepository bookingRepository,
         IUnitOfWork unitOfWork,
         PricingService pricingService,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        IUserContext userContext)
     {
         _userRepository = userRepository;
         _apartmentRepository = apartmentRepository;
@@ -31,11 +34,12 @@ internal sealed class ReserveBookingCommandHandler : ICommandHandler<ReserveBook
         _unitOfWork = unitOfWork;
         _pricingService = pricingService;
         _dateTimeProvider = dateTimeProvider;
+        _userContext = userContext;
     }
 
     public async Task<Result<Guid>> Handle(ReserveBookingCommand request, CancellationToken cancellationToken)
     {
-        User? user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+        User? user = await _userRepository.GetByIdAsync(_userContext.UserId, cancellationToken);
 
         if (user is null)
         {

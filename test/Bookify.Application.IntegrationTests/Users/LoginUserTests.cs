@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
 using Bookify.Api.Controllers.Users;
 using Bookify.Application.IntegrationTests.Infrastructure;
@@ -16,7 +16,7 @@ public class LoginUserTests : BaseIntegrationTest
     [Fact]
     public async Task Login_ShouldReturnOk_WhenUserDoesExists()
     {
-        var request = new LoginUserRequest(UserData.LoginUserRequest.Email, 
+        var request = new LoginUserRequest(UserData.LoginUserRequest.Email,
             UserData.LoginUserRequest.Password);
 
         // Act
@@ -24,14 +24,14 @@ public class LoginUserTests : BaseIntegrationTest
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         // A refreshToken cookie has been set
         response.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? setCookies)
             .Should().BeTrue();
 
         setCookies!.Should().Contain(c => c.Contains("refreshToken="));
     }
-    
+
     [Fact]
     public async Task Login_ShouldReturnUnauthorized_WhenUserDoesNotExist()
     {

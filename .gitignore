@@ -423,3 +423,5 @@ FodyWeavers.xsd
 # Docker 
 .containers/*
 .files/*
+
+docs/*

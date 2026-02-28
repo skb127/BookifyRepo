@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
 using Bookify.Api.Controllers.Users;
 using Bookify.Application.IntegrationTests.Infrastructure;

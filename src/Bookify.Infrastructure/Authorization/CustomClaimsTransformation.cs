@@ -1,4 +1,6 @@
 ﻿using System.Security.Claims;
+using Bookify.Application.Abstractions.Authorization;
+using Bookify.Application.Users;
 using Bookify.Domain.Users;
 using Bookify.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Authentication;
@@ -11,7 +13,7 @@ internal sealed class CustomClaimsTransformation : IClaimsTransformation
 {
     private readonly IServiceProvider _serviceProvider;
 
-    public CustomClaimsTransformation(IServiceProvider serviceProvider) => 
+    public CustomClaimsTransformation(IServiceProvider serviceProvider) =>
         _serviceProvider = serviceProvider;
 
     public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
@@ -24,7 +26,7 @@ internal sealed class CustomClaimsTransformation : IClaimsTransformation
 
         using IServiceScope scope = _serviceProvider.CreateScope();
 
-        AuthorizationService authorizationService = scope.ServiceProvider.GetRequiredService<AuthorizationService>();
+        IAuthorizationService authorizationService = scope.ServiceProvider.GetRequiredService<IAuthorizationService>();
 
         string identityId = principal.GetIdentityId();
 

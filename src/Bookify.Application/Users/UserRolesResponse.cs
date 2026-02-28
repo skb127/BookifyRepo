@@ -1,6 +1,6 @@
 ﻿using Bookify.Domain.Users;
 
-namespace Bookify.Infrastructure.Authorization;
+namespace Bookify.Application.Users;
 
 public sealed class UserRolesResponse
 {
