@@ -2,7 +2,7 @@ using FluentValidation;
 
 namespace Bookify.Application.Bookings.GetPriceEstimate;
 
-public class GetPriceEstimateQueryValidator : AbstractValidator<GetPriceEstimateQuery>
+internal sealed class GetPriceEstimateQueryValidator : AbstractValidator<GetPriceEstimateQuery>
 {
     public GetPriceEstimateQueryValidator()
     {

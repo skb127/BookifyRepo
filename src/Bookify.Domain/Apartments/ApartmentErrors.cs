@@ -11,4 +11,8 @@ public static class ApartmentErrors
     public static readonly Error InvalidCurrency = new(
         "Apartment.InvalidCurrency",
         "The provided currency is invalid");
+
+    public static readonly Error HasActiveBookings = new(
+        "Apartment.HasActiveBookings",
+        "The apartment has active bookings");
 }

@@ -156,4 +156,47 @@ internal static class BookingTestHelpers
 
         return (apartmentId, bookingId, ownerAccessToken, ownerEmail, guestAccessToken, guestEmail);
     }
+
+    // Helper 4: creates an Apartment and 1 Completed booking, returns BOTH owner (admin) and guest tokens, and creates reviews.
+    public static async Task<(Guid apartmentId, Guid bookingId, string ownerToken, string ownerEmail, string guestToken, string guestEmail)>
+        SetupCompletedBookingWithReviewsAsync(BaseIntegrationTest test, IEnumerable<(int Rating, string Comment)> reviews, string password = "Password123!")
+    {
+        // 1. Setup apartment and reserved booking using existing helper
+        var (apartmentId, bookingId, ownerToken, ownerEmail, guestToken, guestEmail) =
+            await SetupApartmentWithOwnerAsync(test, password).ConfigureAwait(false);
+
+        // 2. Confirm booking as Admin/Owner
+        test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme, ownerToken);
+
+        HttpResponseMessage confirmResponse = await test.HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{bookingId}/confirmation", UriKind.Relative),
+            null).ConfigureAwait(true);
+        confirmResponse.EnsureSuccessStatusCode();
+
+        // 3. Complete booking as Admin/Owner (Requires BookingsWrite)
+        HttpResponseMessage completeResponse = await test.HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{bookingId}/completion", UriKind.Relative),
+            null).ConfigureAwait(true);
+        completeResponse.EnsureSuccessStatusCode();
+
+        // 4. Create reviews as Guest
+        test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        foreach (var (rating, comment) in reviews)
+        {
+            var addReviewRequest = new Api.Controllers.Reviews.AddReviewRequest(bookingId, rating, comment)
+            {
+                BookingId = bookingId,
+                Rating = rating,
+                Comment = comment
+            };
+            HttpResponseMessage reviewResponse = await test.HttpClient.PostAsJsonAsync(
+                "api/v1/reviews", addReviewRequest).ConfigureAwait(true);
+            reviewResponse.EnsureSuccessStatusCode();
+        }
+
+        return (apartmentId, bookingId, ownerToken, ownerEmail, guestToken, guestEmail);
+    }
 }

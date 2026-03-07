@@ -38,7 +38,7 @@ internal sealed class GetApartmentBookingsQueryHandler
 
         // 1. Verify Apartment exists and get its OwnerId
         Guid? ownerId = await connection.QueryFirstOrDefaultAsync<Guid?>(
-            "SELECT owner_id FROM apartments WHERE id = @ApartmentId",
+            "SELECT owner_id FROM apartments WHERE id = @ApartmentId AND deleted_at IS NULL",
             new { request.ApartmentId });
 
         if (!ownerId.HasValue)

@@ -25,6 +25,14 @@ internal static class UserData
     public static readonly RegisterUserRequest CreateApartmentStandardUserRequest = new("createapt_std@test.com", "AptStd", "User", "CreateApt123!", new DateOnly(2000, 1, 1));
     public static readonly RegisterUserRequest CreateApartmentAdminUserRequest = new("createapt_admin@test.com", "AptAdmin", "User", "CreateApt123!", new DateOnly(1995, 6, 15));
 
+    // Dedicated Users for UpdateApartment tests
+    public static readonly RegisterUserRequest UpdateApartmentStandardUserRequest = new("updateapt_std@test.com", "UpdateStd", "User", "UpdateApt123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest UpdateApartmentAdminUserRequest = new("updateapt_admin@test.com", "UpdateAdmin", "User", "UpdateApt123!", new DateOnly(1995, 6, 15));
+
+    // Dedicated Users for DeleteApartment tests
+    public static readonly RegisterUserRequest DeleteApartmentStandardUserRequest = new("deleteapt_std@test.com", "DeleteStd", "User", "DeleteApt123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest DeleteApartmentAdminUserRequest = new("deleteapt_admin@test.com", "DeleteAdmin", "User", "DeleteApt123!", new DateOnly(1995, 6, 15));
+
     public const string FirstName = "Test";
     public const string LastName = "User";
     public const string Email = "test@test.com";

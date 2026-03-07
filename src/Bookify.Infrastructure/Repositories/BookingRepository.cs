@@ -12,6 +12,11 @@ internal sealed class BookingRepository : Repository<Booking>, IBookingRepositor
         BookingStatus.Completed
     ];
 
+    private static readonly BookingStatus[] BlockingDeleteBookingStatuses = [
+        BookingStatus.Reserved,
+        BookingStatus.Confirmed
+    ];
+
     public BookingRepository(ApplicationDbContext dbContext) : base(dbContext)
     {
     }
@@ -21,10 +26,19 @@ internal sealed class BookingRepository : Repository<Booking>, IBookingRepositor
         await DbContext
             .Set<Booking>()
             .AnyAsync(
-                booking => 
+                booking =>
                     booking.ApartmentId == apartment.Id &&
                     booking.Duration.Start <= duration.End &&
                     booking.Duration.End >= duration.Start &&
                     ActiveBookingStatuses.Contains(booking.Status),
             cancellationToken);
+
+    public async Task<bool> HasActiveBookingsAsync(Guid apartmentId, CancellationToken cancellationToken = default) =>
+        await DbContext
+            .Set<Booking>()
+            .AnyAsync(
+                booking =>
+                    booking.ApartmentId == apartmentId &&
+                    BlockingDeleteBookingStatuses.Contains(booking.Status),
+                cancellationToken);
 }

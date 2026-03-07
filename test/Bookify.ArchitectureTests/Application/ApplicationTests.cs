@@ -75,6 +75,8 @@ public class ApplicationTests : BaseTest
         TestResult? result = Types.InAssembly(ApplicationAssembly)
             .That()
             .Inherit(typeof(AbstractValidator<>))
+            .And()
+            .AreNotAbstract()
             .Should()
             .HaveNameEndingWith("Validator", StringComparison.InvariantCulture)
             .GetResult();

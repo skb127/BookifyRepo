@@ -4,6 +4,8 @@ namespace Bookify.Application.IntegrationTests.Apartments;
 
 public static class ApartmentData
 {
+    public const string TestCity_SearchFilter = "TestCity_SearchFilter_UniqueStr";
+
     public static readonly CreateApartmentRequest ValidCreateApartmentRequest = new(
         "Apartment 1",
         "Description of Apartment 1",
@@ -20,4 +22,12 @@ public static class ApartmentData
         new MoneyRequest(100.0m, "USD"),
         new MoneyRequest(50.0m, "USD"),
         [10, 3]);
+
+    public static readonly UpdateApartmentRequest ValidUpdateApartmentRequest = new(
+        "Updated Apartment",
+        "Updated description",
+        new AddressRequest("Spain", "Madrid", "28001", "Madrid", "Gran Vía 12"),
+        new MoneyRequest(175.0m, "EUR"),
+        new MoneyRequest(35.0m, "EUR"),
+        []);
 }

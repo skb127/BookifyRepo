@@ -1,6 +1,8 @@
-﻿namespace Bookify.Application.Apartments.SearchApartments;
+﻿using Bookify.Application.Common;
 
-public class ApartmentResponse
+namespace Bookify.Application.Apartments.SearchApartments;
+
+public sealed class ApartmentResponse
 {
     public Guid Id { get; init; }
 
@@ -8,9 +10,13 @@ public class ApartmentResponse
 
     public string Description { get; init; } = "";
 
-    public decimal Price { get; init; }
+    public MoneyResponse Price { get; init; } = null!;
 
-    public string Currency { get; init; } = "";
+    public MoneyResponse CleaningFee { get; init; } = null!;
+
+    public IReadOnlyList<int> Amenities { get; init; } = [];
+
+    public bool IsAvailable { get; init; }
 
     public AddressResponse Address { get; set; } = null!;
 }

@@ -2,12 +2,14 @@ using Bookify.Application.Extensions;
 using Bookify.Domain.Shared;
 using FluentValidation;
 
-namespace Bookify.Application.Apartments.CreateApartment;
+namespace Bookify.Application.Apartments.UpdateApartment;
 
-internal sealed class CreateApartmentCommandValidator : AbstractValidator<CreateApartmentCommand>
+internal sealed class UpdateApartmentCommandValidator : AbstractValidator<UpdateApartmentCommand>
 {
-    public CreateApartmentCommandValidator()
+    public UpdateApartmentCommandValidator()
     {
+        RuleFor(c => c.Id).NotEmpty();
+
         RuleFor(c => c.Name).NotEmpty().MaximumLength(200);
 
         RuleFor(c => c.Description).NotEmpty().MaximumLength(2000);

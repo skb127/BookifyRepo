@@ -43,6 +43,7 @@ public sealed class Apartment : Entity
     public Money Price { get; private set; } = null!;
     public Money CleaningFee { get; private set; } = null!;
     public DateTime? LastBookedOnUtc { get; internal set; }
+    public DateTime? DeletedAt { get; private set; }
     public IReadOnlyList<Amenity> Amenities
     {
         get => _amenities.AsReadOnly();
@@ -72,4 +73,24 @@ public sealed class Apartment : Entity
 
         return apartment;
     }
+
+    public void Update(
+        Name name,
+        Description description,
+        Address address,
+        Money price,
+        Money cleaningFee,
+        IReadOnlyCollection<Amenity> amenities)
+    {
+        Name = name;
+        Description = description;
+        Address = address;
+        Price = price;
+        CleaningFee = cleaningFee;
+
+        _amenities = new List<Amenity>(amenities ?? []);
+    }
+
+    public void Delete() =>
+        DeletedAt = DateTime.UtcNow;
 }

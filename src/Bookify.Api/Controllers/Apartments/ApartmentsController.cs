@@ -1,6 +1,7 @@
 ﻿using Asp.Versioning;
 using Bookify.Application.Apartments.SearchApartments;
 using Bookify.Application.Bookings.GetBookings;
+using Bookify.Application.Bookings.GetPriceEstimate;
 using Bookify.Application.Common;
 using Bookify.Domain.Abstractions;
 using Bookify.Infrastructure.Authorization;
@@ -22,15 +23,54 @@ public sealed class ApartmentsController : ControllerBase
 
         _sender = sender;
 
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetApartment(Guid id, CancellationToken cancellationToken)
+    {
+        var query = new Application.Apartments.GetApartment.GetApartmentQuery(id);
+        Result<Application.Apartments.GetApartment.ApartmentResponse> result = await _sender.Send(query, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            int statusCode = result.Error == Domain.Apartments.ApartmentErrors.NotFound
+                ? StatusCodes.Status404NotFound
+                : StatusCodes.Status400BadRequest;
+
+            return Problem(
+                statusCode: statusCode,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok(result.Value);
+    }
+
     [HttpGet]
     public async Task<IActionResult> SearchApartments(
-        DateOnly startDate,
-        DateOnly endDate,
-        CancellationToken cancellationToken)
+        [FromQuery] DateOnly? startDate,
+        [FromQuery] DateOnly? endDate,
+        [FromQuery] string? city,
+        [FromQuery] string? country,
+        [FromQuery] decimal? minPrice,
+        [FromQuery] decimal? maxPrice,
+        [FromQuery] string? currency,
+        [FromQuery] int[]? amenities,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var query = new SearchApartmentsQuery(startDate, endDate);
+        var query = new SearchApartmentsQuery(
+            startDate,
+            endDate,
+            city,
+            country,
+            minPrice,
+            maxPrice,
+            currency,
+            amenities,
+            page,
+            pageSize);
 
-        Result<IReadOnlyList<ApartmentResponse>> result = await _sender.Send(query, cancellationToken);
+        Result<PagedResponse<ApartmentResponse>> result = await _sender.Send(query, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -73,7 +113,46 @@ public sealed class ApartmentsController : ControllerBase
                 title: result.Error.Code);
         }
 
-        return CreatedAtAction(nameof(SearchApartments), new { id = result.Value }, result.Value);
+        return CreatedAtAction(nameof(GetApartment), new { id = result.Value }, result.Value);
+    }
+
+    [HttpPut("{id:guid}")]
+    [HasPermission(Permissions.ApartmentsWrite)]
+    public async Task<IActionResult> UpdateApartment(
+        Guid id,
+        UpdateApartmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new Application.Apartments.UpdateApartment.UpdateApartmentCommand(
+            id,
+            request.Name,
+            request.Description,
+            request.Address.Country,
+            request.Address.State,
+            request.Address.ZipCode,
+            request.Address.City,
+            request.Address.Street,
+            request.Price.Amount,
+            request.Price.Currency,
+            request.CleaningFee.Amount,
+            request.CleaningFee.Currency,
+            request.Amenities);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            int statusCode = result.Error == Domain.Apartments.ApartmentErrors.NotFound
+                ? StatusCodes.Status404NotFound
+                : StatusCodes.Status400BadRequest;
+
+            return Problem(
+                statusCode: statusCode,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return NoContent();
     }
 
     [HttpGet("{apartmentId:guid}/bookings")]
@@ -124,6 +203,85 @@ public sealed class ApartmentsController : ControllerBase
 
 
         Result<Application.Apartments.CheckApartmentAvailability.ApartmentAvailabilityResponse> result = await _sender.Send(query, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            int statusCode = result.Error == Domain.Apartments.ApartmentErrors.NotFound
+                ? StatusCodes.Status404NotFound
+                : StatusCodes.Status400BadRequest;
+
+            return Problem(
+                statusCode: statusCode,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok(result.Value);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [HasPermission(Permissions.ApartmentsWrite)]
+    public async Task<IActionResult> DeleteApartment(Guid id, CancellationToken cancellationToken)
+    {
+        var command = new Application.Apartments.DeleteApartment.DeleteApartmentCommand(id);
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            int statusCode = result.Error == Domain.Apartments.ApartmentErrors.NotFound
+                ? StatusCodes.Status404NotFound
+                : StatusCodes.Status400BadRequest;
+
+            return Problem(
+                statusCode: statusCode,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return NoContent();
+    }
+
+    [HttpGet("{apartmentId:guid}/reviews")]
+    [ProducesResponseType(typeof(Application.Reviews.GetApartmentReviews.ApartmentReviewsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetApartmentReviews(
+        Guid apartmentId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new Application.Reviews.GetApartmentReviews.GetApartmentReviewsQuery(apartmentId, page, pageSize);
+
+        Result<Application.Reviews.GetApartmentReviews.ApartmentReviewsResponse> result = await _sender.Send(query, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            int statusCode = result.Error == Domain.Apartments.ApartmentErrors.NotFound
+                ? StatusCodes.Status404NotFound
+                : StatusCodes.Status400BadRequest;
+
+            return Problem(
+                statusCode: statusCode,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok(result.Value);
+    }
+
+    [HttpGet("{id:guid}/price-estimate")]
+    [ProducesResponseType(typeof(PriceEstimateResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPriceEstimate(
+        Guid id,
+        [FromQuery] DateOnly startDate,
+        [FromQuery] DateOnly endDate,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetPriceEstimateQuery(id, startDate, endDate);
+
+        Result<PriceEstimateResponse> result = await _sender.Send(query, cancellationToken);
 
         if (result.IsFailure)
         {

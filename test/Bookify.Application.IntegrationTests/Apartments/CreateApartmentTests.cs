@@ -118,6 +118,18 @@ public class CreateApartmentTests : BaseIntegrationTest
 
         // Assert Location Header is present
         response.Headers.Location.Should().NotBeNull();
-        response.Headers.Location!.ToString().Should().NotBeEmpty();
+        string location = response.Headers.Location!.ToString();
+        location.Should().NotBeEmpty();
+
+        // Sub-request: Validate the GET endpoint returns the newly created apartment
+        HttpResponseMessage getResponse = await HttpClient.GetAsync(response.Headers.Location);
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var apartmentResponse = await getResponse.Content.ReadFromJsonAsync<Application.Apartments.GetApartment.ApartmentResponse>();
+        apartmentResponse.Should().NotBeNull();
+        apartmentResponse.Name.Should().Be(request.Name);
+        apartmentResponse.Description.Should().Be(request.Description);
+        apartmentResponse.Price.Amount.Should().Be(request.Price.Amount);
+        apartmentResponse.Price.Currency.Should().Be(request.Price.Currency);
     }
 }

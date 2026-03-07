@@ -16,7 +16,7 @@ internal abstract class Repository<T>
         CancellationToken cancellationToken) =>
             await DbContext
                 .Set<T>()
-                .FirstOrDefaultAsync(user => user.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(entity => entity.Id == id, cancellationToken);
 
     public virtual void Add(T entity) =>
         DbContext.Add(entity);
@@ -41,7 +41,8 @@ internal abstract class Repository<T>
     {
         IQueryable<T> query = DbContext.Set<T>();
 
-        query = includes.Aggregate(query, (current, include) => 
+        query = includes.Aggregate(query, (current, include) =>
+
             current.Include(include));
 
         return await query.FirstOrDefaultAsync(predicate, cancellationToken);

@@ -1,4 +1,4 @@
-﻿namespace Bookify.Application.Apartments.SearchApartments;
+namespace Bookify.Application.Common;
 
 public class AddressResponse
 {

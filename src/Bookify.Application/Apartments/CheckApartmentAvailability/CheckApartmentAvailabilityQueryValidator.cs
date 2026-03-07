@@ -2,7 +2,7 @@ using FluentValidation;
 
 namespace Bookify.Application.Apartments.CheckApartmentAvailability;
 
-public sealed class CheckApartmentAvailabilityQueryValidator : AbstractValidator<CheckApartmentAvailabilityQuery>
+internal sealed class CheckApartmentAvailabilityQueryValidator : AbstractValidator<CheckApartmentAvailabilityQuery>
 {
     public CheckApartmentAvailabilityQueryValidator() =>
         RuleFor(x => x.StartDate)

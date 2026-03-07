@@ -42,6 +42,10 @@ internal sealed class ApartmentConfiguration : IEntityTypeConfiguration<Apartmen
             .HasColumnType("integer[]")
             .HasColumnName("amenities");
 
+        builder.Property(apartment => apartment.DeletedAt);
+
         builder.Property<uint>("Version").IsRowVersion(); // Shadow property for optimistic concurrency control
+
+        builder.HasQueryFilter(apartment => apartment.DeletedAt == null);
     }
 }

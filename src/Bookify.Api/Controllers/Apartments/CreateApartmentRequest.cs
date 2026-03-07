@@ -18,3 +18,11 @@ public sealed record CreateApartmentRequest(
     MoneyRequest Price,
     MoneyRequest CleaningFee,
     IReadOnlyList<int> Amenities);
+
+public sealed record UpdateApartmentRequest(
+    string Name,
+    string Description,
+    AddressRequest Address,
+    MoneyRequest Price,
+    MoneyRequest CleaningFee,
+    IReadOnlyList<int> Amenities);
