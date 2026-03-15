@@ -58,11 +58,6 @@ internal sealed class GetApartmentQueryHandler : IQueryHandler<GetApartmentQuery
 
         ApartmentResponse? apartmentResponse = apartments.FirstOrDefault();
 
-        if (apartmentResponse is null)
-        {
-            return Result.Failure<ApartmentResponse>(ApartmentErrors.NotFound);
-        }
-
-        return apartmentResponse;
+        return apartmentResponse ?? Result.Failure<ApartmentResponse>(ApartmentErrors.NotFound);
     }
 }

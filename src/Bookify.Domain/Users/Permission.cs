@@ -1,4 +1,4 @@
-﻿namespace Bookify.Domain.Users;
+namespace Bookify.Domain.Users;
 
 public sealed class Permission
 {
@@ -9,6 +9,7 @@ public sealed class Permission
     public static readonly Permission ApartmentsWrite = new(3, "apartments:write");
     public static readonly Permission BookingsWrite = new(4, "bookings:write");
     public static readonly Permission BookingsRead = new(5, "bookings:read");
+    public static readonly Permission ReviewsRead = new(6, "reviews:read");
 
     public Permission(int id, string name)
     {

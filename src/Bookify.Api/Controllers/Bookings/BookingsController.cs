@@ -238,7 +238,7 @@ public sealed class BookingsController : ControllerBase
         var query = new Application.Bookings.GetPriceEstimate.GetPriceEstimateQuery(
             apartmentId, startDate, endDate);
 
-        Bookify.Domain.Abstractions.Result<Application.Bookings.GetPriceEstimate.PriceEstimateResponse> result = await _sender.Send(query, cancellationToken);
+        Result<Application.Bookings.GetPriceEstimate.PriceEstimateResponse> result = await _sender.Send(query, cancellationToken);
 
         if (result.IsFailure)
         {

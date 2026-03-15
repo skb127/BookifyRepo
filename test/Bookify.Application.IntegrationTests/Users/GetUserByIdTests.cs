@@ -77,7 +77,7 @@ public class GetUserByIdTests : BaseIntegrationTest
 
         UserResponse? userResponse = await response.Content.ReadFromJsonAsync<UserResponse>();
         userResponse.Should().NotBeNull();
-        userResponse!.Email.Should().Be(adminEmail);
+        userResponse.Email.Should().Be(adminEmail);
         userResponse.FirstName.Should().Be(UserData.GetUserByIdUserRequest.FirstName);
         userResponse.LastName.Should().Be(UserData.GetUserByIdUserRequest.LastName);
     }

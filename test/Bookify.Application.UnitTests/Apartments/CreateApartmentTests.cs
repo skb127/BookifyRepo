@@ -1,4 +1,5 @@
 using Bookify.Application.Abstractions.Authentication;
+using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Apartments.CreateApartment;
 using Bookify.Application.Exceptions;
 using Bookify.Domain.Abstractions;
@@ -12,6 +13,8 @@ namespace Bookify.Application.UnitTests.Apartments;
 
 public class CreateApartmentTests
 {
+    private static readonly DateTime UtcNow = DateTime.UtcNow;
+    
     private static readonly CreateApartmentCommand Command = new(
         "Valid Name",
         "Valid Description",
@@ -31,19 +34,24 @@ public class CreateApartmentTests
     private readonly IApartmentRepository _apartmentRepositoryMock;
     private readonly IUnitOfWork _unitOfWorkMock;
     private readonly IUserContext _userContextMock;
+    private readonly IDateTimeProvider _dateTimeProviderMock;
 
     public CreateApartmentTests()
     {
         _apartmentRepositoryMock = Substitute.For<IApartmentRepository>();
         _unitOfWorkMock = Substitute.For<IUnitOfWork>();
         _userContextMock = Substitute.For<IUserContext>();
+        
+        _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
+        _dateTimeProviderMock.UtcNow.Returns(UtcNow);
 
         _userContextMock.UserId.Returns(Guid.NewGuid());
 
         _handler = new CreateApartmentCommandHandler(
             _apartmentRepositoryMock,
             _unitOfWorkMock,
-            _userContextMock);
+            _userContextMock,
+            _dateTimeProviderMock);
     }
 
     [Fact]
@@ -56,7 +64,7 @@ public class CreateApartmentTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeEmpty();
 
-        _apartmentRepositoryMock.Received(1).Add(Arg.Is<Domain.Apartments.Apartment>(a =>
+        _apartmentRepositoryMock.Received(1).Add(Arg.Is<Apartment>(a =>
             a.Name.Value == Command.Name &&
             a.OwnerId == _userContextMock.UserId));
         await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -75,7 +83,7 @@ public class CreateApartmentTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(ApartmentErrors.InvalidCurrency);
 
-        _apartmentRepositoryMock.DidNotReceive().Add(Arg.Any<Domain.Apartments.Apartment>());
+        _apartmentRepositoryMock.DidNotReceive().Add(Arg.Any<Apartment>());
         await _unitOfWorkMock.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

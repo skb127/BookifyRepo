@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Apartments;
+using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Reviews;
 using Bookify.Domain.Users;
@@ -22,6 +22,9 @@ internal sealed class ReviewConfiguration : IEntityTypeConfiguration<Review>
             .HasMaxLength(200)
             .HasConversion(comment => comment.Value, value => new Comment(value));
 
+        builder.Property(review => review.EditedOnUtc)
+            .IsRequired(false);
+
         builder.HasOne<Apartment>()
             .WithMany()
             .HasForeignKey(review => review.ApartmentId);
@@ -33,5 +36,13 @@ internal sealed class ReviewConfiguration : IEntityTypeConfiguration<Review>
         builder.HasOne<User>()
             .WithMany()
             .HasForeignKey(review => review.UserId);
+
+        builder.Property(review => review.DeletedOnUtc)
+            .IsRequired(false);
+
+        builder.HasIndex(review => review.ApartmentId)
+            .HasFilter("deleted_on_utc IS NULL");
+
+        builder.HasQueryFilter(review => review.DeletedOnUtc == null);
     }
 }

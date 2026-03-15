@@ -1,4 +1,4 @@
-﻿namespace Bookify.Api.Controllers;
+namespace Bookify.Api.Controllers;
 
 internal static class Permissions
 {
@@ -7,4 +7,5 @@ internal static class Permissions
     public const string ApartmentsWrite = "apartments:write";
     public const string BookingsWrite = "bookings:write";
     public const string BookingsRead = "bookings:read";
+    public const string ReviewsRead = "reviews:read";
 }

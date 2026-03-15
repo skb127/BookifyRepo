@@ -1,5 +1,4 @@
 using Bookify.Application.Apartments.CheckApartmentAvailability;
-using Bookify.Application.UnitTests.Apartment;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
@@ -36,7 +35,7 @@ public class CheckApartmentAvailabilityTests
         // Arrange
         _apartmentRepositoryMock
             .GetByIdAsync(Query.ApartmentId, Arg.Any<CancellationToken>())
-            .Returns((Domain.Apartments.Apartment?)null);
+            .Returns((Apartment?)null);
 
         // Act
         Result<ApartmentAvailabilityResponse> result = await _handler.Handle(Query, CancellationToken.None);
@@ -50,7 +49,7 @@ public class CheckApartmentAvailabilityTests
     public async Task Handle_ShouldReturnIsAvailableTrue_WhenNoOverlap()
     {
         // Arrange
-        Domain.Apartments.Apartment apartment = ApartmentData.Create();
+        Apartment apartment = ApartmentData.Create();
         var duration = DateRange.Create(Query.StartDate, Query.EndDate);
 
         _apartmentRepositoryMock
@@ -73,7 +72,7 @@ public class CheckApartmentAvailabilityTests
     public async Task Handle_ShouldReturnIsAvailableFalse_WhenOverlappingExists()
     {
         // Arrange
-        Domain.Apartments.Apartment apartment = ApartmentData.Create();
+        Apartment apartment = ApartmentData.Create();
         var duration = DateRange.Create(Query.StartDate, Query.EndDate);
 
         _apartmentRepositoryMock
@@ -96,7 +95,7 @@ public class CheckApartmentAvailabilityTests
     public async Task Handle_ShouldReturnCorrectDates_WhenQuerySucceeds()
     {
         // Arrange
-        Domain.Apartments.Apartment apartment = ApartmentData.Create();
+        Apartment apartment = ApartmentData.Create();
         var duration = DateRange.Create(Query.StartDate, Query.EndDate);
 
         _apartmentRepositoryMock

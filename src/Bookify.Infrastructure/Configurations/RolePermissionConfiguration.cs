@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Users;
+using Bookify.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -42,6 +42,11 @@ internal sealed class RolePermissionConfiguration : IEntityTypeConfiguration<Rol
             {
                 RoleId = Role.Admin.Id,
                 PermissionId = Permission.BookingsRead.Id
+            },
+            new RolePermission
+            {
+                RoleId = Role.Admin.Id,
+                PermissionId = Permission.ReviewsRead.Id
             });
     }
 }

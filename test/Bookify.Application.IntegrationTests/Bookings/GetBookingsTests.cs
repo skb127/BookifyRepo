@@ -95,7 +95,7 @@ public class GetBookingsTests : BaseIntegrationTest
 
         var pagedResponse = await response.Content.ReadFromJsonAsync<PagedResponse<BookingSummaryResponse>>();
         pagedResponse.Should().NotBeNull();
-        pagedResponse!.TotalCount.Should().BeGreaterThanOrEqualTo(1);
+        pagedResponse.TotalCount.Should().BeGreaterThanOrEqualTo(1);
         pagedResponse.Items.Should().Contain(b => b.Id == bookingId);
     }
 
@@ -118,7 +118,7 @@ public class GetBookingsTests : BaseIntegrationTest
 
         var pagedResponse = await response.Content.ReadFromJsonAsync<PagedResponse<BookingSummaryResponse>>();
         pagedResponse.Should().NotBeNull();
-        pagedResponse!.TotalCount.Should().BeGreaterThanOrEqualTo(1);
+        pagedResponse.TotalCount.Should().BeGreaterThanOrEqualTo(1);
         pagedResponse.Items.Should().AllSatisfy(b => b.UserId.Should().Be(userId));
         pagedResponse.Items.Should().Contain(b => b.Id == bookingId);
     }
@@ -146,7 +146,7 @@ public class GetBookingsTests : BaseIntegrationTest
 
         // Ensure no completed bookings match (or at least not the one we just made)
         // Note: other tests might leave data, but looking for an empty list is the safest isolated assumption if DB is clean
-        pagedResponse!.Items.Should().NotContain(b => b.Status != completedStatus);
+        pagedResponse.Items.Should().NotContain(b => b.Status != completedStatus);
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public class GetBookingsTests : BaseIntegrationTest
 
         var pagedResponse = await response.Content.ReadFromJsonAsync<PagedResponse<BookingSummaryResponse>>();
         pagedResponse.Should().NotBeNull();
-        pagedResponse!.TotalCount.Should().Be(2);
+        pagedResponse.TotalCount.Should().Be(2);
 
         // Ensure both bookings are returned
         pagedResponse.Items.Should().Contain(b => b.Id == booking1Reserved && b.Status == (int)BookingStatus.Reserved);
@@ -197,7 +197,7 @@ public class GetBookingsTests : BaseIntegrationTest
         pagedResponse.Should().NotBeNull();
 
         // Ensure only the reserved booking is returned
-        pagedResponse!.Items.Should().Contain(b => b.Id == booking1Reserved);
+        pagedResponse.Items.Should().Contain(b => b.Id == booking1Reserved);
         pagedResponse.Items.Should().NotContain(b => b.Id == booking2Confirmed);
         pagedResponse.Items.Should().AllSatisfy(b => b.Status.Should().Be(reservedStatus));
     }

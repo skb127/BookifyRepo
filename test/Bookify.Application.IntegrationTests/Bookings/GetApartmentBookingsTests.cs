@@ -81,7 +81,7 @@ public class GetApartmentBookingsTests : BaseIntegrationTest
 
         var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
         problemDetails.Should().NotBeNull();
-        problemDetails!.Title.Should().Be("Validation error");
+        problemDetails.Title.Should().Be("Validation error");
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class GetApartmentBookingsTests : BaseIntegrationTest
 
         var pagedResponse = await response.Content.ReadFromJsonAsync<PagedResponse<BookingSummaryResponse>>();
         pagedResponse.Should().NotBeNull();
-        pagedResponse!.TotalCount.Should().BeGreaterThanOrEqualTo(1);
+        pagedResponse.TotalCount.Should().BeGreaterThanOrEqualTo(1);
         pagedResponse.Items.Should().Contain(b => b.Id == bookingId);
         pagedResponse.Items.Should().AllSatisfy(b => b.ApartmentId.Should().Be(apartmentId));
     }
@@ -134,7 +134,7 @@ public class GetApartmentBookingsTests : BaseIntegrationTest
 
         var pagedResponse = await response.Content.ReadFromJsonAsync<PagedResponse<BookingSummaryResponse>>();
         pagedResponse.Should().NotBeNull();
-        pagedResponse!.TotalCount.Should().BeGreaterThanOrEqualTo(1);
+        pagedResponse.TotalCount.Should().BeGreaterThanOrEqualTo(1);
         pagedResponse.Items.Should().Contain(b => b.Id == bookingId);
     }
 
@@ -155,7 +155,7 @@ public class GetApartmentBookingsTests : BaseIntegrationTest
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme, ownerToken);
 
-        var aptData = Bookify.Application.IntegrationTests.Apartments.ApartmentData.ValidCreateApartmentRequest;
+        var aptData = Apartments.ApartmentData.ValidCreateApartmentRequest;
         HttpResponseMessage createApartmentResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
         createApartmentResponse.EnsureSuccessStatusCode();
 
@@ -169,7 +169,7 @@ public class GetApartmentBookingsTests : BaseIntegrationTest
 
         var pagedResponse = await response.Content.ReadFromJsonAsync<PagedResponse<BookingSummaryResponse>>();
         pagedResponse.Should().NotBeNull();
-        pagedResponse!.TotalCount.Should().Be(0);
+        pagedResponse.TotalCount.Should().Be(0);
         pagedResponse.Items.Should().BeEmpty();
     }
 
@@ -203,7 +203,7 @@ public class GetApartmentBookingsTests : BaseIntegrationTest
         pagedResponse.Should().NotBeNull();
 
         // Ensure only the confirmed booking returns
-        pagedResponse!.Items.Should().Contain(b => b.Id == bookingId2Confirmed);
+        pagedResponse.Items.Should().Contain(b => b.Id == bookingId2Confirmed);
         pagedResponse.Items.Should().NotContain(b => b.Id == bookingId1Reserved);
         pagedResponse.Items.Should().AllSatisfy(b => b.Status.Should().Be(confirmedStatus));
     }

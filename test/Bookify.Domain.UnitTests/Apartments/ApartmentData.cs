@@ -13,5 +13,6 @@ internal static class ApartmentData
             new Address("Country", "State", "ZipCode", "City", "Street"),
             price,
             cleaningFee ?? Money.Zero(),
-            amenities?.ToList() ?? []);
+            amenities?.ToList() ?? [],
+            DateTime.UtcNow);
 }

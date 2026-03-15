@@ -109,7 +109,7 @@ public class GetPriceEstimateTests : BaseIntegrationTest
         estimate.Should().NotBeNull();
 
         // 5 days * 100 USD = 500 USD
-        estimate!.PriceForPeriodAmount.Should().Be(500.0m);
+        estimate.PriceForPeriodAmount.Should().Be(500.0m);
         estimate.PriceForPeriodCurrency.Should().Be("USD");
 
         // Fixed 50 USD cleaning fee
@@ -166,7 +166,7 @@ public class GetPriceEstimateTests : BaseIntegrationTest
         estimate.Should().NotBeNull();
 
         // Base Price: 5 days * 100 USD = 500 USD
-        estimate!.PriceForPeriodAmount.Should().Be(500.0m);
+        estimate.PriceForPeriodAmount.Should().Be(500.0m);
 
         // Upcharge: 6% of 500 = 30 USD
         estimate.AmenitiesUpChargeAmount.Should().Be(30.0m);

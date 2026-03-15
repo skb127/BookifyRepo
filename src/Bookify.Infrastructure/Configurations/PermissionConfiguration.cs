@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Users;
+using Bookify.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,5 +17,6 @@ internal sealed class PermissionConfiguration : IEntityTypeConfiguration<Permiss
         builder.HasData(Permission.ApartmentsWrite);
         builder.HasData(Permission.BookingsWrite);
         builder.HasData(Permission.BookingsRead);
+        builder.HasData(Permission.ReviewsRead);
     }
 }

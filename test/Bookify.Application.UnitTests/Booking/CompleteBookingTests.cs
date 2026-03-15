@@ -12,6 +12,8 @@ namespace Bookify.Application.UnitTests.Booking;
 
 public class CompleteBookingTests
 {
+    private static readonly DateTime UtcNow = DateTime.UtcNow;
+    
     private readonly IDateTimeProvider _dateTimeProviderMock;
     private readonly IBookingRepository _bookingRepositoryMock;
     private readonly IUnitOfWork _unitOfWorkMock;
@@ -19,9 +21,11 @@ public class CompleteBookingTests
 
     public CompleteBookingTests()
     {
-        _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
         _bookingRepositoryMock = Substitute.For<IBookingRepository>();
         _unitOfWorkMock = Substitute.For<IUnitOfWork>();
+        
+        _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
+        _dateTimeProviderMock.UtcNow.Returns(UtcNow);
 
         _handler = new CompleteBookingCommandHandler(
             _dateTimeProviderMock,
@@ -63,8 +67,6 @@ public class CompleteBookingTests
         _bookingRepositoryMock.GetByIdAsync(command.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
 
-        _dateTimeProviderMock.UtcNow.Returns(DateTime.UtcNow);
-
         // Act
         Result result = await _handler.Handle(command, default);
 
@@ -82,8 +84,6 @@ public class CompleteBookingTests
 
         _bookingRepositoryMock.GetByIdAsync(command.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
-
-        _dateTimeProviderMock.UtcNow.Returns(DateTime.UtcNow);
 
         // Act
         Result result = await _handler.Handle(command, default);

@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Common;
+using Bookify.Application.Common;
 
 namespace Bookify.Application.Apartments.SearchApartments;
 
@@ -17,6 +17,8 @@ public sealed class ApartmentResponse
     public IReadOnlyList<int> Amenities { get; init; } = [];
 
     public bool IsAvailable { get; init; }
+
+    public double AverageRating { get; init; }
 
     public AddressResponse Address { get; set; } = null!;
 }

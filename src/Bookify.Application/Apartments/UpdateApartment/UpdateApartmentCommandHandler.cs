@@ -1,3 +1,4 @@
+using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
@@ -9,13 +10,15 @@ internal sealed class UpdateApartmentCommandHandler : ICommandHandler<UpdateApar
 {
     private readonly IApartmentRepository _apartmentRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IDateTimeProvider _dateTimeProvider;
 
     public UpdateApartmentCommandHandler(
         IApartmentRepository apartmentRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork, IDateTimeProvider dateTimeProvider)
     {
         _apartmentRepository = apartmentRepository;
         _unitOfWork = unitOfWork;
+        _dateTimeProvider = dateTimeProvider;
     }
 
     public async Task<Result> Handle(UpdateApartmentCommand request, CancellationToken cancellationToken)
@@ -51,7 +54,8 @@ internal sealed class UpdateApartmentCommandHandler : ICommandHandler<UpdateApar
                 address,
                 price,
                 cleaningFee,
-                amenities);
+                amenities,
+                _dateTimeProvider.UtcNow);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

@@ -34,6 +34,10 @@ namespace Bookify.Infrastructure.Migrations
                         .HasColumnType("integer[]")
                         .HasColumnName("amenities");
 
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on_utc");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
@@ -43,6 +47,10 @@ namespace Bookify.Infrastructure.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("description");
+
+                    b.Property<DateTime?>("EditedOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("edited_on_utc");
 
                     b.Property<DateTime?>("LastBookedOnUtc")
                         .HasColumnType("timestamp with time zone")
@@ -149,6 +157,14 @@ namespace Bookify.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on_utc");
 
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_on_utc");
+
+                    b.Property<DateTime?>("EditedOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("edited_on_utc");
+
                     b.Property<int>("Rating")
                         .HasColumnType("integer")
                         .HasColumnName("rating");
@@ -161,7 +177,8 @@ namespace Bookify.Infrastructure.Migrations
                         .HasName("pk_reviews");
 
                     b.HasIndex("ApartmentId")
-                        .HasDatabaseName("ix_reviews_apartment_id");
+                        .HasDatabaseName("ix_reviews_apartment_id")
+                        .HasFilter("deleted_on_utc IS NULL");
 
                     b.HasIndex("BookingId")
                         .HasDatabaseName("ix_reviews_booking_id");
@@ -292,6 +309,11 @@ namespace Bookify.Infrastructure.Migrations
                         {
                             Id = 5,
                             Name = "bookings:read"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Name = "reviews:read"
                         });
                 });
 
@@ -375,6 +397,11 @@ namespace Bookify.Infrastructure.Migrations
                         {
                             RoleId = 2,
                             PermissionId = 5
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            PermissionId = 6
                         });
                 });
 

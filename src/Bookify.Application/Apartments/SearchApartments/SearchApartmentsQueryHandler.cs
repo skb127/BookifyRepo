@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Text;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Messaging;
@@ -109,8 +109,17 @@ internal sealed class SearchApartmentsQueryHandler : IQueryHandler<SearchApartme
                 a.address_state AS State,
                 a.address_zip_code AS ZipCode,
                 a.address_city AS City,
-                a.address_street AS Street
+                a.address_street AS Street,
+                COALESCE(r.AverageRating, 0.0) AS AverageRating
             FROM apartments AS a
+            LEFT JOIN (
+                SELECT 
+                    apartment_id,
+                    ROUND(AVG(CAST(rating AS float))::numeric, 1) AS AverageRating
+                FROM reviews
+                WHERE deleted_on_utc IS NULL
+                GROUP BY apartment_id
+            ) AS r ON r.apartment_id = a.id
             {whereClause}
             ORDER BY a.id
             LIMIT @PageSize OFFSET @Offset";
@@ -137,7 +146,8 @@ internal sealed class SearchApartmentsQueryHandler : IQueryHandler<SearchApartme
                 City = a.City,
                 Street = a.Street
             },
-            IsAvailable = a.IsAvailable
+            IsAvailable = a.IsAvailable,
+            AverageRating = a.AverageRating
         }).ToList();
 
         return new PagedResponse<ApartmentResponse>
@@ -152,15 +162,16 @@ internal sealed class SearchApartmentsQueryHandler : IQueryHandler<SearchApartme
 #pragma warning disable S1144, S3459 // Unused private types or members - Properties are set by Dapper via reflection
     private sealed class ApartmentFlat
     {
-        public Guid Id { get; init; } = Guid.Empty;
+        public Guid Id { get; init; }
         public string Name { get; init; } = default!;
         public string Description { get; init; } = default!;
-        public decimal Price { get; init; } = default!;
+        public decimal Price { get; init; }
         public string Currency { get; init; } = default!;
-        public decimal CleaningFee { get; init; } = default!;
+        public decimal CleaningFee { get; init; }
         public string CleaningFeeCurrency { get; init; } = default!;
         public int[]? Amenities { get; init; } = [];
         public bool IsAvailable { get; init; }
+        public double AverageRating { get; init; }
         public string Country { get; init; } = default!;
         public string State { get; init; } = default!;
         public string ZipCode { get; init; } = default!;

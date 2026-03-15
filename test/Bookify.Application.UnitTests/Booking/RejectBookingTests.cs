@@ -16,6 +16,8 @@ namespace Bookify.Application.UnitTests.Booking;
 
 public class RejectBookingTests
 {
+    private static readonly DateTime UtcNow = DateTime.UtcNow;
+
     private readonly IDateTimeProvider _dateTimeProviderMock;
     private readonly IBookingRepository _bookingRepositoryMock;
     private readonly IUnitOfWork _unitOfWorkMock;
@@ -26,13 +28,15 @@ public class RejectBookingTests
 
     public RejectBookingTests()
     {
-        _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
         _bookingRepositoryMock = Substitute.For<IBookingRepository>();
         _unitOfWorkMock = Substitute.For<IUnitOfWork>();
         _userContextMock = Substitute.For<IUserContext>();
         _authorizationServiceMock = Substitute.For<IAuthorizationService>();
         _apartmentRepositoryMock = Substitute.For<IApartmentRepository>();
 
+        _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
+        _dateTimeProviderMock.UtcNow.Returns(UtcNow);
+        
         _handler = new RejectBookingCommandHandler(
             _dateTimeProviderMock,
             _bookingRepositoryMock,
@@ -50,10 +54,10 @@ public class RejectBookingTests
         return booking;
     }
 
-    private static Domain.Apartments.Apartment CreateApartment(Guid ownerId)
+    private static Apartment CreateApartment(Guid ownerId)
     {
-        var apartment = (Domain.Apartments.Apartment)Activator.CreateInstance(typeof(Domain.Apartments.Apartment), true)!;
-        typeof(Domain.Apartments.Apartment).GetProperty(nameof(Domain.Apartments.Apartment.OwnerId))!.SetValue(apartment, ownerId);
+        var apartment = (Apartment)Activator.CreateInstance(typeof(Apartment), true)!;
+        typeof(Apartment).GetProperty(nameof(Apartment.OwnerId))!.SetValue(apartment, ownerId);
         return apartment;
     }
 
@@ -136,9 +140,7 @@ public class RejectBookingTests
         // Setup user as Admin
         _authorizationServiceMock.GetPermissionsForUserAsync(identityId)
             .Returns(new HashSet<string> { Permission.BookingsWrite.Name });
-
-        _dateTimeProviderMock.UtcNow.Returns(DateTime.UtcNow);
-
+        
         // Act
         Result result = await _handler.Handle(command, CancellationToken.None);
 
@@ -161,8 +163,6 @@ public class RejectBookingTests
         // Setup user as Admin
         _authorizationServiceMock.GetPermissionsForUserAsync(identityId)
             .Returns(new HashSet<string> { Permission.BookingsWrite.Name });
-
-        _dateTimeProviderMock.UtcNow.Returns(DateTime.UtcNow);
 
         // Act
         Result result = await _handler.Handle(command, CancellationToken.None);
@@ -190,8 +190,6 @@ public class RejectBookingTests
         _authorizationServiceMock.GetPermissionsForUserAsync(identityId).Returns(new HashSet<string>()); // No admin permission
         _apartmentRepositoryMock.GetByIdAsync(apartmentId, Arg.Any<CancellationToken>()).Returns(apartment);
 
-        _dateTimeProviderMock.UtcNow.Returns(DateTime.UtcNow);
-
         // Act
         Result result = await _handler.Handle(command, CancellationToken.None);
 
@@ -214,8 +212,6 @@ public class RejectBookingTests
         // Setup user as Admin
         _authorizationServiceMock.GetPermissionsForUserAsync(identityId)
             .Returns([Permission.BookingsWrite.Name]);
-
-        _dateTimeProviderMock.UtcNow.Returns(DateTime.UtcNow);
 
         _unitOfWorkMock.SaveChangesAsync(Arg.Any<CancellationToken>())
             .ThrowsAsync(new ConcurrencyException("Concurrency", new InvalidOperationException()));

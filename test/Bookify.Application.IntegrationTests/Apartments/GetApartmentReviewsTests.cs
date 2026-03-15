@@ -97,7 +97,7 @@ public class GetApartmentReviewsTests : BaseIntegrationTest
             (5, "Absolutely loved it")
         };
 
-        var (apartmentId, _, _, _, guestToken, _) = await BookingTestHelpers.SetupCompletedBookingWithReviewsAsync(this, reviewsToCreate);
+        var (apartmentId, _, _, _, guestToken, _) = await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate);
 
         // Act
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);

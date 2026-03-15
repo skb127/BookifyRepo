@@ -1,3 +1,4 @@
+using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
@@ -10,15 +11,17 @@ internal sealed class DeleteApartmentCommandHandler : ICommandHandler<DeleteApar
     private readonly IApartmentRepository _apartmentRepository;
     private readonly IBookingRepository _bookingRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IDateTimeProvider _dateTimeProvider;
 
     public DeleteApartmentCommandHandler(
         IApartmentRepository apartmentRepository,
         IBookingRepository bookingRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork, IDateTimeProvider dateTimeProvider)
     {
         _apartmentRepository = apartmentRepository;
         _bookingRepository = bookingRepository;
         _unitOfWork = unitOfWork;
+        _dateTimeProvider = dateTimeProvider;
     }
 
     public async Task<Result> Handle(DeleteApartmentCommand request, CancellationToken cancellationToken)
@@ -36,7 +39,7 @@ internal sealed class DeleteApartmentCommandHandler : ICommandHandler<DeleteApar
             return Result.Failure(ApartmentErrors.HasActiveBookings);
         }
 
-        apartment.Delete();
+        apartment.Delete(_dateTimeProvider.UtcNow);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

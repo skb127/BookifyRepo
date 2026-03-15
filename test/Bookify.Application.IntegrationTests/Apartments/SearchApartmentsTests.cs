@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Bookify.Api.Controllers.Apartments;
@@ -34,7 +34,7 @@ public class SearchApartmentsTests : BaseIntegrationTest
         Func<Task> act = async () => await Sender.Send(query).ConfigureAwait(false);
 
         // Assert - It fails fast at the validation behaviour, throwing a ValidationException
-        await act.Should().ThrowAsync<Bookify.Application.Exceptions.ValidationException>();
+        await act.Should().ThrowAsync<Exceptions.ValidationException>();
     }
 
     /// <summary>
@@ -90,7 +90,7 @@ public class SearchApartmentsTests : BaseIntegrationTest
         Func<Task> act = async () => await Sender.Send(query).ConfigureAwait(false);
 
         // Assert
-        await act.Should().ThrowAsync<Bookify.Application.Exceptions.ValidationException>();
+        await act.Should().ThrowAsync<Exceptions.ValidationException>();
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class SearchApartmentsTests : BaseIntegrationTest
         Func<Task> act = async () => await Sender.Send(query).ConfigureAwait(false);
 
         // Assert
-        await act.Should().ThrowAsync<Bookify.Application.Exceptions.ValidationException>();
+        await act.Should().ThrowAsync<Exceptions.ValidationException>();
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class SearchApartmentsTests : BaseIntegrationTest
         Func<Task> act = async () => await Sender.Send(query).ConfigureAwait(false);
 
         // Assert
-        await act.Should().ThrowAsync<Bookify.Application.Exceptions.ValidationException>();
+        await act.Should().ThrowAsync<Exceptions.ValidationException>();
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public class SearchApartmentsTests : BaseIntegrationTest
         Func<Task> act = async () => await Sender.Send(query).ConfigureAwait(false);
 
         // Assert
-        await act.Should().ThrowAsync<Bookify.Application.Exceptions.ValidationException>();
+        await act.Should().ThrowAsync<Exceptions.ValidationException>();
     }
 
     [Fact]
@@ -337,6 +337,84 @@ public class SearchApartmentsTests : BaseIntegrationTest
         result.Value.Should().NotBeNull();
         result.Value.Items.Should().BeEmpty();
         result.Value.TotalCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task SearchApartments_ShouldReturn_ZeroAverageRating_ForApartmentWithNoReviews()
+    {
+        // Arrange - use a specific city to isolate our new apartment in search results
+        string uniqueCity = $"City_{Guid.CreateVersion7()}";
+
+        await PromoteToAdminAsync(UserData.CreateApartmentAdminUserRequest.Email);
+        string adminToken = await GetAccessToken(
+            UserData.CreateApartmentAdminUserRequest.Email,
+            UserData.CreateApartmentAdminUserRequest.Password);
+
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme,
+            adminToken);
+
+        var request = new CreateApartmentRequest(
+            "No Reviews Apartment",
+            "Description",
+            new AddressRequest("Country", "State", "ZipCode", uniqueCity, "Street"),
+            new MoneyRequest(100.0m, "USD"),
+            new MoneyRequest(50.0m, "USD"),
+            []);
+
+        HttpResponseMessage createResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", request);
+        createResponse.IsSuccessStatusCode.Should().BeTrue();
+
+        var query = new SearchApartmentsQuery(
+            null, null, uniqueCity, null, null, null, null, null, 1, 10);
+
+        // Act
+        Result<PagedResponse<ApartmentResponse>> result = await Sender.Send(query);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.Items.Should().ContainSingle();
+        result.Value.Items[0].AverageRating.Should().Be(0.0);
+    }
+
+    [Fact]
+    public async Task SearchApartments_ShouldReturn_CorrectAverageRating_ForApartmentWithReviews()
+    {
+        // Arrange
+        var reviewsToCreate = new List<(int Rating, string Comment)>
+        {
+            (3, "Okay stay"),
+            (5, "Perfect stay")
+        };
+
+        // This creates an apartment, completes multiple bookings, and adds reviews for them
+        var (apartmentId, _, _, _, guestToken, _) = await Bookings.BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate);
+
+        // First we need to find the city of the apartment that was created by the helper to isolate it
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+        var getApartmentResponse = await HttpClient.GetAsync(new Uri($"api/v1/apartments/{apartmentId}", UriKind.Relative));
+        getApartmentResponse.IsSuccessStatusCode.Should().BeTrue();
+
+        var apartmentDetails = await getApartmentResponse.Content.ReadFromJsonAsync<Bookify.Application.Apartments.GetApartment.ApartmentResponse>();
+        var city = apartmentDetails!.Address.City;
+
+        var query = new SearchApartmentsQuery(
+            null, null, city, null, null, null, null, null, 1, 10);
+
+        // Act
+        Result<PagedResponse<ApartmentResponse>> result = await Sender.Send(query);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+
+        // Find our specific apartment since the city might be shared with others (from seed data or other tests)
+        var apartment = result.Value.Items.SingleOrDefault(a => a.Id == apartmentId);
+        apartment.Should().NotBeNull();
+
+        // The average of 3 and 5 is 4.0
+        apartment.AverageRating.Should().Be(4.0);
     }
 
 }

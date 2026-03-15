@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Email;
 using Bookify.Application.IntegrationTests.Users;
@@ -147,5 +147,14 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
 
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.DeleteApartmentStandardUserRequest).ConfigureAwait(false);
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.DeleteApartmentAdminUserRequest).ConfigureAwait(false);
+
+
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.UpdateReviewSecondaryUserRequest).ConfigureAwait(false);
+
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.DeleteReviewSecondaryUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.DeleteReviewTertiaryUserRequest).ConfigureAwait(false);
+
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.GetAllReviewsAdminUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.GetAllReviewsRegularUserRequest).ConfigureAwait(false);
     }
 }

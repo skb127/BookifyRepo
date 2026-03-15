@@ -33,6 +33,17 @@ internal static class UserData
     public static readonly RegisterUserRequest DeleteApartmentStandardUserRequest = new("deleteapt_std@test.com", "DeleteStd", "User", "DeleteApt123!", new DateOnly(2000, 1, 1));
     public static readonly RegisterUserRequest DeleteApartmentAdminUserRequest = new("deleteapt_admin@test.com", "DeleteAdmin", "User", "DeleteApt123!", new DateOnly(1995, 6, 15));
 
+    // Dedicated Users for UpdateReview tests
+    public static readonly RegisterUserRequest UpdateReviewSecondaryUserRequest = new("updatereview_sec@test.com", "UpdateSec", "User", "UpdateRev123!", new DateOnly(2000, 1, 1));
+
+    // Dedicated Users for DeleteReview tests
+    public static readonly RegisterUserRequest DeleteReviewSecondaryUserRequest = new("deletereview_sec@test.com", "DeleteSec", "User", "DeleteRev123!", new DateOnly(2000, 1, 1));
+    public static readonly RegisterUserRequest DeleteReviewTertiaryUserRequest = new("deletereview_tertiary@test.com", "Tertiary", "User", "Password123!", new DateOnly(2000, 1, 1));
+
+    // Dedicated Users for GetAllReviews tests
+    public static readonly RegisterUserRequest GetAllReviewsAdminUserRequest = new("getallreviews_admin@test.com", "AllRevAdmin", "User", "AllRevAdmin123!", new DateOnly(1995, 6, 15));
+    public static readonly RegisterUserRequest GetAllReviewsRegularUserRequest = new("getallreviews_regular@test.com", "AllRevRegular", "User", "AllRevRegular123!", new DateOnly(2000, 1, 1));
+
     public const string FirstName = "Test";
     public const string LastName = "User";
     public const string Email = "test@test.com";

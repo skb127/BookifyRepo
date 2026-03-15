@@ -157,9 +157,9 @@ internal static class BookingTestHelpers
         return (apartmentId, bookingId, ownerAccessToken, ownerEmail, guestAccessToken, guestEmail);
     }
 
-    // Helper 4: creates an Apartment and 1 Completed booking, returns BOTH owner (admin) and guest tokens, and creates reviews.
+    // Helper 4: creates an Apartment and 1 Completed booking (no reviews yet), returns BOTH owner (admin) and guest tokens.
     public static async Task<(Guid apartmentId, Guid bookingId, string ownerToken, string ownerEmail, string guestToken, string guestEmail)>
-        SetupCompletedBookingWithReviewsAsync(BaseIntegrationTest test, IEnumerable<(int Rating, string Comment)> reviews, string password = "Password123!")
+        SetupCompletedBookingAsync(BaseIntegrationTest test, string password = "Password123!")
     {
         // 1. Setup apartment and reserved booking using existing helper
         var (apartmentId, bookingId, ownerToken, ownerEmail, guestToken, guestEmail) =
@@ -180,23 +180,102 @@ internal static class BookingTestHelpers
             null).ConfigureAwait(true);
         completeResponse.EnsureSuccessStatusCode();
 
-        // 4. Create reviews as Guest
+        return (apartmentId, bookingId, ownerToken, ownerEmail, guestToken, guestEmail);
+    }
+
+    // Helper 5: creates an Apartment and N Completed bookings (1 per review), returns owner token, guest token (from first guest), etc.
+    public static async Task<(Guid apartmentId, List<Guid> bookingIds, string ownerToken, string ownerEmail, string guestToken, string guestEmail)>
+        SetupApartmentWithMultipleReviewedBookingsAsync(BaseIntegrationTest test, IEnumerable<(int Rating, string Comment)> reviews, string password = "Password123!")
+    {
+        // 1. Setup apartment and owner
+        var ownerEmail = $"owner_{Guid.CreateVersion7()}@test.com";
+        var registerOwnerCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            ownerEmail, "AdminOwner", "User", password, new DateOnly(1990, 1, 1));
+        _ = await test.Sender.Send(registerOwnerCommand).ConfigureAwait(false);
+
+        await test.PromoteToAdminAsync(ownerEmail).ConfigureAwait(false);
+
+        string ownerToken = await test.GetAccessToken(ownerEmail, password).ConfigureAwait(true);
         test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            JwtBearerDefaults.AuthenticationScheme, guestToken);
+            JwtBearerDefaults.AuthenticationScheme, ownerToken);
+
+        var aptData = ApartmentData.ValidCreateApartmentRequest;
+        HttpResponseMessage createApartmentResponse = await test.HttpClient.PostAsJsonAsync(
+            "api/v1/apartments", aptData).ConfigureAwait(true);
+        createApartmentResponse.EnsureSuccessStatusCode();
+
+        Guid apartmentId = await createApartmentResponse.Content.ReadFromJsonAsync<Guid>().ConfigureAwait(true);
+
+        // 2. Setup guest
+        var guestEmail = $"guest_{Guid.CreateVersion7()}@test.com";
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        _ = await test.Sender.Send(registerGuestCommand).ConfigureAwait(false);
+
+        string guestToken = await test.GetAccessToken(guestEmail, password).ConfigureAwait(true);
+
+        var bookingIds = new List<Guid>();
+        int monthOffset = 1;
+        int yearOffset = 2028;
 
         foreach (var (rating, comment) in reviews)
         {
+            // Reserve Booking as the Guest
+            test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+            var startDate = new DateOnly(yearOffset, monthOffset, 1);
+            var endDate = new DateOnly(yearOffset, monthOffset, 10);
+
+            monthOffset++;
+            if (monthOffset > 12)
+            {
+                monthOffset = 1;
+                yearOffset++;
+            }
+
+            var reserveRequest = new ReserveBookingRequest(apartmentId, startDate, endDate)
+            {
+                ApartmentId = apartmentId,
+                StartDate = startDate,
+                EndDate = endDate
+            };
+
+            HttpResponseMessage reserveResponse = await test.HttpClient.PostAsJsonAsync("api/v1/bookings", reserveRequest).ConfigureAwait(true);
+            reserveResponse.EnsureSuccessStatusCode();
+
+            Guid bookingId = await reserveResponse.Content.ReadFromJsonAsync<Guid>().ConfigureAwait(true);
+            bookingIds.Add(bookingId);
+
+            // Confirm booking as Admin/Owner
+            test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                JwtBearerDefaults.AuthenticationScheme, ownerToken);
+
+            HttpResponseMessage confirmResponse = await test.HttpClient.PutAsync(
+                new Uri($"api/v1/bookings/{bookingId}/confirmation", UriKind.Relative), null).ConfigureAwait(true);
+            confirmResponse.EnsureSuccessStatusCode();
+
+            // Complete booking as Admin/Owner
+            HttpResponseMessage completeResponse = await test.HttpClient.PutAsync(
+                new Uri($"api/v1/bookings/{bookingId}/completion", UriKind.Relative), null).ConfigureAwait(true);
+            completeResponse.EnsureSuccessStatusCode();
+
+            // Create review as Guest
+            test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                JwtBearerDefaults.AuthenticationScheme, guestToken);
+
             var addReviewRequest = new Api.Controllers.Reviews.AddReviewRequest(bookingId, rating, comment)
             {
                 BookingId = bookingId,
                 Rating = rating,
                 Comment = comment
             };
+
             HttpResponseMessage reviewResponse = await test.HttpClient.PostAsJsonAsync(
                 "api/v1/reviews", addReviewRequest).ConfigureAwait(true);
             reviewResponse.EnsureSuccessStatusCode();
         }
 
-        return (apartmentId, bookingId, ownerToken, ownerEmail, guestToken, guestEmail);
+        return (apartmentId, bookingIds, ownerToken, ownerEmail, guestToken, guestEmail);
     }
 }

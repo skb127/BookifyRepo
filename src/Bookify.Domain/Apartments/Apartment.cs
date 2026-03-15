@@ -15,7 +15,8 @@ public sealed class Apartment : Entity
         Address address,
         Money price,
         Money cleaningFee,
-        IReadOnlyCollection<Amenity> amenities)
+        IReadOnlyCollection<Amenity> amenities,
+        DateTime createdOnUtc)
         : base(id)
     {
         OwnerId = ownerId;
@@ -25,6 +26,7 @@ public sealed class Apartment : Entity
         Price = price;
         CleaningFee = cleaningFee;
         _amenities = new List<Amenity>(amenities ?? []);
+        CreatedOnUtc = createdOnUtc;
     }
 
     /// <summary>
@@ -43,6 +45,8 @@ public sealed class Apartment : Entity
     public Money Price { get; private set; } = null!;
     public Money CleaningFee { get; private set; } = null!;
     public DateTime? LastBookedOnUtc { get; internal set; }
+    public DateTime CreatedOnUtc { get; private set; }
+    public DateTime? EditedOnUtc { get; private set; }
     public DateTime? DeletedAt { get; private set; }
     public IReadOnlyList<Amenity> Amenities
     {
@@ -59,7 +63,8 @@ public sealed class Apartment : Entity
         Address address,
         Money price,
         Money cleaningFee,
-        IReadOnlyCollection<Amenity> amenities)
+        IReadOnlyCollection<Amenity> amenities,
+        DateTime utcNow)
     {
         var apartment = new Apartment(
             Guid.CreateVersion7(),
@@ -69,7 +74,8 @@ public sealed class Apartment : Entity
             address,
             price,
             cleaningFee,
-            amenities);
+            amenities,
+            utcNow);
 
         return apartment;
     }
@@ -80,17 +86,19 @@ public sealed class Apartment : Entity
         Address address,
         Money price,
         Money cleaningFee,
-        IReadOnlyCollection<Amenity> amenities)
+        IReadOnlyCollection<Amenity> amenities,
+        DateTime utcNow)
     {
         Name = name;
         Description = description;
         Address = address;
         Price = price;
         CleaningFee = cleaningFee;
+        EditedOnUtc = utcNow;
 
         _amenities = new List<Amenity>(amenities ?? []);
     }
 
-    public void Delete() =>
-        DeletedAt = DateTime.UtcNow;
+    public void Delete(DateTime utcNow) =>
+        DeletedAt = utcNow;
 }

@@ -49,7 +49,7 @@ internal sealed class GetApartmentReviewsQueryHandler
                 comment AS Comment,
                 created_on_utc AS CreatedOnUtc
             FROM reviews
-            WHERE apartment_id = @ApartmentId
+            WHERE apartment_id = @ApartmentId AND deleted_on_utc IS NULL
             ORDER BY created_on_utc DESC
             LIMIT @PageSize OFFSET @Offset
             """,
@@ -67,7 +67,7 @@ internal sealed class GetApartmentReviewsQueryHandler
                 COUNT(*) AS TotalCount, 
                 AVG(CAST(rating AS float)) AS AverageRating
             FROM reviews 
-            WHERE apartment_id = @ApartmentId
+            WHERE apartment_id = @ApartmentId AND deleted_on_utc IS NULL
             """,
             new { request.ApartmentId });
 

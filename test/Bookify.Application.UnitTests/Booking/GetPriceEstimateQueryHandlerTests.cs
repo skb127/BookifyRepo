@@ -50,10 +50,10 @@ public class GetPriceEstimateQueryHandlerTests
         // Construct fake apartment
         var price = new Money(100.0m, Currency.Usd);
         var cleaningFee = new Money(50.0m, Currency.Usd);
-        var apartment = (Bookify.Domain.Apartments.Apartment)Activator.CreateInstance(typeof(Bookify.Domain.Apartments.Apartment), true)!;
-        typeof(Bookify.Domain.Apartments.Apartment).GetProperty(nameof(Bookify.Domain.Apartments.Apartment.Price))!.SetValue(apartment, price);
-        typeof(Bookify.Domain.Apartments.Apartment).GetProperty(nameof(Bookify.Domain.Apartments.Apartment.CleaningFee))!.SetValue(apartment, cleaningFee);
-        typeof(Bookify.Domain.Apartments.Apartment).GetProperty(nameof(Bookify.Domain.Apartments.Apartment.Amenities))!.SetValue(apartment, new List<Amenity>()); // 0% upcharge
+        var apartment = (Apartment)Activator.CreateInstance(typeof(Apartment), true)!;
+        typeof(Apartment).GetProperty(nameof(Apartment.Price))!.SetValue(apartment, price);
+        typeof(Apartment).GetProperty(nameof(Apartment.CleaningFee))!.SetValue(apartment, cleaningFee);
+        typeof(Apartment).GetProperty(nameof(Apartment.Amenities))!.SetValue(apartment, new List<Amenity>()); // 0% upcharge
 
         _apartmentRepositoryMock.GetByIdAsync(query.ApartmentId, CancellationToken.None)
             .Returns(apartment);

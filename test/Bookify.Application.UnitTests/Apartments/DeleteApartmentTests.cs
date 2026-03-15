@@ -1,5 +1,5 @@
+using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Apartments.DeleteApartment;
-using Bookify.Application.UnitTests.Apartment;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
@@ -10,6 +10,7 @@ namespace Bookify.Application.UnitTests.Apartments;
 
 public class DeleteApartmentTests
 {
+    private static readonly DateTime UtcNow = DateTime.UtcNow;
     private static readonly Guid ApartmentId = Guid.NewGuid();
 
     private static readonly DeleteApartmentCommand Command = new(ApartmentId);
@@ -19,17 +20,22 @@ public class DeleteApartmentTests
     private readonly IApartmentRepository _apartmentRepositoryMock;
     private readonly IBookingRepository _bookingRepositoryMock;
     private readonly IUnitOfWork _unitOfWorkMock;
+    private readonly IDateTimeProvider _dateTimeProviderMock;
 
     public DeleteApartmentTests()
     {
         _apartmentRepositoryMock = Substitute.For<IApartmentRepository>();
         _bookingRepositoryMock = Substitute.For<IBookingRepository>();
         _unitOfWorkMock = Substitute.For<IUnitOfWork>();
+        
+        _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
+        _dateTimeProviderMock.UtcNow.Returns(UtcNow);
 
         _handler = new DeleteApartmentCommandHandler(
             _apartmentRepositoryMock,
             _bookingRepositoryMock,
-            _unitOfWorkMock);
+            _unitOfWorkMock,
+            _dateTimeProviderMock);
     }
 
     [Fact]
@@ -38,7 +44,7 @@ public class DeleteApartmentTests
         // Arrange
         _apartmentRepositoryMock
             .GetByIdAsync(ApartmentId, Arg.Any<CancellationToken>())
-            .Returns((Domain.Apartments.Apartment?)null);
+            .Returns((Apartment?)null);
 
         // Act
         Result result = await _handler.Handle(Command, CancellationToken.None);
@@ -97,7 +103,7 @@ public class DeleteApartmentTests
     public async Task Handle_ShouldSetDeletedAt_WhenApartmentCanBeDeleted()
     {
         // Arrange
-        Domain.Apartments.Apartment apartment = ApartmentData.Create();
+        var apartment = ApartmentData.Create();
 
         _apartmentRepositoryMock
             .GetByIdAsync(ApartmentId, Arg.Any<CancellationToken>())

@@ -1,6 +1,6 @@
+using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Apartments.UpdateApartment;
 using Bookify.Application.Exceptions;
-using Bookify.Application.UnitTests.Apartment;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Shared;
@@ -12,6 +12,8 @@ namespace Bookify.Application.UnitTests.Apartments;
 
 public class UpdateApartmentTests
 {
+    private static readonly DateTime UtcNow = DateTime.UtcNow;
+    
     private static readonly UpdateApartmentCommand Command = new(
         Guid.NewGuid(),
         "Updated Name",
@@ -31,15 +33,21 @@ public class UpdateApartmentTests
 
     private readonly IApartmentRepository _apartmentRepositoryMock;
     private readonly IUnitOfWork _unitOfWorkMock;
+    private readonly IDateTimeProvider _dateTimeProviderMock;
+
 
     public UpdateApartmentTests()
     {
         _apartmentRepositoryMock = Substitute.For<IApartmentRepository>();
         _unitOfWorkMock = Substitute.For<IUnitOfWork>();
+        
+        _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
+        _dateTimeProviderMock.UtcNow.Returns(UtcNow);
 
         _handler = new UpdateApartmentCommandHandler(
             _apartmentRepositoryMock,
-            _unitOfWorkMock);
+            _unitOfWorkMock,
+            _dateTimeProviderMock);
     }
 
     [Fact]
@@ -48,7 +56,7 @@ public class UpdateApartmentTests
         // Arrange
         _apartmentRepositoryMock
             .GetByIdAsync(Command.Id, Arg.Any<CancellationToken>())
-            .Returns((Domain.Apartments.Apartment?)null);
+            .Returns((Apartment?)null);
 
         // Act
         Result result = await _handler.Handle(Command, CancellationToken.None);
@@ -101,7 +109,7 @@ public class UpdateApartmentTests
     public async Task Handle_ShouldUpdateApartmentProperties_WhenCommandIsValid()
     {
         // Arrange
-        Domain.Apartments.Apartment apartment = ApartmentData.Create();
+        Apartment apartment = ApartmentData.Create();
 
         _apartmentRepositoryMock
             .GetByIdAsync(Command.Id, Arg.Any<CancellationToken>())

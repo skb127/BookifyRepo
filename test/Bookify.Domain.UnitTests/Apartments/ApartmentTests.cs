@@ -20,7 +20,7 @@ public class ApartmentTests : BaseTest
         var amenities = new List<Amenity> { Amenity.WiFi, Amenity.Parking };
 
         // Act
-        var apartment = Apartment.Create(ownerId, name, description, address, price, cleaningFee, amenities);
+        var apartment = Apartment.Create(ownerId, name, description, address, price, cleaningFee, amenities, DateTime.UtcNow);
 
         // Assert
         apartment.Should().NotBeNull();
@@ -48,7 +48,7 @@ public class ApartmentTests : BaseTest
         var newAmenities = new List<Amenity> { Amenity.Gym, Amenity.Spa };
 
         // Act
-        apartment.Update(newName, newDescription, newAddress, newPrice, newCleaningFee, newAmenities);
+        apartment.Update(newName, newDescription, newAddress, newPrice, newCleaningFee, newAmenities, DateTime.UtcNow);
 
         // Assert
         apartment.Name.Should().Be(newName);
@@ -74,7 +74,8 @@ public class ApartmentTests : BaseTest
             new Address("Country", "State", "ZipCode", "City", "Street"),
             new Money(100.0m, Currency.Usd),
             Money.Zero(),
-            []);
+            [],
+            DateTime.UtcNow);
 
         // Assert
         apartment.Amenities.Should().BeEmpty();
@@ -88,7 +89,7 @@ public class ApartmentTests : BaseTest
         DateTime before = DateTime.UtcNow;
 
         // Act
-        apartment.Delete();
+        apartment.Delete(DateTime.UtcNow);
 
         // Assert
         apartment.DeletedAt.Should().NotBeNull();
@@ -105,7 +106,7 @@ public class ApartmentTests : BaseTest
         Money originalPrice = apartment.Price;
 
         // Act
-        apartment.Delete();
+        apartment.Delete(DateTime.UtcNow);
 
         // Assert
         apartment.Name.Should().Be(originalName);

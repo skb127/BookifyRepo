@@ -1,11 +1,11 @@
 ﻿using Bookify.Domain.Apartments;
 using Bookify.Domain.Shared;
 
-namespace Bookify.Application.UnitTests.Apartment;
+namespace Bookify.Application.UnitTests.Apartments;
 
 internal static class ApartmentData
 {
-    public static Domain.Apartments.Apartment Create() =>
+    public static Apartment Create() =>
         new(Guid.CreateVersion7(),
             Guid.NewGuid(),
             new Name("Apartment 1"),
@@ -13,5 +13,6 @@ internal static class ApartmentData
             new Address("Country", "State", "ZipCode", "City", "Street"),
             new Money(50.0m, Currency.Usd),
             Money.Zero(),
-            []);
+            [],
+            DateTime.UtcNow);
 }

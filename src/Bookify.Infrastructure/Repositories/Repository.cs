@@ -47,4 +47,10 @@ internal abstract class Repository<T>
 
         return await query.FirstOrDefaultAsync(predicate, cancellationToken);
     }
+
+    public virtual async Task<bool> ExistsAsync(
+        Expression<Func<T, bool>> predicate,
+        CancellationToken cancellationToken = default) =>
+            await DbContext.Set<T>()
+                .AnyAsync(predicate, cancellationToken);
 }

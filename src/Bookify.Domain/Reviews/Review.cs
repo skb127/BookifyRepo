@@ -1,16 +1,17 @@
-﻿using Bookify.Domain.Abstractions;
+using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Reviews.Events;
 
 namespace Bookify.Domain.Reviews;
+
 public sealed class Review : Entity
 {
-    public Review(Guid id, 
-        Guid apartmentId, 
-        Guid bookingId, 
-        Guid userId, 
-        Rating rating, 
-        Comment comment, 
+    public Review(Guid id,
+        Guid apartmentId,
+        Guid bookingId,
+        Guid userId,
+        Rating rating,
+        Comment comment,
         DateTime createdOnUtc)
         : base(id)
     {
@@ -28,7 +29,7 @@ public sealed class Review : Entity
     /// </summary>
     private Review()
     {
-        
+
     }
     public Guid ApartmentId { get; private set; }
     public Guid BookingId { get; private set; }
@@ -36,6 +37,8 @@ public sealed class Review : Entity
     public Rating Rating { get; private set; } = null!;
     public Comment Comment { get; private set; } = null!;
     public DateTime CreatedOnUtc { get; private set; }
+    public DateTime? EditedOnUtc { get; private set; }
+    public DateTime? DeletedOnUtc { get; private set; }
 
     public static Result<Review> Create(
         Booking booking,
@@ -61,4 +64,38 @@ public sealed class Review : Entity
 
         return review;
     }
+
+    public Result Update(
+        Rating rating,
+        Comment comment,
+        DateTime utcNow,
+        Booking booking)
+    {
+        if (booking.Id != BookingId)
+        {
+            return Result.Failure(ReviewErrors.NotEligible);
+        }
+
+        if (booking.CompletedOnUtc is null)
+        {
+            return Result.Failure(ReviewErrors.NotEligible);
+        }
+
+        DateTime editLimit = booking.CompletedOnUtc.Value.AddDays(7);
+        if (utcNow > editLimit)
+        {
+            return Result.Failure(ReviewErrors.EditTimeExpired);
+        }
+
+        Rating = rating;
+        Comment = comment;
+        EditedOnUtc = utcNow;
+
+        RaiseDomainEvent(new ReviewUpdatedDomainEvent(Id, ApartmentId, BookingId));
+
+        return Result.Success();
+    }
+
+    public void Delete(DateTime utcNow) =>
+        DeletedOnUtc = utcNow;
 }

@@ -2,7 +2,7 @@
 using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Bookings.ReserveBooking;
 using Bookify.Application.Exceptions;
-using Bookify.Application.UnitTests.Apartment;
+using Bookify.Application.UnitTests.Apartments;
 using Bookify.Application.UnitTests.Users;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
@@ -81,7 +81,7 @@ public class ReserveBookingTests
 
         _apartmentRepositoryMock
             .GetByIdAsync(Command.ApartmentId, CancellationToken.None)
-            .Returns((Domain.Apartments.Apartment?)null);
+            .Returns((Apartment?)null);
 
         // Act 
         Result<Guid> result = await _handler.Handle(Command, CancellationToken.None);
@@ -94,7 +94,7 @@ public class ReserveBookingTests
     public async Task Handle_ShouldReturnFailure_WhenTheApartmentBookingIsOverlapping()
     {
         // Arrange
-        Domain.Apartments.Apartment apartment = ApartmentData.Create();
+        Apartment apartment = ApartmentData.Create();
         var duration = DateRange.Create(Command.StartDate, Command.EndDate);
 
         var user = UserData.Create();
@@ -122,7 +122,7 @@ public class ReserveBookingTests
     public async Task Handle_ShouldReturnFailure_WhenUnitOfWorkThrows()
     {
         // Arrange
-        Domain.Apartments.Apartment apartment = ApartmentData.Create();
+        Apartment apartment = ApartmentData.Create();
         var duration = DateRange.Create(Command.StartDate, Command.EndDate);
 
         var user = UserData.Create();
@@ -154,7 +154,7 @@ public class ReserveBookingTests
     public async Task Handle_ShouldReturnSuccess_WhenBookingIsReserved()
     {
         // Arrange
-        Domain.Apartments.Apartment apartment = ApartmentData.Create();
+        Apartment apartment = ApartmentData.Create();
         var duration = DateRange.Create(Command.StartDate, Command.EndDate);
 
         var user = UserData.Create();
@@ -182,7 +182,7 @@ public class ReserveBookingTests
     public async Task Handle_ShouldCallRepository_WhenBookingIsReserved()
     {
         // Arrange
-        Domain.Apartments.Apartment apartment = ApartmentData.Create();
+        Apartment apartment = ApartmentData.Create();
         var duration = DateRange.Create(Command.StartDate, Command.EndDate);
 
         var user = UserData.Create();
@@ -212,7 +212,7 @@ public class ReserveBookingTests
     public async Task Handle_ShouldCallUnitOfWork_WhenBookingIsReserved()
     {
         // Arrange
-        Domain.Apartments.Apartment apartment = ApartmentData.Create();
+        Apartment apartment = ApartmentData.Create();
         var duration = DateRange.Create(Command.StartDate, Command.EndDate);
 
         var user = UserData.Create();
