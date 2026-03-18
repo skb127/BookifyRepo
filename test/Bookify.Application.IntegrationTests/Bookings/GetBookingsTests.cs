@@ -25,7 +25,7 @@ public class GetBookingsTests : BaseIntegrationTest
         HttpClient.DefaultRequestHeaders.Authorization = null;
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings/admin", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -48,7 +48,7 @@ public class GetBookingsTests : BaseIntegrationTest
             JwtBearerDefaults.AuthenticationScheme, guestToken);
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings/admin", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -64,7 +64,7 @@ public class GetBookingsTests : BaseIntegrationTest
             JwtBearerDefaults.AuthenticationScheme, adminToken);
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings/admin?pageSize=101", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings?pageSize=101", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -88,7 +88,7 @@ public class GetBookingsTests : BaseIntegrationTest
             JwtBearerDefaults.AuthenticationScheme, adminToken);
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings/admin", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -111,7 +111,7 @@ public class GetBookingsTests : BaseIntegrationTest
             JwtBearerDefaults.AuthenticationScheme, adminToken);
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/bookings/admin?userId={userId}", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/bookings?userId={userId}", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -136,7 +136,7 @@ public class GetBookingsTests : BaseIntegrationTest
 
         // Act - Request Completed (5), but we only created a Reserved (1)
         int completedStatus = (int)BookingStatus.Completed;
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/bookings/admin?status={completedStatus}", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/bookings?status={completedStatus}", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -161,7 +161,7 @@ public class GetBookingsTests : BaseIntegrationTest
             JwtBearerDefaults.AuthenticationScheme, adminToken);
 
         // Act - Filter by userId to isolate the data created in this test
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/bookings/admin?userId={userId}", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/bookings?userId={userId}", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -188,7 +188,7 @@ public class GetBookingsTests : BaseIntegrationTest
 
         // Act - Filter by User ID + Status = Reserved
         int reservedStatus = (int)BookingStatus.Reserved;
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/bookings/admin?userId={userId}&status={reservedStatus}", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/bookings?userId={userId}&status={reservedStatus}", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);

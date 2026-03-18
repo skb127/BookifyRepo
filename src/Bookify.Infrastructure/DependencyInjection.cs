@@ -14,6 +14,7 @@ using Bookify.Domain.Reviews;
 using Bookify.Domain.Users;
 using Bookify.Infrastructure.Authentication;
 using Bookify.Infrastructure.Authorization;
+using Bookify.Infrastructure.Bookings;
 using Bookify.Infrastructure.Caching;
 using Bookify.Infrastructure.Clock;
 using Bookify.Infrastructure.Data;
@@ -53,7 +54,7 @@ public static class DependencyInjection
 
         AddAuthentication(services, configuration);
 
-        AddIdentity(services);
+AddIdentity(services);
         
         AddAuthorization(services);
 
@@ -65,7 +66,7 @@ public static class DependencyInjection
 
         AddBackgroundJobs(services, configuration);
 
-        AddTurnstile(services, configuration);
+AddTurnstile(services, configuration);
         
         AddOptions(services, configuration);
 
@@ -74,7 +75,7 @@ public static class DependencyInjection
 
     private static void AddEmail(IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<EmailOptions>(configuration.GetSection("Email"));
+services.Configure<EmailOptions>(configuration.GetSection("Email"));
         
         services.AddSingleton<IEmailTemplateService, ScribanTemplateService>();
 
@@ -202,12 +203,14 @@ public static class DependencyInjection
     private static void AddBackgroundJobs(IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<OutboxOptions>(configuration.GetSection("Outbox"));
+        services.Configure<CompleteBookingsJobOptions>(configuration.GetSection("CompleteBookings"));
 
         services.AddQuartz();
 
         services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true); // Ensure that Quartz jobs are gracefully shutdown when the application stops
 
         services.ConfigureOptions<ProcessOutboxMessagesJobSetup>(); // Configure the Quartz job to process outbox messages, this is going to be triggered based on the schedule defined in the OutboxOptions
+services.ConfigureOptions<CompleteBookingsJobSetup>(); // Configure the Quartz job to complete bookings, this is going to be triggered based on the schedule defined in the CompleteBookingsOptions
     }
 
     private static void AddTurnstile(IServiceCollection services, IConfiguration configuration)
@@ -218,7 +221,7 @@ public static class DependencyInjection
         {
             TurnstileOptions options = sp.GetRequiredService<IOptions<TurnstileOptions>>().Value;
             
-            httpClient.BaseAddress = options.BaseUrl;
+httpClient.BaseAddress = options.BaseUrl;
         });
     }
 

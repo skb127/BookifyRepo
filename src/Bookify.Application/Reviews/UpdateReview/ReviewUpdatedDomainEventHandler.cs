@@ -1,6 +1,7 @@
 using Bookify.Application.Abstractions.Email;
 using Bookify.Application.Abstractions.Email.Models;
 using Bookify.Application.Options;
+using Bookify.Domain.Apartments;
 using Bookify.Domain.Reviews;
 using Bookify.Domain.Reviews.Events;
 using Bookify.Domain.Users;
@@ -13,6 +14,7 @@ internal sealed class ReviewUpdatedDomainEventHandler : INotificationHandler<Rev
 {
     private readonly IReviewRepository _reviewRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IApartmentRepository _apartmentRepository;
     private readonly IEmailService _emailService;
     private readonly IEmailTemplateService _emailTemplateService;
     private readonly BookifyAppOptions _appOptions;
@@ -20,12 +22,14 @@ internal sealed class ReviewUpdatedDomainEventHandler : INotificationHandler<Rev
     public ReviewUpdatedDomainEventHandler(
         IReviewRepository reviewRepository,
         IUserRepository userRepository,
+        IApartmentRepository apartmentRepository,
         IEmailService emailService,
         IEmailTemplateService emailTemplateService,
         IOptions<BookifyAppOptions> appOptions)
     {
         _reviewRepository = reviewRepository;
         _userRepository = userRepository;
+        _apartmentRepository = apartmentRepository;
         _emailService = emailService;
         _emailTemplateService = emailTemplateService;
         _appOptions = appOptions.Value;
@@ -45,7 +49,13 @@ internal sealed class ReviewUpdatedDomainEventHandler : INotificationHandler<Rev
         {
             return;
         }
-
+        
+        Apartment? apartment = await _apartmentRepository.GetByIdAsync(review.ApartmentId, cancellationToken);
+        if (apartment is null)
+        {
+            return;
+        }
+        
 #pragma warning disable S1135 // Complete the task associated to this 'TODO' comment.
         // TODO: Get the apartment owner
         // Currently, Bookify does not have an explicit Apartment -> Owner relationship in the domain
@@ -64,6 +74,8 @@ internal sealed class ReviewUpdatedDomainEventHandler : INotificationHandler<Rev
         {
             FirstName = "Host", // Placeholder for the host name
             ReviewerName = reviewerName,
+            ApartmentName = apartment.Name.Value,
+            ApartmentId = apartment.Id.ToString(),
             Rating = review.Rating.Value,
             HomeUrl = homeUri.AbsoluteUri
         };
@@ -74,7 +86,7 @@ internal sealed class ReviewUpdatedDomainEventHandler : INotificationHandler<Rev
 
         var emailMessage = new EmailMessage(
             hostEmail,
-            "A review for your apartment has been updated",
+            $"A review for your apartment {apartment.Name.Value} has been updated",
             emailBody);
 
         await _emailService.SendAsync(emailMessage, cancellationToken);

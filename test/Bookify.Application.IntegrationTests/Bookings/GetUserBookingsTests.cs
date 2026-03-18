@@ -25,7 +25,7 @@ public class GetUserBookingsTests : BaseIntegrationTest
         HttpClient.DefaultRequestHeaders.Authorization = null;
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings/me", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -40,7 +40,7 @@ public class GetUserBookingsTests : BaseIntegrationTest
             JwtBearerDefaults.AuthenticationScheme, guestToken);
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings?pageSize=101", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings/me?pageSize=101", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -59,7 +59,7 @@ public class GetUserBookingsTests : BaseIntegrationTest
             JwtBearerDefaults.AuthenticationScheme, guestToken);
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings?page=0", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings/me?page=0", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -85,7 +85,7 @@ public class GetUserBookingsTests : BaseIntegrationTest
             JwtBearerDefaults.AuthenticationScheme, guestToken);
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings/me", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -106,7 +106,7 @@ public class GetUserBookingsTests : BaseIntegrationTest
             JwtBearerDefaults.AuthenticationScheme, guestToken);
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings/me", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -129,7 +129,7 @@ public class GetUserBookingsTests : BaseIntegrationTest
 
         // Act - Request Confirmed (2), but we only have Reserved (1)
         int confirmedStatus = (int)BookingStatus.Confirmed;
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/bookings?status={confirmedStatus}", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/bookings/me?status={confirmedStatus}", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -150,7 +150,7 @@ public class GetUserBookingsTests : BaseIntegrationTest
             JwtBearerDefaults.AuthenticationScheme, guestToken);
 
         // Act - Get all
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/bookings/me", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -175,7 +175,7 @@ public class GetUserBookingsTests : BaseIntegrationTest
 
         // Act - Filter by Confirmed (2)
         int confirmedStatus = (int)BookingStatus.Confirmed;
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/bookings?status={confirmedStatus}", UriKind.Relative));
+        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/bookings/me?status={confirmedStatus}", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);

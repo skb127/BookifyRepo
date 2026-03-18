@@ -66,6 +66,10 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             services.Configure<OutboxOptions>(o =>
                 o.IntervalInSeconds = 1);
 
+            // Speed up CompleteBookings processing for integration tests (default is daily)
+            services.Configure<Bookify.Infrastructure.Bookings.CompleteBookingsJobOptions>(o =>
+                o.CronExpression = "*/2 * * * * ?"); // Every two seconds
+
             services.Configure<ExpirationOptions>(options =>
             {
                 options.EmailChangeExpirationSeconds = 20;

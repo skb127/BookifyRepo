@@ -29,7 +29,7 @@ public sealed class BookingsController : ControllerBase
         _sender = sender;
 
     [HasPermission(Permissions.BookingsRead)]
-    [HttpGet("admin")]
+    [HttpGet]
     [ProducesResponseType(typeof(PagedResponse<BookingSummaryResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetBookings(
         [FromQuery] Guid? userId,
@@ -48,7 +48,7 @@ public sealed class BookingsController : ControllerBase
         return Ok(result.Value);
     }
 
-    [HttpGet]
+    [HttpGet("me")]
     [ProducesResponseType(typeof(PagedResponse<UserBookingResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMyBookings(
         [FromQuery] int? status,

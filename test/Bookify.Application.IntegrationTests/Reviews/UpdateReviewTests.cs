@@ -193,10 +193,15 @@ public class UpdateReviewTests : BaseIntegrationTest
         reviewResponse.Rating.Should().Be(3);
         reviewResponse.Comment.Should().Be("Actually, just OK.");
 
+        // Fetch apartment details to get the exact name generated for the email subject
+        var query = new Application.Apartments.GetApartment.GetApartmentQuery(apartmentId);
+        var apartmentResult = await Sender.Send(query);
+        var apartment = apartmentResult.Value;
+
         // Assert 3: Verify Email was sent by Outbox
         EmailMessage email = await _mockEmailService.WaitForEmailToAsync(
             recipientEmail: "host@bookify.com",
-            subject: "A review for your apartment has been updated",
+            subject: $"A review for your apartment {apartment.Name} has been updated",
             timeoutMs: 10_000,
             since: testStartTime);
 

@@ -2,6 +2,8 @@ using Bookify.Application.Abstractions.Email;
 using Bookify.Application.Abstractions.Email.Models;
 using Bookify.Application.Options;
 using Bookify.Application.Reviews.UpdateReview;
+using Bookify.Application.UnitTests.Apartments;
+using Bookify.Domain.Apartments;
 using Bookify.Domain.Reviews;
 using Bookify.Domain.Reviews.Events;
 using Bookify.Domain.Users;
@@ -14,6 +16,7 @@ public class ReviewUpdatedDomainEventHandlerTests
 {
     private readonly IReviewRepository _reviewRepositoryMock;
     private readonly IUserRepository _userRepositoryMock;
+    private readonly IApartmentRepository _apartmentRepositoryMock;
     private readonly IEmailService _emailServiceMock;
     private readonly IEmailTemplateService _emailTemplateServiceMock;
     private readonly ReviewUpdatedDomainEventHandler _handler;
@@ -22,6 +25,7 @@ public class ReviewUpdatedDomainEventHandlerTests
     {
         _reviewRepositoryMock = Substitute.For<IReviewRepository>();
         _userRepositoryMock = Substitute.For<IUserRepository>();
+        _apartmentRepositoryMock = Substitute.For<IApartmentRepository>();
         _emailServiceMock = Substitute.For<IEmailService>();
         _emailTemplateServiceMock = Substitute.For<IEmailTemplateService>();
 
@@ -33,6 +37,7 @@ public class ReviewUpdatedDomainEventHandlerTests
         _handler = new ReviewUpdatedDomainEventHandler(
             _reviewRepositoryMock,
             _userRepositoryMock,
+            _apartmentRepositoryMock,
             _emailServiceMock,
             _emailTemplateServiceMock,
             options);
@@ -98,9 +103,11 @@ public class ReviewUpdatedDomainEventHandlerTests
         var domainEvent = new ReviewUpdatedDomainEvent(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
 
         var user = CreateUser();
+        var apartment = ApartmentData.Create();
 
         var review = (Review)Activator.CreateInstance(typeof(Review), true)!;
         typeof(Review).GetProperty("UserId")!.SetValue(review, user.Id);
+        typeof(Review).GetProperty("ApartmentId")!.SetValue(review, apartment.Id);
         typeof(Review).GetProperty("Rating")!.SetValue(review, Rating.Create(5).Value);
 
         _reviewRepositoryMock.GetByIdAsync(domainEvent.ReviewId, Arg.Any<CancellationToken>())
@@ -108,6 +115,9 @@ public class ReviewUpdatedDomainEventHandlerTests
 
         _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
             .Returns(user);
+        
+        _apartmentRepositoryMock.GetByIdAsync(apartment.Id, Arg.Any<CancellationToken>())
+            .Returns(apartment);
 
         string expectedEmailBody = "<html>Email Content</html>";
 
@@ -126,6 +136,8 @@ public class ReviewUpdatedDomainEventHandlerTests
             Arg.Is<object>(m =>
                 m.GetType().GetProperty("FirstName")!.GetValue(m)!.ToString() == "Host" &&
                 m.GetType().GetProperty("ReviewerName")!.GetValue(m)!.ToString() == user.FirstName.Value &&
+                m.GetType().GetProperty("ApartmentName")!.GetValue(m)!.ToString() == apartment.Name.Value &&
+                m.GetType().GetProperty("ApartmentId")!.GetValue(m)!.ToString() == apartment.Id.ToString() &&
                 m.GetType().GetProperty("Rating")!.GetValue(m)!.ToString() == "5" &&
                 m.GetType().GetProperty("HomeUrl")!.GetValue(m)!.ToString() == "https://test.bookify.com/"),
             Arg.Any<CancellationToken>());
@@ -133,7 +145,7 @@ public class ReviewUpdatedDomainEventHandlerTests
         await _emailServiceMock.Received(1).SendAsync(
             Arg.Is<EmailMessage>(m =>
                 m.To == "host@bookify.com" &&
-                m.Subject == "A review for your apartment has been updated" &&
+                m.Subject == $"A review for your apartment {apartment.Name.Value} has been updated" &&
                 m.Body == expectedEmailBody),
             Arg.Any<CancellationToken>());
     }

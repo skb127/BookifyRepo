@@ -400,7 +400,7 @@ public class SearchApartmentsTests : BaseIntegrationTest
         var city = apartmentDetails!.Address.City;
 
         var query = new SearchApartmentsQuery(
-            null, null, city, null, null, null, null, null, 1, 10);
+            null, null, city, null, null, null, null, null, 1, 100);
 
         // Act
         Result<PagedResponse<ApartmentResponse>> result = await Sender.Send(query);

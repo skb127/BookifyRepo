@@ -62,7 +62,6 @@ internal sealed class ProcessOutboxMessagesJob : IJob
             {
                 _logger.LogError(caughtException, "Exception occured while processing outbox message {MessageId}", outboxMessage.Id);
                 
-
                 exception = caughtException;
             }
 
