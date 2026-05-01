@@ -44,6 +44,10 @@ internal static class UserData
     public static readonly RegisterUserRequest GetAllReviewsAdminUserRequest = new("getallreviews_admin@test.com", "AllRevAdmin", "User", "AllRevAdmin123!", new DateOnly(1995, 6, 15));
     public static readonly RegisterUserRequest GetAllReviewsRegularUserRequest = new("getallreviews_regular@test.com", "AllRevRegular", "User", "AllRevRegular123!", new DateOnly(2000, 1, 1));
 
+    // Dedicated users for cache invalidation E2E tests
+    public static readonly RegisterUserRequest CacheInvalidationAdminUserRequest = new("cacheinvalidation_admin@test.com", "CacheAdmin", "User", "CacheAdmin123!", new DateOnly(1995, 6, 15));
+    public static readonly RegisterUserRequest CacheInvalidationUserRequest = new("cacheinvalidation_user@test.com", "CacheUser", "User", "CacheUser123!", new DateOnly(1990, 3, 20));
+
     public const string FirstName = "Test";
     public const string LastName = "User";
     public const string Email = "test@test.com";

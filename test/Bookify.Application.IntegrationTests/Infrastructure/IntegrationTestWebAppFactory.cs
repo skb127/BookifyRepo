@@ -160,5 +160,8 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
 
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.GetAllReviewsAdminUserRequest).ConfigureAwait(false);
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.GetAllReviewsRegularUserRequest).ConfigureAwait(false);
+
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.CacheInvalidationAdminUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.CacheInvalidationUserRequest).ConfigureAwait(false);
     }
 }

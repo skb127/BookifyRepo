@@ -1,4 +1,5 @@
 ﻿using Bookify.Domain.Abstractions;
+using Bookify.Domain.Apartments.Events;
 using Bookify.Domain.Shared;
 
 namespace Bookify.Domain.Apartments;
@@ -97,8 +98,14 @@ public sealed class Apartment : Entity
         EditedOnUtc = utcNow;
 
         _amenities = new List<Amenity>(amenities ?? []);
+
+        RaiseDomainEvent(new ApartmentUpdatedDomainEvent(Id));
     }
 
-    public void Delete(DateTime utcNow) =>
+    public void Delete(DateTime utcNow)
+    {
         DeletedAt = utcNow;
+
+        RaiseDomainEvent(new ApartmentDeletedDomainEvent(Id));
+    }
 }

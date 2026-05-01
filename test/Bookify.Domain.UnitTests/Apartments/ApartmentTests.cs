@@ -1,4 +1,5 @@
 using Bookify.Domain.Apartments;
+using Bookify.Domain.Apartments.Events;
 using Bookify.Domain.Shared;
 using Bookify.Domain.UnitTests.Infrastructure;
 using FluentAssertions;
@@ -57,6 +58,9 @@ public class ApartmentTests : BaseTest
         apartment.Price.Should().Be(newPrice);
         apartment.CleaningFee.Should().Be(newCleaningFee);
         apartment.Amenities.Should().BeEquivalentTo(newAmenities);
+
+        var domainEvent = AssertDomainEventWasPublished<ApartmentUpdatedDomainEvent>(apartment);
+        domainEvent.ApartmentId.Should().Be(apartment.Id);
     }
 
     [Fact]
@@ -95,6 +99,9 @@ public class ApartmentTests : BaseTest
         apartment.DeletedAt.Should().NotBeNull();
         apartment.DeletedAt.Should().BeOnOrAfter(before);
         apartment.DeletedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+
+        var domainEvent = AssertDomainEventWasPublished<ApartmentDeletedDomainEvent>(apartment);
+        domainEvent.ApartmentId.Should().Be(apartment.Id);
     }
 
     [Fact]
