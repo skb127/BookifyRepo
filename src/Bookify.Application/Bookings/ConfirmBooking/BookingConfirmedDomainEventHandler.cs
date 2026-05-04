@@ -7,9 +7,9 @@ using Bookify.Domain.Users;
 using MediatR;
 using Microsoft.Extensions.Options;
 
-namespace Bookify.Application.Bookings.ReserveBooking;
+namespace Bookify.Application.Bookings.ConfirmBooking;
 
-internal sealed class BookingReservedDomainEventHandler : INotificationHandler<BookingReservedDomainEvent>
+internal sealed class BookingConfirmedDomainEventHandler : INotificationHandler<BookingConfirmedDomainEvent>
 {
     private readonly IBookingRepository _bookingRepository;
     private readonly IUserRepository _userRepository;
@@ -17,7 +17,7 @@ internal sealed class BookingReservedDomainEventHandler : INotificationHandler<B
     private readonly IEmailTemplateService _emailTemplateService;
     private readonly BookifyAppOptions _appOptions;
 
-    public BookingReservedDomainEventHandler(
+    public BookingConfirmedDomainEventHandler(
         IBookingRepository bookingRepository,
         IUserRepository userRepository,
         IEmailService emailService,
@@ -31,7 +31,7 @@ internal sealed class BookingReservedDomainEventHandler : INotificationHandler<B
         _appOptions = appOptions.Value;
     }
 
-    public async Task Handle(BookingReservedDomainEvent notification, CancellationToken cancellationToken)
+    public async Task Handle(BookingConfirmedDomainEvent notification, CancellationToken cancellationToken)
     {
         Booking? booking = await _bookingRepository.GetByIdAsync(notification.BookingId, cancellationToken);
 
@@ -57,12 +57,12 @@ internal sealed class BookingReservedDomainEventHandler : INotificationHandler<B
         };
 
         string emailBody = await _emailTemplateService.GenerateEmailBodyAsync(
-            "BookingReserved.html",
+            "BookingConfirmed.html",
             model, cancellationToken);
 
         var emailMessage = new EmailMessage(
             user.Email.Value,
-            "Booking Reserved",
+            "Booking Confirmed",
             emailBody);
 
         await _emailService.SendAsync(emailMessage, cancellationToken);

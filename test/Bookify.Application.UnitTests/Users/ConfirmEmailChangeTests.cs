@@ -51,7 +51,7 @@ public class ConfirmEmailChangeTests
     public async Task Handle_ShouldReturnFailure_WhenUserFound_ButTokenIsNull()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
         // No email change requested, so Token is null
 
         _userRepositoryMock.GetOneWithIncludesAsync(Arg.Any<Expression<Func<User, bool>>>(), Arg.Any<CancellationToken>(), Arg.Any<Expression<Func<User, object?>>>())
@@ -69,7 +69,7 @@ public class ConfirmEmailChangeTests
     public async Task Handle_ShouldReturnFailure_WhenUserFound_ButTokenIsExpired()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
 
         // Create an expired token directly since the constructor is now public
         var expiredToken = EmailChangeToken.Create(
@@ -97,7 +97,7 @@ public class ConfirmEmailChangeTests
     public async Task Handle_ShouldReturnSuccess_WhenTokenCorrect()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
         var newEmail = new Email("new@test.com");
         user.RequestEmailChange(newEmail, TimeSpan.FromMinutes(30));
 
@@ -129,7 +129,7 @@ public class ConfirmEmailChangeTests
     public async Task Handle_ShouldReturnFailure_WhenIdentityProviderFails()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
         var newEmail = new Email("new@test.com");
         user.RequestEmailChange(newEmail, TimeSpan.FromMinutes(30));
 
@@ -157,7 +157,7 @@ public class ConfirmEmailChangeTests
     public async Task Handle_ShouldThrowException_WhenUnitOfWorkThrows()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1))!);
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
         var newEmail = new Email("new@test.com");
         user.RequestEmailChange(newEmail, TimeSpan.FromMinutes(30));
 

@@ -37,7 +37,7 @@ internal sealed class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUs
 
         // Verify Password
         bool isPasswordValid = await _identityProvider.ValidateCredentialsAsync(
-            user.Email!.Value,
+            user.Email.Value,
             request.Password,
             cancellationToken);
 

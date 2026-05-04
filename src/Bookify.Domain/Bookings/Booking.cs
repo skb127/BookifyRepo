@@ -51,6 +51,7 @@ public sealed class Booking : Entity
     public DateTime? ConfirmedOnUtc { get; private set; }
     public DateTime? RejectedOnUtc { get; private set; }
     public DateTime? CompletedOnUtc { get; private set; }
+    public DateTime? CompletedNotificationSentAt { get; private set; }
     public DateTime? CancelledOnUtc { get; private set; }
 
     // Factory Method
@@ -148,4 +149,7 @@ public sealed class Booking : Entity
 
         return Result.Success();
     }
+
+    public void MarkCompletionNotified(DateTime utcNow) =>
+        CompletedNotificationSentAt = utcNow;
 }

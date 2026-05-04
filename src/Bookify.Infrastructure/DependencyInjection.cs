@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using Bookify.Application.Abstractions.Authentication;
 using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Abstractions.Clock;
@@ -33,6 +33,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Quartz;
+using Polly;
 using AuthenticationOptions = Bookify.Infrastructure.Authentication.AuthenticationOptions;
 using AuthenticationService = Bookify.Infrastructure.Authentication.AuthenticationService;
 using IAuthenticationService = Bookify.Application.Abstractions.Authentication.IAuthenticationService;
@@ -54,8 +55,8 @@ public static class DependencyInjection
 
         AddAuthentication(services, configuration);
 
-AddIdentity(services);
-        
+        AddIdentity(services);
+
         AddAuthorization(services);
 
         AddCaching(services, configuration);
@@ -66,8 +67,8 @@ AddIdentity(services);
 
         AddBackgroundJobs(services, configuration);
 
-AddTurnstile(services, configuration);
-        
+        AddTurnstile(services, configuration);
+
         AddOptions(services, configuration);
 
         return services;
@@ -75,8 +76,8 @@ AddTurnstile(services, configuration);
 
     private static void AddEmail(IServiceCollection services, IConfiguration configuration)
     {
-services.Configure<EmailOptions>(configuration.GetSection("Email"));
-        
+        services.Configure<EmailOptions>(configuration.GetSection("Email"));
+
         services.AddSingleton<IEmailTemplateService, ScribanTemplateService>();
 
         services.AddTransient<IEmailService, SmtpEmailService>();
@@ -136,7 +137,8 @@ services.Configure<EmailOptions>(configuration.GetSection("Email"));
             configuration.GetConnectionString("Database") ??
             throw new ArgumentNullException(nameof(configuration));
 
-        services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+        services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
 
         services.AddScoped<IUserRepository, UserRepository>();
 
@@ -149,7 +151,6 @@ services.Configure<EmailOptions>(configuration.GetSection("Email"));
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
         services.AddSingleton<ISqlConnectionFactory>(_ =>
-
             new SqlConnectionFactory(connectionString));
 
         SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
@@ -202,16 +203,64 @@ services.Configure<EmailOptions>(configuration.GetSection("Email"));
 
     private static void AddBackgroundJobs(IServiceCollection services, IConfiguration configuration)
     {
+        // --- Outbox processor job ---
+        // Processes domain events that were persisted as outbox messages during SaveChangesAsync.
         services.Configure<OutboxOptions>(configuration.GetSection("Outbox"));
+
+        // --- Complete bookings batch job ---
+        // Automatically marks confirmed bookings as completed when their duration end date has passed.
+        // Uses raw SQL for performance
         services.Configure<CompleteBookingsJobOptions>(configuration.GetSection("CompleteBookings"));
+
+        // --- Notify completed bookings job ---
+        // Sends email notifications to users whose bookings were completed by the batch job.
+        // Runs separately because the batch job uses raw SQL and does not generate domain events.
+        services.Configure<NotifyCompletedBookingsJobOptions>(configuration.GetSection("NotifyCompletedBookings"));
 
         services.AddQuartz();
 
-        services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true); // Ensure that Quartz jobs are gracefully shutdown when the application stops
+        services.AddQuartzHostedService(options =>
+            options.WaitForJobsToComplete =
+                true); // Ensure that Quartz jobs are gracefully shutdown when the application stops
 
-        services.ConfigureOptions<ProcessOutboxMessagesJobSetup>(); // Configure the Quartz job to process outbox messages, this is going to be triggered based on the schedule defined in the OutboxOptions
-services.ConfigureOptions<CompleteBookingsJobSetup>(); // Configure the Quartz job to complete bookings, this is going to be triggered based on the schedule defined in the CompleteBookingsOptions
+        services
+            .ConfigureOptions<ProcessOutboxMessagesJobSetup>(); // Configure the Quartz job to process outbox messages
+        services.ConfigureOptions<CompleteBookingsJobSetup>(); // Configure the Quartz job to complete bookings
+        services
+            .ConfigureOptions<
+                NotifyCompletedBookingsJobSetup>(); // Configure the Quartz job to notify completed bookings
+
+        AddEmailNotificationResiliencePipeline(services);
     }
+
+    /// <summary>
+    /// Registers the Polly resilience pipeline for email notification retries.
+    /// Uses exponential backoff (1s, 2s, 4s) with a maximum of 3 retry attempts.
+    /// Only retries on transient SMTP and network errors
+    /// </summary>
+    private static void AddEmailNotificationResiliencePipeline(IServiceCollection services) =>
+        services.AddResiliencePipeline("email-notification-retry", builder =>
+            builder.AddRetry(new Polly.Retry.RetryStrategyOptions
+            {
+                // Maximum number of retry attempts before giving up.
+                // After 3 failures, the exception propagates to the caller.
+                MaxRetryAttempts = 3,
+
+                // Base delay between retries. Combined with exponential backoff,
+                // the actual delays will be: 1s, 2s, 4s (doubling each time).
+                Delay = TimeSpan.FromSeconds(1),
+
+                // Exponential backoff increases the delay between each retry attempt,
+                // giving the external service (SMTP server) more time to recover.
+                BackoffType = DelayBackoffType.Exponential,
+
+                ShouldHandle = new PredicateBuilder()
+                    .Handle<SmtpCommandException>()
+                    .Handle<SmtpProtocolException>()
+                    .Handle<IOException>()
+                    .Handle<TimeoutException>()
+                    .Handle<System.Net.Sockets.SocketException>()
+            }));
 
     private static void AddTurnstile(IServiceCollection services, IConfiguration configuration)
     {
@@ -220,8 +269,8 @@ services.ConfigureOptions<CompleteBookingsJobSetup>(); // Configure the Quartz j
         services.AddHttpClient<ITurnstileValidator, TurnstileService>((sp, httpClient) =>
         {
             TurnstileOptions options = sp.GetRequiredService<IOptions<TurnstileOptions>>().Value;
-            
-httpClient.BaseAddress = options.BaseUrl;
+
+            httpClient.BaseAddress = options.BaseUrl;
         });
     }
 

@@ -70,6 +70,15 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             services.Configure<Bookify.Infrastructure.Bookings.CompleteBookingsJobOptions>(o =>
                 o.CronExpression = "*/2 * * * * ?"); // Every two seconds
 
+            // Configure NotifyCompletedBookings job for integration tests.
+            // Uses a long interval to prevent interference with existing tests.
+            // Tests that specifically need this job can override this configuration.
+            services.Configure<Bookify.Infrastructure.Bookings.NotifyCompletedBookingsJobOptions>(o =>
+            {
+                o.CronExpression = "0 0 0 1 1 ? 2099"; // Effectively disabled —  1st January 2099
+                o.BatchSize = 10;
+            });
+
             services.Configure<ExpirationOptions>(options =>
             {
                 options.EmailChangeExpirationSeconds = 20;
@@ -125,43 +134,69 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
     {
         using HttpClient httpClient = CreateClient();
 
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest)
+            .ConfigureAwait(false);
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.LoginUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RefreshTokenUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RefreshTokenUserRequest)
+            .ConfigureAwait(false);
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ExistingUserRequest).ConfigureAwait(false);
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.LogoutTestUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangePasswordUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangePasswordUserRequest2).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangeEmailUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangeEmailUserRequest2).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangeEmailPendingUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.PasswordRecoveryUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.PasswordResetUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.UpdateProfileUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.UpdateProfileUserRequest2).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.GetUserByIdUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RevokeSessionsUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.CreateApartmentStandardUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.CreateApartmentAdminUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangePasswordUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangePasswordUserRequest2)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangeEmailUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangeEmailUserRequest2)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.ChangeEmailPendingUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.PasswordRecoveryUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.PasswordResetUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.UpdateProfileUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.UpdateProfileUserRequest2)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.GetUserByIdUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RevokeSessionsUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.CreateApartmentStandardUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.CreateApartmentAdminUserRequest)
+            .ConfigureAwait(false);
 
 
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.UpdateApartmentStandardUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.UpdateApartmentAdminUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.UpdateApartmentStandardUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.UpdateApartmentAdminUserRequest)
+            .ConfigureAwait(false);
 
 
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.DeleteApartmentStandardUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.DeleteApartmentAdminUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.DeleteApartmentStandardUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.DeleteApartmentAdminUserRequest)
+            .ConfigureAwait(false);
 
 
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.UpdateReviewSecondaryUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.UpdateReviewSecondaryUserRequest)
+            .ConfigureAwait(false);
 
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.DeleteReviewSecondaryUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.DeleteReviewTertiaryUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.DeleteReviewSecondaryUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.DeleteReviewTertiaryUserRequest)
+            .ConfigureAwait(false);
 
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.GetAllReviewsAdminUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.GetAllReviewsRegularUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.GetAllReviewsAdminUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.GetAllReviewsRegularUserRequest)
+            .ConfigureAwait(false);
 
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.CacheInvalidationAdminUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.CacheInvalidationUserRequest).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.CacheInvalidationAdminUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.CacheInvalidationUserRequest)
+            .ConfigureAwait(false);
     }
 }

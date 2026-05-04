@@ -358,7 +358,7 @@ public class UserTests : BaseTest
 
         var domainEvent = AssertDomainEventWasPublished<UserEmailChangedDomainEvent>(user);
         domainEvent.Should().NotBeNull();
-        domainEvent!.NewEmail.Should().Be(newEmail.Value);
+        domainEvent.NewEmail.Should().Be(newEmail.Value);
     }
 
     [Fact]

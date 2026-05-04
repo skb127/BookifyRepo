@@ -43,7 +43,7 @@ public class BookingRejectedDomainEventHandlerTests
         var firstName = new FirstName("Test");
         var lastName = new LastName("User");
         var email = new Email("test@test.com");
-        var dateOfBirth = DateOfBirth.Create(new DateOnly(2000, 1, 1))!;
+        var dateOfBirth = DateOfBirth.Create(new DateOnly(2000, 1, 1));
 
         return User.Create(firstName, lastName, email, dateOfBirth);
     }

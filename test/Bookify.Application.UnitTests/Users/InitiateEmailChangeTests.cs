@@ -99,7 +99,7 @@ public class InitiateEmailChangeTests
 
         // Simulate collision in DB
         _userRepositoryMock.FindOneAsync(Arg.Any<Expression<Func<User, bool>>>(), Arg.Any<CancellationToken>())
-            .Returns(User.Create(new FirstName("Other"), new LastName("Person"), new Email(Command.NewEmail), DateOfBirth.Create(new DateOnly(2000, 1, 1))!));
+            .Returns(User.Create(new FirstName("Other"), new LastName("Person"), new Email(Command.NewEmail), DateOfBirth.Create(new DateOnly(2000, 1, 1))));
 
         // Act
         Result result = await _handler.Handle(Command, CancellationToken.None);

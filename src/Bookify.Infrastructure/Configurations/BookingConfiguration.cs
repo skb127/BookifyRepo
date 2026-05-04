@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Apartments;
+using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Shared;
 using Bookify.Domain.Users;
@@ -38,6 +38,9 @@ internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder.HasOne<User>()
             .WithMany()
             .HasForeignKey(booking => booking.UserId);
+
+        builder.Property(booking => booking.CompletedNotificationSentAt)
+            .IsRequired(false);
 
     }
 }

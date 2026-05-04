@@ -1,40 +1,53 @@
+using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Email;
 using Bookify.Application.Abstractions.Email.Models;
-using Bookify.Application.Bookings.CancelBooking;
+using Bookify.Application.Bookings.CompleteBooking;
 using Bookify.Application.Options;
+using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Bookings.Events;
 using Bookify.Domain.Users;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
+using FluentAssertions;
 
 namespace Bookify.Application.UnitTests.Booking.Events;
 
-public class BookingCancelledDomainEventHandlerTests
+public class BookingCompletedDomainEventHandlerTests
 {
+    private static readonly DateTime UtcNow = DateTime.UtcNow;
+
     private readonly IBookingRepository _bookingRepositoryMock;
     private readonly IUserRepository _userRepositoryMock;
     private readonly IEmailService _emailServiceMock;
     private readonly IEmailTemplateService _emailTemplateServiceMock;
-    private readonly BookingCancelledDomainEventHandler _handler;
+    private readonly IDateTimeProvider _dateTimeProviderMock;
+    private readonly IUnitOfWork _unitOfWorkMock;
+    private readonly BookingCompletedDomainEventHandler _handler;
 
-    public BookingCancelledDomainEventHandlerTests()
+    public BookingCompletedDomainEventHandlerTests()
     {
         _bookingRepositoryMock = Substitute.For<IBookingRepository>();
         _userRepositoryMock = Substitute.For<IUserRepository>();
         _emailServiceMock = Substitute.For<IEmailService>();
         _emailTemplateServiceMock = Substitute.For<IEmailTemplateService>();
+        _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
+        _unitOfWorkMock = Substitute.For<IUnitOfWork>();
+
+        _dateTimeProviderMock.UtcNow.Returns(UtcNow);
 
         var options = Microsoft.Extensions.Options.Options.Create(new BookifyAppOptions
         {
             FrontendUrl = new Uri("https://test.bookify.com")
         });
 
-        _handler = new BookingCancelledDomainEventHandler(
+        _handler = new BookingCompletedDomainEventHandler(
             _bookingRepositoryMock,
             _userRepositoryMock,
             _emailServiceMock,
             _emailTemplateServiceMock,
+            _dateTimeProviderMock,
+            _unitOfWorkMock,
             options);
     }
 
@@ -52,7 +65,7 @@ public class BookingCancelledDomainEventHandlerTests
     public async Task Handle_ShouldNotSendEmail_WhenBookingNotFound()
     {
         // Arrange
-        var domainEvent = new BookingCancelledDomainEvent(Guid.NewGuid());
+        var domainEvent = new BookingCompletedDomainEvent(Guid.NewGuid());
 
         _bookingRepositoryMock.GetByIdAsync(domainEvent.BookingId, Arg.Any<CancellationToken>())
             .ReturnsNull();
@@ -63,15 +76,15 @@ public class BookingCancelledDomainEventHandlerTests
         // Assert
         await _emailTemplateServiceMock.DidNotReceiveWithAnyArgs().GenerateEmailBodyAsync(default!, default!);
         await _emailServiceMock.DidNotReceiveWithAnyArgs().SendAsync(default!);
+        await _unitOfWorkMock.DidNotReceiveWithAnyArgs().SaveChangesAsync(default);
     }
 
     [Fact]
     public async Task Handle_ShouldNotSendEmail_WhenUserNotFound()
     {
         // Arrange
-        var domainEvent = new BookingCancelledDomainEvent(Guid.NewGuid());
+        var domainEvent = new BookingCompletedDomainEvent(Guid.NewGuid());
 
-        // Use reflection to set up a booking without creating complex apartment data from another project
         var booking = (Domain.Bookings.Booking)Activator.CreateInstance(typeof(Domain.Bookings.Booking), true)!;
         typeof(Domain.Bookings.Booking).GetProperty("UserId")!.SetValue(booking, Guid.NewGuid());
 
@@ -87,18 +100,20 @@ public class BookingCancelledDomainEventHandlerTests
         // Assert
         await _emailTemplateServiceMock.DidNotReceiveWithAnyArgs().GenerateEmailBodyAsync(default!, default!);
         await _emailServiceMock.DidNotReceiveWithAnyArgs().SendAsync(default!);
+        await _unitOfWorkMock.DidNotReceiveWithAnyArgs().SaveChangesAsync(default);
     }
 
     [Fact]
-    public async Task Handle_ShouldSendEmail_WhenValid()
+    public async Task Handle_ShouldSendEmailAndMarkAsNotified_WhenValid()
     {
         // Arrange
-        var domainEvent = new BookingCancelledDomainEvent(Guid.CreateVersion7());
+        var domainEvent = new BookingCompletedDomainEvent(Guid.CreateVersion7());
 
         var user = CreateUser();
 
         var booking = (Domain.Bookings.Booking)Activator.CreateInstance(typeof(Domain.Bookings.Booking), true)!;
         typeof(Domain.Bookings.Booking).GetProperty("UserId")!.SetValue(booking, user.Id);
+        typeof(Domain.Bookings.Booking).GetProperty("Id")!.SetValue(booking, domainEvent.BookingId);
 
         _bookingRepositoryMock.GetByIdAsync(domainEvent.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
@@ -109,7 +124,7 @@ public class BookingCancelledDomainEventHandlerTests
         string expectedEmailBody = "<html>Email Content</html>";
 
         _emailTemplateServiceMock.GenerateEmailBodyAsync(
-            "BookingCancelled.html",
+            "BookingCompleted.html",
             Arg.Any<object>(),
             Arg.Any<CancellationToken>())
             .Returns(expectedEmailBody);
@@ -119,17 +134,23 @@ public class BookingCancelledDomainEventHandlerTests
 
         // Assert
         await _emailTemplateServiceMock.Received(1).GenerateEmailBodyAsync(
-            "BookingCancelled.html",
+            "BookingCompleted.html",
             Arg.Is<object>(m =>
                 m.GetType().GetProperty("FirstName")!.GetValue(m)!.ToString() == user.FirstName.Value &&
+                m.GetType().GetProperty("BookingId")!.GetValue(m)!.ToString() == domainEvent.BookingId.ToString() &&
                 m.GetType().GetProperty("HomeUrl")!.GetValue(m)!.ToString() == "https://test.bookify.com/"),
             Arg.Any<CancellationToken>());
 
         await _emailServiceMock.Received(1).SendAsync(
             Arg.Is<EmailMessage>(m =>
                 m.To == user.Email.Value &&
-                m.Subject == "Booking Cancelled" &&
+                m.Subject == "Stay Completed" &&
                 m.Body == expectedEmailBody),
             Arg.Any<CancellationToken>());
+
+        // Verify the booking was marked as notified to prevent duplicates from the batch job
+        booking.CompletedNotificationSentAt.Should().Be(UtcNow);
+
+        await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

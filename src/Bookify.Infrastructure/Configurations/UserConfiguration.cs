@@ -35,7 +35,7 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasConversion(phoneNumber => phoneNumber != null ? phoneNumber.Value : null, value => PhoneNumber.Create(value!));
 
         builder.Property(user => user.DateOfBirth)
-            .HasConversion(dateOfBirth => dateOfBirth.Value, value => DateOfBirth.Create(value)!)
+            .HasConversion(dateOfBirth => dateOfBirth.Value, value => DateOfBirth.Create(value))
             .HasDefaultValue(DateOfBirth.Create(new DateOnly(1900, 1, 1)));
 
         builder.Property(user => user.LastModifiedOn);
