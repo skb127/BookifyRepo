@@ -47,6 +47,7 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="MailKit" Version="4.16.0" />
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.10.0" />
     <PackageVersion Include="Scriban" Version="7.1.0" />
   </ItemGroup>
 </Project>

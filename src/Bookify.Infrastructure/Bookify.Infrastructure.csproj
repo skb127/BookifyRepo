@@ -24,6 +24,7 @@
     <PackageReference Include="Quartz.Extensions.Hosting" />
     <PackageReference Include="Scriban" />
     <PackageReference Include="Microsoft.Extensions.Resilience" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
   </ItemGroup>
 
   <ItemGroup>

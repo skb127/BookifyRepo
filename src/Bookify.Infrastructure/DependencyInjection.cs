@@ -33,6 +33,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Quartz;
+using Microsoft.Extensions.Http.Resilience;
 using Polly;
 using AuthenticationOptions = Bookify.Infrastructure.Authentication.AuthenticationOptions;
 using AuthenticationService = Bookify.Infrastructure.Authentication.AuthenticationService;
@@ -266,11 +267,78 @@ public static class DependencyInjection
     {
         services.Configure<TurnstileOptions>(configuration.GetSection("Turnstile"));
 
-        services.AddHttpClient<ITurnstileValidator, TurnstileService>((sp, httpClient) =>
-        {
-            TurnstileOptions options = sp.GetRequiredService<IOptions<TurnstileOptions>>().Value;
+        services
+            .AddHttpClient<ITurnstileValidator, TurnstileService>((sp, httpClient) =>
+            {
+                TurnstileOptions options = sp.GetRequiredService<IOptions<TurnstileOptions>>().Value;
 
-            httpClient.BaseAddress = options.BaseUrl;
+                httpClient.BaseAddress = options.BaseUrl;
+            })
+            .AddResilienceHandler("turnstile-pipeline", AddTurnstileResiliencePipeline);
+    }
+
+    /// <summary>
+    /// Configures the Polly resilience pipeline for Turnstile HTTP calls.
+    /// Combines a Retry strategy for transient errors with a Circuit Breaker
+    /// to prevent cascade failures when Cloudflare is experiencing an outage.
+    ///
+    /// Strategy execution order (outer → inner):
+    ///   Circuit Breaker → Retry → HTTP call
+    ///
+    /// Only handles network/transport errors and HTTP 5xx responses.
+    /// Doesnt retry successful responses where success=false (invalid tokens).
+    /// </summary>
+    private static void AddTurnstileResiliencePipeline(
+        ResiliencePipelineBuilder<HttpResponseMessage> builder)
+    {
+        // --- Circuit Breaker (outer) ---
+        // Opens when 50% of requests fail within a 30-second sampling window,
+        // requiring at least 5 requests before the circuit can trip.
+        // Stays open for 15 seconds before transitioning to half-open.
+        builder.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
+        {
+            // Minimum failure rate (50%) to open the circuit.
+            FailureRatio = 0.5,
+
+            // Minimum number of requests in the sampling window before
+            // the circuit breaker can evaluate and potentially open.
+            MinimumThroughput = 5,
+
+            // Time window used to calculate the failure ratio.
+            SamplingDuration = TimeSpan.FromSeconds(30),
+
+            // Time the circuit remains open before attempting recovery (half-open state).
+            BreakDuration = TimeSpan.FromSeconds(15),
+
+            // Only trip on network errors and HTTP 5xx — not on valid responses
+            // where Cloudflare returns success=false (invalid tokens).
+            ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                .Handle<HttpRequestException>()
+                .Handle<TaskCanceledException>()
+                .Handle<TimeoutException>()
+                .HandleResult(r => (int)r.StatusCode >= 500)
+        });
+
+        // --- Retry (inner) ---
+        // Fewer attempts: 2
+        // Delays with exponential backoff: 1s → 2s.
+        builder.AddRetry(new HttpRetryStrategyOptions
+        {
+            // Maximum number of retry attempts before propagating the exception.
+            MaxRetryAttempts = 2,
+
+            // Base delay. With exponential backoff the actual delays will be: 1s, 2s.
+            Delay = TimeSpan.FromSeconds(1),
+
+            // Exponential backoff gives Cloudflare more time to recover between retries.
+            BackoffType = DelayBackoffType.Exponential,
+
+            // Same predicate as the Circuit Breaker.
+            ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                .Handle<HttpRequestException>()
+                .Handle<TaskCanceledException>()
+                .Handle<TimeoutException>()
+                .HandleResult(r => (int)r.StatusCode >= 500)
         });
     }
 

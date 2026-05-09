@@ -6,7 +6,11 @@ services:
       context: .
       dockerfile: src/Bookify.Api/Dockerfile
     depends_on:
+      - cert-generator
       - bookify-db
+      - bookify-redis
+      - bookify-idp
+      - bookify-seq
 
   bookify-db:
     image: postgres:17
@@ -53,3 +57,11 @@ services:
       - ./.containers/redis:/data
     ports:
       - 6379:6379
+    
+  cert-generator:
+    image: mcr.microsoft.com/dotnet/sdk:9.0
+    container_name: Bookify.CertGen
+    # Generate the certificate & grant the read permissions to everyone
+    command: sh -c "dotnet dev-certs https -ep /https/aspnetapp.pfx -p Password123 && chmod 666 /https/aspnetapp.pfx"
+    volumes:
+      - ${HOME}/.aspnet/https:/https
