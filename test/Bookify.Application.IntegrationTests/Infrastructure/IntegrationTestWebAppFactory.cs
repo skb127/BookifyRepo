@@ -62,9 +62,12 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             services.Configure<RedisCacheOptions>(redisCacheOptions =>
                 redisCacheOptions.Configuration = _redisContainer.GetConnectionString());
 
-            // Speed up Outbox processing for integration tests (default is 10s)
+            // Speed up Outbox processing for integration tests
             services.Configure<OutboxOptions>(o =>
-                o.IntervalInSeconds = 1);
+            {
+                o.IntervalInSeconds = 1;
+                o.BatchSize = 1000; 
+            });
 
             // Speed up CompleteBookings processing for integration tests (default is daily)
             services.Configure<Bookify.Infrastructure.Bookings.CompleteBookingsJobOptions>(o =>
