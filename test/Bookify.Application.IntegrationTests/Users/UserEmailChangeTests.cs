@@ -16,7 +16,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bookify.Application.IntegrationTests.Users;
 
-[Collection("IntegrationTests")]
 public class UserEmailChangeTests : BaseIntegrationTest
 {
     private readonly IntegrationTestWebAppFactory _factory;

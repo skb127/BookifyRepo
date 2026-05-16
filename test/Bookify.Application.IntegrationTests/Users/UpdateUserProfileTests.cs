@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Bookify.Application.IntegrationTests.Users;
 
-[Collection("IntegrationTests")]
 public class UpdateUserProfileTests : BaseIntegrationTest
 {
     public UpdateUserProfileTests(IntegrationTestWebAppFactory factory) : base(factory)

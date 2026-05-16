@@ -60,6 +60,8 @@ app.UseStatusCodePages();
 
 app.UseAuthentication();
 
+app.UseRateLimiter();
+
 app.UseAuthorization();
 
 app.MapControllers();
@@ -68,7 +70,7 @@ app.MapControllers();
 app.MapHealthChecks("health", new HealthCheckOptions
 {
     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-});
+}).RequireRateLimiting("health-checks");
 
 await app.RunAsync();
 

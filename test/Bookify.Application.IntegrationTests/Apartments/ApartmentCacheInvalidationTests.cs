@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Bookify.Application.IntegrationTests.Apartments;
 
-[Collection("IntegrationTests")]
 public class ApartmentCacheInvalidationTests : BaseIntegrationTest
 {
     public ApartmentCacheInvalidationTests(IntegrationTestWebAppFactory factory) : base(factory)

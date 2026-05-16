@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Bookings.ConfirmBooking;
+﻿﻿using Bookify.Application.Bookings.ConfirmBooking;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
@@ -6,7 +6,6 @@ using FluentAssertions;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 
-[Collection("IntegrationTests")]
 public class ConfirmBookingTests : BaseIntegrationTest
 {
     private static readonly Guid BookingId = Guid.CreateVersion7();

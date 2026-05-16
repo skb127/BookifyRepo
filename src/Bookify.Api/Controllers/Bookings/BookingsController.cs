@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using Bookify.Application.Bookings.CancelBooking;
 using Bookify.Application.Bookings.CompleteBooking;
 using Bookify.Application.Bookings.ConfirmBooking;
@@ -14,6 +14,7 @@ using Bookify.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Bookify.Api.Controllers.Bookings;
 
@@ -86,6 +87,7 @@ public sealed class BookingsController : ControllerBase
     }
 
     [HttpPost]
+    [EnableRateLimiting("write-operations")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     public async Task<IActionResult> ReserveBooking(
         ReserveBookingRequest request,
@@ -116,6 +118,7 @@ public sealed class BookingsController : ControllerBase
     }
 
     [HttpPut("{id:guid}/confirmation")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> ConfirmBooking(
         Guid id,
         CancellationToken cancellation)
@@ -136,6 +139,7 @@ public sealed class BookingsController : ControllerBase
     }
 
     [HttpPut("{id:guid}/cancellation")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> CancelBooking(
         Guid id,
         CancellationToken cancellationToken)
@@ -164,6 +168,7 @@ public sealed class BookingsController : ControllerBase
     }
 
     [HttpPut("{id:guid}/rejection")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> RejectBooking(
         Guid id,
         CancellationToken cancellationToken)
@@ -201,6 +206,7 @@ public sealed class BookingsController : ControllerBase
 
     [HasPermission(Permissions.BookingsWrite)]
     [HttpPut("{id:guid}/completion")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> CompleteBooking(
         Guid id,
         CancellationToken cancellationToken)

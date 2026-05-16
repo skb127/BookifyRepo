@@ -8,6 +8,7 @@ using Bookify.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Bookify.Api.Controllers.Reviews;
 
@@ -23,6 +24,7 @@ public sealed class ReviewsController : ControllerBase
         _sender = sender;
 
     [HttpPost]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> AddReview(AddReviewRequest request, CancellationToken cancellationToken)
     {
         var command = new AddReviewCommand(request.BookingId, request.Rating, request.Comment);
@@ -69,6 +71,7 @@ public sealed class ReviewsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> UpdateReview(
         Guid id,
         UpdateReviewRequest request,
@@ -154,6 +157,7 @@ public sealed class ReviewsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [EnableRateLimiting("write-operations")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]

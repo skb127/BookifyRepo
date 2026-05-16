@@ -7,6 +7,7 @@ using Bookify.Infrastructure;
 using Bookify.Infrastructure.Authentication;
 using Bookify.Infrastructure.Data;
 using Bookify.Infrastructure.Outbox;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -105,6 +106,17 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             });
 
             services.AddSingleton<IEmailService>(MockEmailService);
+
+            // Bypass RateLimiting for all old integration tests
+            services.RemoveAll<Microsoft.Extensions.Options.IConfigureOptions<Microsoft.AspNetCore.RateLimiting.RateLimiterOptions>>();
+            services.AddRateLimiter(options =>
+            {
+                options.AddPolicy("write-operations", _ => System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("bypass"));
+                options.AddPolicy("search", _ => System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("bypass"));
+                options.AddPolicy("health-checks", _ => System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("bypass"));
+                options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<Microsoft.AspNetCore.Http.HttpContext, string>(
+                    _ => System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("bypass"));
+            });
         });
     }
 

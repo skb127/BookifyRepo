@@ -21,6 +21,7 @@ using Bookify.Infrastructure.Data;
 using Bookify.Infrastructure.Email;
 using Bookify.Infrastructure.Identity;
 using Bookify.Infrastructure.Outbox;
+using Bookify.Infrastructure.RateLimiting;
 using Bookify.Infrastructure.Repositories;
 using Bookify.Infrastructure.Security;
 using Dapper;
@@ -28,13 +29,14 @@ using MailKit.Net.Smtp;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Quartz;
 using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Options;
 using Polly;
+using Quartz;
 using AuthenticationOptions = Bookify.Infrastructure.Authentication.AuthenticationOptions;
 using AuthenticationService = Bookify.Infrastructure.Authentication.AuthenticationService;
 using IAuthenticationService = Bookify.Application.Abstractions.Authentication.IAuthenticationService;
@@ -71,6 +73,8 @@ public static class DependencyInjection
         AddTurnstile(services, configuration);
 
         AddOptions(services, configuration);
+
+        AddRateLimiting(services);
 
         return services;
     }
@@ -346,5 +350,49 @@ public static class DependencyInjection
     {
         services.Configure<BookifyAppOptions>(configuration.GetSection("BookifyApp"));
         services.Configure<ExpirationOptions>(configuration.GetSection("Expiration"));
+    }
+
+    private static void AddRateLimiting(IServiceCollection services)
+    {
+        services.AddSingleton<WriteOperationsRateLimiterPolicy>();
+        services.AddSingleton<SearchRateLimiterPolicy>();
+        services.AddSingleton<HealthChecksRateLimiterPolicy>();
+
+        services.AddRateLimiter(options =>
+        {
+            options.AddPolicy<string, WriteOperationsRateLimiterPolicy>("write-operations");
+            options.AddPolicy<string, SearchRateLimiterPolicy>("search");
+            options.AddPolicy<string, HealthChecksRateLimiterPolicy>("health-checks");
+
+            options.GlobalLimiter =
+                System.Threading.RateLimiting.PartitionedRateLimiter
+                    .Create<Microsoft.AspNetCore.Http.HttpContext, string>(context =>
+                    {
+                        string key = context.User.Identity?.IsAuthenticated == true
+                            ? context.User.GetIdentityId()
+                            : context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+                        return System.Threading.RateLimiting.RateLimitPartition.GetSlidingWindowLimiter(key, _ =>
+                            new System.Threading.RateLimiting.SlidingWindowRateLimiterOptions
+                            {
+                                PermitLimit = 80,
+                                Window = TimeSpan.FromMinutes(1),
+                                SegmentsPerWindow = 2
+                            });
+                    });
+
+            options.OnRejected = async (context, token) =>
+            {
+                context.HttpContext.Response.StatusCode =
+                    Microsoft.AspNetCore.Http.StatusCodes.Status429TooManyRequests;
+                await Microsoft.AspNetCore.Http.HttpResponseJsonExtensions.WriteAsJsonAsync(
+                    context.HttpContext.Response, new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Status = Microsoft.AspNetCore.Http.StatusCodes.Status429TooManyRequests,
+                        Title = "Too Many Requests",
+                        Detail = "You have exceeded the request limit. Please try again later."
+                    }, token);
+            };
+        });
     }
 }

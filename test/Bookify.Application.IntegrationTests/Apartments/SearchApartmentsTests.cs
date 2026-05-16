@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Bookify.Application.IntegrationTests.Apartments;
 
-[Collection("IntegrationTests")]
 public class SearchApartmentsTests : BaseIntegrationTest
 {
     public SearchApartmentsTests(IntegrationTestWebAppFactory factory)

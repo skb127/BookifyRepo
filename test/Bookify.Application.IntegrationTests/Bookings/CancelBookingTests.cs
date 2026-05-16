@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 
-[Collection("IntegrationTests")]
 public class CancelBookingTests : BaseIntegrationTest
 {
     private readonly MockEmailService _mockEmailService;

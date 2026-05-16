@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Bookify.Application.IntegrationTests.Reviews;
 
-[Collection("IntegrationTests")]
 public class GetReviewTests : BaseIntegrationTest
 {
     public GetReviewTests(IntegrationTestWebAppFactory factory) : base(factory)

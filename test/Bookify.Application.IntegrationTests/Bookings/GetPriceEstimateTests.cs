@@ -6,7 +6,6 @@ using FluentAssertions;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 
-[Collection("IntegrationTests")]
 public class GetPriceEstimateTests : BaseIntegrationTest
 {
     public GetPriceEstimateTests(IntegrationTestWebAppFactory factory) : base(factory)

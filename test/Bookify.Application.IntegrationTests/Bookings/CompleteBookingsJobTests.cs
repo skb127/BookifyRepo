@@ -3,12 +3,9 @@ using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Domain.Bookings;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Xunit.Abstractions;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 
-[Collection("IntegrationTests")]
 public class CompleteBookingsJobTests : BaseIntegrationTest
 {
     public CompleteBookingsJobTests(IntegrationTestWebAppFactory factory)

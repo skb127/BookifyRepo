@@ -6,7 +6,6 @@ using FluentAssertions;
 
 namespace Bookify.Application.IntegrationTests.Users;
 
-[Collection("IntegrationTests")]
 public class RegisterUsersTests : BaseIntegrationTest
 {
     public RegisterUsersTests(IntegrationTestWebAppFactory factory) : base(factory)

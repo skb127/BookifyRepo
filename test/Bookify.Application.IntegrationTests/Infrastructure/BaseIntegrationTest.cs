@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bookify.Application.IntegrationTests.Infrastructure;
 
+[Collection("IntegrationTests")]
 public abstract class BaseIntegrationTest
 {
     private readonly IServiceScope _scope; // To allow resolving scoped services

@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using Bookify.Application.Apartments.SearchApartments;
 using Bookify.Application.Bookings.GetBookings;
 using Bookify.Application.Bookings.GetPriceEstimate;
@@ -8,6 +8,7 @@ using Bookify.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Bookify.Api.Controllers.Apartments;
 
@@ -45,6 +46,7 @@ public sealed class ApartmentsController : ControllerBase
     }
 
     [HttpGet]
+    [EnableRateLimiting("search")]
     public async Task<IActionResult> SearchApartments(
         [FromQuery] DateOnly? startDate,
         [FromQuery] DateOnly? endDate,
@@ -84,6 +86,7 @@ public sealed class ApartmentsController : ControllerBase
     }
 
     [HttpPost]
+    [EnableRateLimiting("write-operations")]
     [HasPermission(Permissions.ApartmentsWrite)]
     public async Task<IActionResult> CreateApartment(
         CreateApartmentRequest request,
@@ -117,6 +120,7 @@ public sealed class ApartmentsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [EnableRateLimiting("write-operations")]
     [HasPermission(Permissions.ApartmentsWrite)]
     public async Task<IActionResult> UpdateApartment(
         Guid id,
@@ -220,6 +224,7 @@ public sealed class ApartmentsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [EnableRateLimiting("write-operations")]
     [HasPermission(Permissions.ApartmentsWrite)]
     public async Task<IActionResult> DeleteApartment(Guid id, CancellationToken cancellationToken)
     {

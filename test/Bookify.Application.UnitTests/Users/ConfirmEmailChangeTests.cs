@@ -147,8 +147,7 @@ public class ConfirmEmailChangeTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(UserErrors.InvalidEmailChangeToken);
 
-        // Verificamos que NO se guardaron cambios en BD y el usuario sigue igual
-
+        // Verify that NO changes were saved to the DB and the user remains the same
         user.Email.Value.Should().Be("test@test.com");
         await _unitOfWorkMock.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }

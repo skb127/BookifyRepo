@@ -1,4 +1,4 @@
-﻿using System.Net;
+﻿﻿﻿﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Bookify.Application.Bookings.GetBooking;
@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 
-[Collection("IntegrationTests")]
 public class GetBookingTests : BaseIntegrationTest
 {
     private static readonly Guid BookingId = Guid.CreateVersion7();
@@ -22,7 +21,7 @@ public class GetBookingTests : BaseIntegrationTest
     public async Task GetBooking_ShouldReturnNotFound_WhenBookingIsNotFound()
     {
         // Arrange
-        // Creamos un usuario de prueba para obtener un token válido
+        // Create a test user to get a valid token
         var (_, _, _, guestToken, _) = await BookingTestHelpers.SetupReservedBookingAsync(this);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme, guestToken);

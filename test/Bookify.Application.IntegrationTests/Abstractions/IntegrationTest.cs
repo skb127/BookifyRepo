@@ -3,6 +3,4 @@ using Bookify.Application.IntegrationTests.Infrastructure;
 namespace Bookify.Application.IntegrationTests.Abstractions;
 
 [CollectionDefinition("IntegrationTests")]
-public class IntegrationTestDefinition : ICollectionFixture<IntegrationTestWebAppFactory>
-{
-}
+public class IntegrationTestDefinition : ICollectionFixture<IntegrationTestWebAppFactory>;

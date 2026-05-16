@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 
-[Collection("IntegrationTests")]
 public class GetBookingsTests : BaseIntegrationTest
 {
     public GetBookingsTests(IntegrationTestWebAppFactory factory)
@@ -127,7 +126,7 @@ public class GetBookingsTests : BaseIntegrationTest
     public async Task GetBookings_ShouldFilterByStatus_WhenStatusIsProvided_AndNoMatch()
     {
         // Arrange
-        var (_, _, _, _, _) = await BookingTestHelpers.SetupReservedBookingAsync(this);
+        await BookingTestHelpers.SetupReservedBookingAsync(this);
 
         var adminEmail = await CreateAuthAdminAsync();
         string adminToken = await GetAccessToken(adminEmail, "Password123!");

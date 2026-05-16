@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using Bookify.Application.Users;
 using Bookify.Application.Users.ChangePasswordUser;
 using Bookify.Application.Users.ConfirmEmailChange;
@@ -18,6 +18,7 @@ using Bookify.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Bookify.Api.Controllers.Users;
 
@@ -33,6 +34,7 @@ public sealed class UsersController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("login")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> Login(
         LoginUserRequest request,
         CancellationToken cancellationToken)
@@ -60,6 +62,7 @@ public sealed class UsersController : ControllerBase
 
     [Authorize]
     [HttpPost("refresh")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
     {
         if (!Request.Cookies.TryGetValue("refreshToken", out string? refreshToken))
@@ -84,6 +87,7 @@ public sealed class UsersController : ControllerBase
 
     [Authorize]
     [HttpPost("logout")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
         if (!Request.Cookies.TryGetValue("refreshToken", out string? refreshToken))
@@ -102,6 +106,7 @@ public sealed class UsersController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("register")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> Register(
         RegisterUserRequest request,
         CancellationToken cancellationToken)
@@ -146,6 +151,7 @@ public sealed class UsersController : ControllerBase
 
     [Authorize]
     [HttpPost("revoke-all-sessions")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> RevokeAllSessions(CancellationToken cancellationToken)
     {
         var command = new RevokeAllSessionsCommand();
@@ -180,6 +186,7 @@ public sealed class UsersController : ControllerBase
 
     [Authorize]
     [HttpPut("profile")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> UpdateProfile(
         UpdateUserProfileRequest request,
         CancellationToken cancellationToken)
@@ -206,6 +213,7 @@ public sealed class UsersController : ControllerBase
 
     [Authorize]
     [HttpPost("change-password")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> ChangePassword(
         ChangeUserPasswordRequest request,
         CancellationToken cancellationToken)
@@ -230,6 +238,7 @@ public sealed class UsersController : ControllerBase
     [AllowAnonymous]
     //[Turnstile]
     [HttpPost("forgot-password")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> ForgotPassword(
         PasswordRecoveryRequest recoveryRequest,
         CancellationToken cancellationToken)
@@ -244,6 +253,7 @@ public sealed class UsersController : ControllerBase
     [AllowAnonymous]
     //[Turnstile]
     [HttpPost("reset-password")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> ResetPassword(
         PasswordResetRequest resetRequest,
         CancellationToken cancellationToken)
@@ -265,6 +275,7 @@ public sealed class UsersController : ControllerBase
 
     [Authorize]
     [HttpPost("change-email")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> InitiateEmailChange(
         InitiateEmailChangeRequest request,
         CancellationToken cancellationToken)
@@ -288,6 +299,7 @@ public sealed class UsersController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("confirm-email-change")]
+    [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> ConfirmEmailChange(
         ConfirmEmailChangeRequest request,
         CancellationToken cancellationToken)

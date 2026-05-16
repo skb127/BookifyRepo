@@ -1,15 +1,11 @@
-using System.Linq.Expressions;
 using Bookify.Application.Abstractions.Authentication;
 using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Reviews.UpdateReview;
 using Bookify.Application.UnitTests.Apartments;
-using Bookify.Application.UnitTests.Users;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Reviews;
-using Bookify.Domain.Shared;
-using Bookify.Domain.Users;
 using FluentAssertions;
 using NSubstitute;
 

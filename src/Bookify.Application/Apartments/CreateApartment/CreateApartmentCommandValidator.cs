@@ -1,5 +1,4 @@
 using Bookify.Application.Extensions;
-using Bookify.Domain.Shared;
 using FluentValidation;
 
 namespace Bookify.Application.Apartments.CreateApartment;

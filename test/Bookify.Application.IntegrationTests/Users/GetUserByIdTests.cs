@@ -10,7 +10,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.Application.IntegrationTests.Users;
 
-[Collection("IntegrationTests")]
 public class GetUserByIdTests : BaseIntegrationTest
 {
     public GetUserByIdTests(IntegrationTestWebAppFactory factory) : base(factory)

@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Bookify.Application.IntegrationTests.Users;
 
-[Collection("IntegrationTests")]
 public class LogoutUserTests : BaseIntegrationTest
 {
     public LogoutUserTests(IntegrationTestWebAppFactory factory) : base(factory)

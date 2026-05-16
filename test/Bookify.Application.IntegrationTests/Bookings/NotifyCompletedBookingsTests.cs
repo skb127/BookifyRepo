@@ -11,7 +11,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 
-[Collection("IntegrationTests")]
 public class NotifyCompletedBookingsTests : BaseIntegrationTest
 {
     private readonly IntegrationTestWebAppFactory _factory;

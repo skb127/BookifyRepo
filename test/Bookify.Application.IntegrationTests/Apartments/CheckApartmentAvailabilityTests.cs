@@ -10,7 +10,6 @@ namespace Bookify.Application.IntegrationTests.Apartments;
 
 public sealed record ApartmentAvailabilityResponse(bool IsAvailable, DateOnly StartDate, DateOnly EndDate);
 
-[Collection("IntegrationTests")]
 public class CheckApartmentAvailabilityTests : BaseIntegrationTest
 {
     public CheckApartmentAvailabilityTests(IntegrationTestWebAppFactory factory)

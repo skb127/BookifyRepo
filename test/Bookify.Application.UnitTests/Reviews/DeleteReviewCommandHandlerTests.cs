@@ -7,7 +7,6 @@ using Bookify.Application.Users;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Reviews;
-using Bookify.Domain.Shared;
 using Bookify.Domain.Users;
 using FluentAssertions;
 using NSubstitute;

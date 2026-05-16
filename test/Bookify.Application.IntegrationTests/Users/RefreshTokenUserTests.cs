@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Bookify.Application.IntegrationTests.Users;
 
-[Collection("IntegrationTests")]
 public class RefreshTokenUserTests : BaseIntegrationTest
 {
     private readonly IntegrationTestWebAppFactory _factory;

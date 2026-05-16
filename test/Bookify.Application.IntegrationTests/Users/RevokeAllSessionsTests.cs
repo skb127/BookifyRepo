@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Bookify.Application.IntegrationTests.Users;
 
-[Collection("IntegrationTests")]
 public class RevokeAllSessionsTests : BaseIntegrationTest
 {
     public RevokeAllSessionsTests(IntegrationTestWebAppFactory factory) : base(factory)

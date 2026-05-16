@@ -11,7 +11,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.Application.IntegrationTests.Users;
 
-[Collection("IntegrationTests")]
 public class UserCacheInvalidationTests : BaseIntegrationTest
 {
     public UserCacheInvalidationTests(IntegrationTestWebAppFactory factory) : base(factory)
