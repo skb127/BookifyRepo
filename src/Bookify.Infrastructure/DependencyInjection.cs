@@ -41,6 +41,7 @@ using AuthenticationOptions = Bookify.Infrastructure.Authentication.Authenticati
 using AuthenticationService = Bookify.Infrastructure.Authentication.AuthenticationService;
 using IAuthenticationService = Bookify.Application.Abstractions.Authentication.IAuthenticationService;
 using IAuthorizationService = Bookify.Application.Abstractions.Authorization.IAuthorizationService;
+using RateLimitingOptions = Bookify.Infrastructure.RateLimiting.RateLimitingOptions;
 
 namespace Bookify.Infrastructure;
 
@@ -74,7 +75,7 @@ public static class DependencyInjection
 
         AddOptions(services, configuration);
 
-        AddRateLimiting(services);
+        AddRateLimiting(services, configuration);
 
         return services;
     }
@@ -352,11 +353,16 @@ public static class DependencyInjection
         services.Configure<ExpirationOptions>(configuration.GetSection("Expiration"));
     }
 
-    private static void AddRateLimiting(IServiceCollection services)
+    private static void AddRateLimiting(IServiceCollection services, IConfiguration configuration)
     {
+        services.Configure<RateLimitingOptions>(configuration.GetSection("RateLimiting"));
+
         services.AddSingleton<WriteOperationsRateLimiterPolicy>();
         services.AddSingleton<SearchRateLimiterPolicy>();
         services.AddSingleton<HealthChecksRateLimiterPolicy>();
+
+        RateLimitingOptions rateLimitingOptions = configuration.GetSection("RateLimiting").Get<RateLimitingOptions>() ??
+                                                  new RateLimitingOptions();
 
         services.AddRateLimiter(options =>
         {
@@ -375,9 +381,9 @@ public static class DependencyInjection
                         return System.Threading.RateLimiting.RateLimitPartition.GetSlidingWindowLimiter(key, _ =>
                             new System.Threading.RateLimiting.SlidingWindowRateLimiterOptions
                             {
-                                PermitLimit = 80,
-                                Window = TimeSpan.FromMinutes(1),
-                                SegmentsPerWindow = 2
+                                PermitLimit = rateLimitingOptions.Global.PermitLimit,
+                                Window = TimeSpan.FromSeconds(rateLimitingOptions.Global.WindowSeconds),
+                                SegmentsPerWindow = rateLimitingOptions.Global.SegmentsPerWindow
                             });
                     });
 

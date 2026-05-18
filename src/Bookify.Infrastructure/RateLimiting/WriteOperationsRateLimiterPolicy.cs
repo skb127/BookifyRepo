@@ -2,11 +2,17 @@ using System.Threading.RateLimiting;
 using Bookify.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 
 namespace Bookify.Infrastructure.RateLimiting;
 
 internal sealed class WriteOperationsRateLimiterPolicy : IRateLimiterPolicy<string>
 {
+    private readonly PolicyOptions _options;
+
+    public WriteOperationsRateLimiterPolicy(IOptions<RateLimitingOptions> options) =>
+        _options = options.Value.WriteOperations;
+
     public Func<OnRejectedContext, CancellationToken, ValueTask>? OnRejected => null;
 
     public RateLimitPartition<string> GetPartition(HttpContext httpContext)
@@ -18,8 +24,8 @@ internal sealed class WriteOperationsRateLimiterPolicy : IRateLimiterPolicy<stri
         return RateLimitPartition.GetFixedWindowLimiter(key, _ =>
             new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 15,
-                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = _options.PermitLimit,
+                Window = TimeSpan.FromSeconds(_options.WindowSeconds),
                 QueueLimit = 0
             });
     }
