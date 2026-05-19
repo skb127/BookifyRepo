@@ -18,6 +18,7 @@ public abstract class RateLimitIntegrationTest
         
         // Assign a unique simulated IP to each test to avoid collisions in the GlobalLimiter
         HttpClient.DefaultRequestHeaders.Add("X-Test-IP", Guid.NewGuid().ToString());
+        HttpClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
     }
 
     protected async Task<string> GetAccessTokenAsync(string email, string password)
@@ -25,6 +26,7 @@ public abstract class RateLimitIntegrationTest
         // Use a client with bypass header so login requests don't consume write-operations permits
         using var bypassClient = Factory.CreateClient();
         bypassClient.DefaultRequestHeaders.Add("X-Test-Bypass-RateLimit", "true");
+        bypassClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
         
         var response = await bypassClient.PostAsJsonAsync("api/v1/users/login", new LoginUserRequest(email, password))
             .ConfigureAwait(false);

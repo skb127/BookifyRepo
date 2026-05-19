@@ -26,5 +26,5 @@ public sealed class TurnstileResponse
     public string TokenId { get; init; } = "";
 
     [JsonPropertyName("metadata")]
-    public Dictionary<string, string> Metadata { get; init; } = new();
+    public Dictionary<string, System.Text.Json.JsonElement> Metadata { get; init; } = new();
 }

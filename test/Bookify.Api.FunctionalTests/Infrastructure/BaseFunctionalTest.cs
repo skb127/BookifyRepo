@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using Bookify.Api.Controllers.Users;
 using Bookify.Application.Users;
 
@@ -13,6 +13,7 @@ public abstract class BaseFunctionalTest : IClassFixture<FunctionalTestWebAppFac
         ArgumentNullException.ThrowIfNull(factory);
         
         HttpClient = factory.CreateClient();
+        HttpClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
     }
 
     protected async Task<string> GetAccessToken(string userEmail, string userPassword)

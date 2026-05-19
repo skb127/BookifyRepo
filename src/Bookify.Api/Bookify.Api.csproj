@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <UserSecretsId>e5ec6e77-2f27-47a9-a302-a4f18cb1fa0c</UserSecretsId>
@@ -25,6 +25,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Bookify.Application\Bookify.Application.csproj" />
     <ProjectReference Include="..\Bookify.Infrastructure\Bookify.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Bookify.Api.UnitTests" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using Bookify.Api.Controllers.Users;
 using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Users;
@@ -31,6 +31,7 @@ public abstract class BaseIntegrationTest
         {
             BaseAddress = new Uri("https://localhost")
         });
+        HttpClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
     }
 
     public async Task<string> GetAccessToken(string userEmail, string userPassword)

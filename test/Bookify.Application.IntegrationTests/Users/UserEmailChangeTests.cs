@@ -93,6 +93,7 @@ public class UserEmailChangeTests : BaseIntegrationTest
 
         // Resolve dependencies from the custom factory
         var customClient = customFactory.CreateClient();
+        customClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
         var customEmailService = customFactory.Services.GetRequiredService<IEmailService>() as MockEmailService;
 
         // Login as the dedicated user for this test

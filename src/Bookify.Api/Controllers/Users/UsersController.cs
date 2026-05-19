@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Bookify.Api.Filters.Turnstile;
 using Bookify.Application.Users;
 using Bookify.Application.Users.ChangePasswordUser;
 using Bookify.Application.Users.ConfirmEmailChange;
@@ -33,6 +34,7 @@ public sealed class UsersController : ControllerBase
         _sender = sender;
 
     [AllowAnonymous]
+    [Turnstile]
     [HttpPost("login")]
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> Login(
@@ -105,6 +107,7 @@ public sealed class UsersController : ControllerBase
     }
 
     [AllowAnonymous]
+    [Turnstile]
     [HttpPost("register")]
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> Register(
@@ -236,7 +239,7 @@ public sealed class UsersController : ControllerBase
     }
 
     [AllowAnonymous]
-    //[Turnstile]
+    [Turnstile]
     [HttpPost("forgot-password")]
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> ForgotPassword(
@@ -251,7 +254,7 @@ public sealed class UsersController : ControllerBase
     }
 
     [AllowAnonymous]
-    //[Turnstile]
+    [Turnstile]
     [HttpPost("reset-password")]
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> ResetPassword(

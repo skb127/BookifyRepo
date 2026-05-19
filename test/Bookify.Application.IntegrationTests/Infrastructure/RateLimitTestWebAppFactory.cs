@@ -176,6 +176,12 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
                     }, token).ConfigureAwait(false);
                 };
             });
+
+            services.Configure<Bookify.Infrastructure.Security.TurnstileOptions>(options =>
+            {
+                options.BaseUrl = new Uri("https://challenges.cloudflare.com/turnstile/v0/");
+                options.SecretKey = "1x0000000000000000000000000000000AA";
+            });
         });
     }
 
@@ -201,6 +207,7 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
     {
         using HttpClient client = CreateClient();
         client.DefaultRequestHeaders.Add("X-Test-Bypass-RateLimit", "true");
+        client.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
         
         await client.PostAsJsonAsync("api/v1/users/register", RateLimitUserData.WriteOpsUser)
             .ConfigureAwait(false);

@@ -117,6 +117,12 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
                 options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<Microsoft.AspNetCore.Http.HttpContext, string>(
                     _ => System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("bypass"));
             });
+
+            services.Configure<Bookify.Infrastructure.Security.TurnstileOptions>(options =>
+            {
+                options.BaseUrl = new Uri("https://challenges.cloudflare.com/turnstile/v0/");
+                options.SecretKey = "1x0000000000000000000000000000000AA";
+            });
         });
     }
 
@@ -148,6 +154,7 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
     private async Task InitializeTestUserAsync()
     {
         using HttpClient httpClient = CreateClient();
+        httpClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
 
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest)
             .ConfigureAwait(false);

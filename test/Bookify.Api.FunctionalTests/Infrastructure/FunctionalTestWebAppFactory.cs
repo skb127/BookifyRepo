@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using Bookify.Api.FunctionalTests.Users;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Infrastructure;
@@ -68,6 +68,12 @@ public class FunctionalTestWebAppFactory : WebApplicationFactory<Program>, IAsyn
                 options.Issuer = $"{keycloakAddress}realms/bookify/";
                 options.MetadataUrl = new Uri($"{keycloakAddress}realms/bookify/.well-known/openid-configuration");
             });
+
+            services.Configure<Bookify.Infrastructure.Security.TurnstileOptions>(options =>
+            {
+                options.BaseUrl = new Uri("https://challenges.cloudflare.com/turnstile/v0/");
+                options.SecretKey = "1x0000000000000000000000000000000AA";
+            });
         });
 
     public async Task InitializeAsync()
@@ -98,6 +104,7 @@ public class FunctionalTestWebAppFactory : WebApplicationFactory<Program>, IAsyn
     private async Task InitializeTestUserAsync()
     {
         HttpClient httpClient = CreateClient();
+        httpClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
 
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest).ConfigureAwait(false);
         await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest2).ConfigureAwait(false);

@@ -142,10 +142,16 @@ public class UserPasswordTests : BaseIntegrationTest
                 {
                     options.PasswordRecoveryExpirationSeconds = -5; // Expired immediately
                 });
+                services.Configure<Bookify.Infrastructure.Security.TurnstileOptions>(options =>
+                {
+                    options.BaseUrl = new Uri("https://challenges.cloudflare.com/turnstile/v0/");
+                    options.SecretKey = "1x0000000000000000000000000000000AA";
+                });
             });
         });
 
         var customClient = customFactory.CreateClient();
+        customClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
         var customEmailService = customFactory.Services.GetRequiredService<IEmailService>() as MockEmailService;
 
         // Create a unique user for this isolated environment
@@ -212,5 +218,98 @@ public class UserPasswordTests : BaseIntegrationTest
         resetResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problem = await resetResponse.Content.ReadFromJsonAsync<ProblemDetails>();
         problem!.Title.Should().Be("Validation error");
+    }
+
+    [Fact]
+    public async Task ForgotPassword_ShouldReturnBadRequest_WhenTurnstileTokenIsMissing()
+    {
+        // Arrange
+        var user = UserData.PasswordRecoveryUserRequest;
+        HttpClient.DefaultRequestHeaders.Remove("X-Turnstile-Token");
+
+        // Act
+        var request = new PasswordRecoveryRequest(user.Email);
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/users/forgot-password", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        string content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("Missing Turnstile token");
+    }
+
+    [Fact]
+    public async Task ForgotPassword_ShouldReturnBadRequest_WhenTurnstileTokenIsInvalid()
+    {
+        // Arrange
+        await using var customFactory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.Configure<Bookify.Infrastructure.Security.TurnstileOptions>(options =>
+                {
+                    options.BaseUrl = new Uri("https://challenges.cloudflare.com/turnstile/v0/");
+                    options.SecretKey = "2x0000000000000000000000000000000AA"; // Always-fails key
+                });
+            });
+        });
+        
+        var customClient = customFactory.CreateClient();
+        customClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "invalid-token-string");
+        var user = UserData.PasswordRecoveryUserRequest;
+
+        // Act
+        var request = new PasswordRecoveryRequest(user.Email);
+        HttpResponseMessage response = await customClient.PostAsJsonAsync("api/v1/users/forgot-password", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        string content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("Invalid Turnstile token");
+    }
+
+    [Fact]
+    public async Task ResetPassword_ShouldReturnBadRequest_WhenTurnstileTokenIsMissing()
+    {
+        // Arrange
+        var resetRequest = new PasswordResetRequest("dummy-token", "NewPassword123!");
+        HttpClient.DefaultRequestHeaders.Remove("X-Turnstile-Token");
+
+        // Act
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/users/reset-password", resetRequest);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        string content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("Missing Turnstile token");
+    }
+
+    [Fact]
+    public async Task ResetPassword_ShouldReturnBadRequest_WhenTurnstileTokenIsInvalid()
+    {
+        // Arrange
+        await using var customFactory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.Configure<Bookify.Infrastructure.Security.TurnstileOptions>(options =>
+                {
+                    options.BaseUrl = new Uri("https://challenges.cloudflare.com/turnstile/v0/");
+                    options.SecretKey = "2x0000000000000000000000000000000AA"; // Always-fails key
+                });
+            });
+        });
+        
+        var customClient = customFactory.CreateClient();
+        customClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "invalid-token-string");
+
+        var resetRequest = new PasswordResetRequest("dummy-token", "NewPassword123!");
+
+        // Act
+        HttpResponseMessage response = await customClient.PostAsJsonAsync("api/v1/users/reset-password", resetRequest);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        string content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("Invalid Turnstile token");
     }
 }
