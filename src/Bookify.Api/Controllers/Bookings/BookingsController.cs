@@ -15,6 +15,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Bookify.Api.Filters.Idempotency;
 
 namespace Bookify.Api.Controllers.Bookings;
 
@@ -87,6 +88,7 @@ public sealed class BookingsController : ControllerBase
     }
 
     [HttpPost]
+    [Idempotent(cacheTimeInMinutes: 60)]
     [EnableRateLimiting("write-operations")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     public async Task<IActionResult> ReserveBooking(
