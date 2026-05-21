@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Apartments;
+using Bookify.Domain.Apartments;
 using Bookify.Domain.Shared;
 using Bookify.Domain.Users;
 using Microsoft.EntityFrameworkCore;
@@ -43,6 +43,10 @@ internal sealed class ApartmentConfiguration : IEntityTypeConfiguration<Apartmen
             .HasColumnName("amenities");
 
         builder.Property(apartment => apartment.DeletedAt);
+
+        builder.Property(apartment => apartment.InstantBooking)
+            .HasDefaultValue(false)
+            .IsRequired();
 
         builder.Property<uint>("Version").IsRowVersion(); // Shadow property for optimistic concurrency control
 

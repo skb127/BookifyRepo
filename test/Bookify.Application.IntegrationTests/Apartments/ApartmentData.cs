@@ -12,7 +12,8 @@ public static class ApartmentData
         new AddressRequest("Country", "State", "ZipCode", "City", "Street"),
         new MoneyRequest(100.0m, "USD"),
         new MoneyRequest(50.0m, "USD"),
-        []);
+        [],
+        false);
 
     // GardenView (10) + Parking (3) = 6% upcharge
     public static readonly CreateApartmentRequest ValidCreateApartmentWithAmenitiesRequest = new(
@@ -21,7 +22,17 @@ public static class ApartmentData
         new AddressRequest("Country", "State", "ZipCode", "City", "Street"),
         new MoneyRequest(100.0m, "USD"),
         new MoneyRequest(50.0m, "USD"),
-        [10, 3]);
+        [10, 3],
+        false);
+
+    public static readonly CreateApartmentRequest ValidCreateApartmentInstantBookingRequest = new(
+        "Apartment Instant Booking",
+        "Description of Apartment Instant Booking",
+        new AddressRequest("Country", "State", "ZipCode", "City", "Street"),
+        new MoneyRequest(100.0m, "USD"),
+        new MoneyRequest(50.0m, "USD"),
+        [],
+        true);
 
     public static readonly UpdateApartmentRequest ValidUpdateApartmentRequest = new(
         "Updated Apartment",
@@ -29,5 +40,6 @@ public static class ApartmentData
         new AddressRequest("Spain", "Madrid", "28001", "Madrid", "Gran Vía 12"),
         new MoneyRequest(175.0m, "EUR"),
         new MoneyRequest(35.0m, "EUR"),
-        []);
+        [],
+        false);
 }

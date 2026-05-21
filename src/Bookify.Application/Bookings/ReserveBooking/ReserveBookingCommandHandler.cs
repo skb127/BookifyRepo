@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Abstractions.Authentication;
+using Bookify.Application.Abstractions.Authentication;
 using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Application.Exceptions;
@@ -67,7 +67,8 @@ internal sealed class ReserveBookingCommandHandler : ICommandHandler<ReserveBook
                 user.Id,
                 duration,
                 _dateTimeProvider.UtcNow,
-                _pricingService);
+                _pricingService,
+                apartment.InstantBooking);
 
             _bookingRepository.Add(booking);
 

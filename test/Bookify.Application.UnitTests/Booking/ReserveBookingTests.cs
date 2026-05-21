@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Abstractions.Authentication;
+using Bookify.Application.Abstractions.Authentication;
 using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Bookings.ReserveBooking;
 using Bookify.Application.Exceptions;
@@ -235,5 +235,37 @@ public class ReserveBookingTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldCreateBookingInConfirmedState_WhenInstantBookingIsTrue()
+    {
+        // Arrange
+        var apartment = ApartmentData.CreateWithInstantBooking();
+
+        var duration = DateRange.Create(Command.StartDate, Command.EndDate);
+
+        var user = UserData.Create();
+        _userContextMock.UserId.Returns(user.Id);
+        _userRepositoryMock
+            .GetByIdAsync(_userContextMock.UserId, Arg.Any<CancellationToken>())
+            .Returns(user);
+
+        _apartmentRepositoryMock
+            .GetByIdAsync(Command.ApartmentId, Arg.Any<CancellationToken>())
+            .Returns(apartment);
+
+        _bookingRepositoryMock
+            .IsOverlappingAsync(apartment, duration, Arg.Any<CancellationToken>())
+            .Returns(false);
+
+        // Act 
+        Result<Guid> result = await _handler.Handle(Command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        _bookingRepositoryMock
+            .Received(1)
+            .Add(Arg.Is<Domain.Bookings.Booking>(b => b.Id == result.Value && b.Status == BookingStatus.Confirmed));
     }
 }

@@ -104,7 +104,8 @@ public sealed class ApartmentsController : ControllerBase
             request.Price.Currency,
             request.CleaningFee.Amount,
             request.CleaningFee.Currency,
-            request.Amenities);
+            request.Amenities,
+            request.InstantBooking);
 
         Result<Guid> result = await _sender.Send(command, cancellationToken);
 
@@ -140,7 +141,8 @@ public sealed class ApartmentsController : ControllerBase
             request.Price.Currency,
             request.CleaningFee.Amount,
             request.CleaningFee.Currency,
-            request.Amenities);
+            request.Amenities,
+            request.InstantBooking);
 
         Result result = await _sender.Send(command, cancellationToken);
 

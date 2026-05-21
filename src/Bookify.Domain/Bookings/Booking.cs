@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Abstractions;
+using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings.Events;
 using Bookify.Domain.Shared;
@@ -60,7 +60,8 @@ public sealed class Booking : Entity
         Guid userId,
         DateRange duration,
         DateTime utcNow,
-        PricingService pricingService)
+        PricingService pricingService,
+        bool instantBooking = false)
     {
         PricingDetails pricingDetails = pricingService.CalculatePrice(apartment, duration);
 
@@ -73,10 +74,18 @@ public sealed class Booking : Entity
             pricingDetails.CleaningFee,
             pricingDetails.AmenitiesUpCharge,
             pricingDetails.TotalPrice,
-            BookingStatus.Reserved,
+            instantBooking ? BookingStatus.Confirmed : BookingStatus.Reserved,
             utcNow);
 
-        booking.RaiseDomainEvent(new BookingReservedDomainEvent(booking.Id));
+        if (instantBooking)
+        {
+            booking.ConfirmedOnUtc = utcNow;
+            booking.RaiseDomainEvent(new BookingConfirmedDomainEvent(booking.Id));
+        }
+        else
+        {
+            booking.RaiseDomainEvent(new BookingReservedDomainEvent(booking.Id));
+        }
 
         apartment.LastBookedOnUtc = utcNow;
 

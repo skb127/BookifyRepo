@@ -17,7 +17,8 @@ public sealed record CreateApartmentRequest(
     AddressRequest Address,
     MoneyRequest Price,
     MoneyRequest CleaningFee,
-    IReadOnlyList<int> Amenities);
+    IReadOnlyList<int> Amenities,
+    bool InstantBooking = false);
 
 public sealed record UpdateApartmentRequest(
     string Name,
@@ -25,4 +26,5 @@ public sealed record UpdateApartmentRequest(
     AddressRequest Address,
     MoneyRequest Price,
     MoneyRequest CleaningFee,
-    IReadOnlyList<int> Amenities);
+    IReadOnlyList<int> Amenities,
+    bool InstantBooking = false);

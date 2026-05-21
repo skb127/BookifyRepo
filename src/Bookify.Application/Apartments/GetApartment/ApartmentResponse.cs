@@ -13,5 +13,6 @@ public sealed class ApartmentResponse
     public AddressResponse Address { get; set; } = null!;
     public IReadOnlyList<int> Amenities { get; init; } = [];
     public DateTime? LastBookedOnUtc { get; init; }
+    public bool InstantBooking { get; init; }
 }
 

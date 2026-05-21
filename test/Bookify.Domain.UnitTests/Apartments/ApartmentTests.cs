@@ -33,6 +33,26 @@ public class ApartmentTests : BaseTest
         apartment.Price.Should().Be(price);
         apartment.CleaningFee.Should().Be(cleaningFee);
         apartment.Amenities.Should().BeEquivalentTo(amenities);
+        apartment.InstantBooking.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Create_ShouldSetInstantBookingTrue_WhenInstantBookingIsTrue()
+    {
+        // Arrange
+        var ownerId = Guid.NewGuid();
+        var name = new Name("Test Apartment");
+        var description = new Description("Test Description");
+        var address = new Address("Country", "State", "ZipCode", "City", "Street");
+        var price = new Money(100.0m, Currency.Usd);
+        var cleaningFee = new Money(50.0m, Currency.Usd);
+        var amenities = new List<Amenity> { Amenity.WiFi };
+
+        // Act
+        var apartment = Apartment.Create(ownerId, name, description, address, price, cleaningFee, amenities, DateTime.UtcNow, instantBooking: true);
+
+        // Assert
+        apartment.InstantBooking.Should().BeTrue();
     }
 
     [Fact]
@@ -49,7 +69,7 @@ public class ApartmentTests : BaseTest
         var newAmenities = new List<Amenity> { Amenity.Gym, Amenity.Spa };
 
         // Act
-        apartment.Update(newName, newDescription, newAddress, newPrice, newCleaningFee, newAmenities, DateTime.UtcNow);
+        apartment.Update(newName, newDescription, newAddress, newPrice, newCleaningFee, newAmenities, DateTime.UtcNow, false);
 
         // Assert
         apartment.Name.Should().Be(newName);
@@ -61,6 +81,26 @@ public class ApartmentTests : BaseTest
 
         var domainEvent = AssertDomainEventWasPublished<ApartmentUpdatedDomainEvent>(apartment);
         domainEvent.ApartmentId.Should().Be(apartment.Id);
+    }
+
+    [Fact]
+    public void Update_ShouldMutateInstantBooking_WhenDifferentValueIsProvided()
+    {
+        // Arrange
+        var apartment = ApartmentData.Create(new Money(100.0m, Currency.Usd), instantBooking: false);
+
+        var newName = new Name("Updated Apartment");
+        var newDescription = new Description("Updated Description");
+        var newAddress = new Address("Portugal", "Lisbon", "1000-001", "Lisbon", "Rua Nova 5");
+        var newPrice = new Money(200.0m, Currency.Eur);
+        var newCleaningFee = new Money(40.0m, Currency.Eur);
+        var newAmenities = new List<Amenity> { Amenity.Gym };
+
+        // Act
+        apartment.Update(newName, newDescription, newAddress, newPrice, newCleaningFee, newAmenities, DateTime.UtcNow, true);
+
+        // Assert
+        apartment.InstantBooking.Should().BeTrue();
     }
 
     [Fact]
@@ -79,7 +119,8 @@ public class ApartmentTests : BaseTest
             new Money(100.0m, Currency.Usd),
             Money.Zero(),
             [],
-            DateTime.UtcNow);
+            DateTime.UtcNow,
+            false);
 
         // Assert
         apartment.Amenities.Should().BeEmpty();

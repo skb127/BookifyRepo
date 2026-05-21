@@ -55,7 +55,8 @@ internal sealed class UpdateApartmentCommandHandler : ICommandHandler<UpdateApar
                 price,
                 cleaningFee,
                 amenities,
-                _dateTimeProvider.UtcNow);
+                _dateTimeProvider.UtcNow,
+                request.InstantBooking);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

@@ -15,4 +15,5 @@ public record UpdateApartmentCommand(
     string PriceCurrency,
     decimal CleaningFeeAmount,
     string CleaningFeeCurrency,
-    IReadOnlyList<int> Amenities) : ICommand;
+    IReadOnlyList<int> Amenities,
+    bool InstantBooking = false) : ICommand;

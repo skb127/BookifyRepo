@@ -1,11 +1,11 @@
-﻿using Bookify.Domain.Apartments;
+using Bookify.Domain.Apartments;
 using Bookify.Domain.Shared;
 
 namespace Bookify.Domain.UnitTests.Apartments;
 
 internal static class ApartmentData
 {
-    public static Apartment Create(Money price, Money? cleaningFee = null, ICollection<Amenity>? amenities = null) =>
+    public static Apartment Create(Money price, Money? cleaningFee = null, ICollection<Amenity>? amenities = null, bool instantBooking = false) =>
         new(Guid.CreateVersion7(),
             Guid.NewGuid(),
             new Name("Apartment 1"),
@@ -14,5 +14,6 @@ internal static class ApartmentData
             price,
             cleaningFee ?? Money.Zero(),
             amenities?.ToList() ?? [],
-            DateTime.UtcNow);
+            DateTime.UtcNow,
+            instantBooking);
 }

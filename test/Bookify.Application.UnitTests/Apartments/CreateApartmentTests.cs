@@ -27,7 +27,8 @@ public class CreateApartmentTests
         Currency.Eur.Code,
         50.0m,
         Currency.Eur.Code,
-        [1, 2, 3]);
+        [1, 2, 3],
+        false);
 
     private readonly CreateApartmentCommandHandler _handler; // SUT
 
@@ -100,5 +101,23 @@ public class CreateApartmentTests
 
         // Assert
         await act.Should().ThrowAsync<ConcurrencyException>();
+    }
+
+    [Fact]
+    public async Task Handle_ShouldSetInstantBooking_WhenCommandHasInstantBookingTrue()
+    {
+        // Arrange
+        var commandWithInstantBooking = Command with { InstantBooking = true };
+
+        // Act
+        Result<Guid> result = await _handler.Handle(commandWithInstantBooking, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        _apartmentRepositoryMock.Received(1).Add(Arg.Is<Apartment>(a =>
+            a.Name.Value == commandWithInstantBooking.Name &&
+            a.OwnerId == _userContextMock.UserId &&
+            a.InstantBooking));
     }
 }

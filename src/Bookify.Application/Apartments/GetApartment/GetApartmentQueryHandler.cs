@@ -27,6 +27,7 @@ internal sealed class GetApartmentQueryHandler : IQueryHandler<GetApartmentQuery
                 a.description AS Description,
                 a.amenities AS Amenities,
                 a.last_booked_on_utc AS LastBookedOnUtc,
+                a.instant_booking AS InstantBooking,
                 a.price_amount AS Amount,
                 a.price_currency AS Currency,
                 a.cleaning_fee_amount AS Amount,

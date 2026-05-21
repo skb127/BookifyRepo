@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Abstractions;
+using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments.Events;
 using Bookify.Domain.Shared;
 
@@ -17,7 +17,8 @@ public sealed class Apartment : Entity
         Money price,
         Money cleaningFee,
         IReadOnlyCollection<Amenity> amenities,
-        DateTime createdOnUtc)
+        DateTime createdOnUtc,
+        bool instantBooking)
         : base(id)
     {
         OwnerId = ownerId;
@@ -28,6 +29,7 @@ public sealed class Apartment : Entity
         CleaningFee = cleaningFee;
         _amenities = new List<Amenity>(amenities ?? []);
         CreatedOnUtc = createdOnUtc;
+        InstantBooking = instantBooking;
     }
 
     /// <summary>
@@ -49,6 +51,7 @@ public sealed class Apartment : Entity
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? EditedOnUtc { get; private set; }
     public DateTime? DeletedAt { get; private set; }
+    public bool InstantBooking { get; private set; }
     public IReadOnlyList<Amenity> Amenities
     {
         get => _amenities.AsReadOnly();
@@ -65,7 +68,8 @@ public sealed class Apartment : Entity
         Money price,
         Money cleaningFee,
         IReadOnlyCollection<Amenity> amenities,
-        DateTime utcNow)
+        DateTime utcNow,
+        bool instantBooking = false)
     {
         var apartment = new Apartment(
             Guid.CreateVersion7(),
@@ -76,7 +80,8 @@ public sealed class Apartment : Entity
             price,
             cleaningFee,
             amenities,
-            utcNow);
+            utcNow,
+            instantBooking);
 
         return apartment;
     }
@@ -88,7 +93,8 @@ public sealed class Apartment : Entity
         Money price,
         Money cleaningFee,
         IReadOnlyCollection<Amenity> amenities,
-        DateTime utcNow)
+        DateTime utcNow,
+        bool instantBooking)
     {
         Name = name;
         Description = description;
@@ -96,6 +102,7 @@ public sealed class Apartment : Entity
         Price = price;
         CleaningFee = cleaningFee;
         EditedOnUtc = utcNow;
+        InstantBooking = instantBooking;
 
         _amenities = new List<Amenity>(amenities ?? []);
 

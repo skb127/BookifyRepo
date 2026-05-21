@@ -34,6 +34,63 @@ public class BookingTests : BaseTest
     }
 
     [Fact]
+    public void Reserve_WithInstantBooking_ShouldSetStatusConfirmed()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+
+        // Act
+        var booking = Booking.Reserve(apartment, user.Id, period, DateTime.UtcNow, pricingService, instantBooking: true);
+
+        // Assert
+        booking.Status.Should().Be(BookingStatus.Confirmed);
+    }
+
+    [Fact]
+    public void Reserve_WithInstantBooking_ShouldSetConfirmedOnUtc()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        var utcNow = DateTime.UtcNow;
+
+        // Act
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService, instantBooking: true);
+
+        // Assert
+        booking.ConfirmedOnUtc.Should().Be(utcNow);
+    }
+
+    [Fact]
+    public void Reserve_WithInstantBooking_ShouldRaiseBookingConfirmedDomainEvent()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+
+        // Act
+        var booking = Booking.Reserve(apartment, user.Id, period, DateTime.UtcNow, pricingService, instantBooking: true);
+
+        // Assert
+        BookingConfirmedDomainEvent domainEvent = AssertDomainEventWasPublished<BookingConfirmedDomainEvent>(booking);
+
+        domainEvent.BookingId.Should().Be(booking.Id);
+    }
+
+    [Fact]
     public void Confirm_ShouldRaiseBookingConfirmedDomainEvent()
     {
         // Arrange

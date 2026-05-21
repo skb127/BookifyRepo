@@ -31,7 +31,8 @@ public class ReserveBookingTests : BaseIntegrationTest
 
         // 2. Create apartment mapping to Admin context
         string adminToken = await GetAccessToken(adminEmail, password);
-        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
         var aptData = ApartmentData.ValidCreateApartmentRequest;
         HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
         aptResponse.EnsureSuccessStatusCode();
@@ -45,7 +46,8 @@ public class ReserveBookingTests : BaseIntegrationTest
         var guestUserId = guestUserIdResponse.Value;
 
         string guestToken = await GetAccessToken(guestEmail, password);
-        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
 
         var request = new ReserveBookingRequest(
             apartmentId,
@@ -97,5 +99,63 @@ public class ReserveBookingTests : BaseIntegrationTest
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ReserveBooking_ShouldReturn201AndStatusConfirmed_WhenApartmentHasInstantBooking()
+    {
+        // Arrange
+        // 1. Create an admin to create the apartment
+        var adminEmail = $"admin_{Guid.NewGuid()}@test.com";
+        var password = "Password123!";
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        await Sender.Send(registerAdminCommand);
+        await PromoteToAdminAsync(adminEmail);
+
+        // 2. Create apartment mapping to Admin context with InstantBooking = true
+        string adminToken = await GetAccessToken(adminEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
+        var aptData = ApartmentData.ValidCreateApartmentInstantBookingRequest;
+        HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
+        aptResponse.EnsureSuccessStatusCode();
+        var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>();
+
+        // 3. Create a guest to reserve
+        var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        var guestUserIdResponse = await Sender.Send(registerGuestCommand);
+        var guestUserId = guestUserIdResponse.Value;
+
+        string guestToken = await GetAccessToken(guestEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        var request = new ReserveBookingRequest(
+            apartmentId,
+            new DateOnly(2028, 2, 1),
+            new DateOnly(2028, 2, 10))
+        {
+            ApartmentId = apartmentId,
+            StartDate = new DateOnly(2028, 2, 1),
+            EndDate = new DateOnly(2028, 2, 10)
+        };
+
+        // Act
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/bookings", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        response.Headers.Location.Should().NotBeNull();
+
+        // Verify the booking was created with Confirmed status (2)
+        HttpResponseMessage getResponse = await HttpClient.GetAsync(response.Headers.Location);
+        getResponse.EnsureSuccessStatusCode();
+        var bookingResponse = await getResponse.Content.ReadFromJsonAsync<BookingResponse>();
+        bookingResponse.Should().NotBeNull();
+        bookingResponse.UserId.Should().Be(guestUserId);
+        bookingResponse.Status.Should().Be(2); // BookingStatus.Confirmed
     }
 }

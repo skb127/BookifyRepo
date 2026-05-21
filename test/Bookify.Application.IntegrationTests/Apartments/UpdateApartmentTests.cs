@@ -99,7 +99,8 @@ public class UpdateApartmentTests : BaseIntegrationTest
             validRequest.Address,
             validRequest.Price,
             validRequest.CleaningFee,
-            validRequest.Amenities);
+            validRequest.Amenities,
+            validRequest.InstantBooking);
 
         // Act
         HttpResponseMessage response = await HttpClient.PutAsJsonAsync($"api/v1/apartments/{Guid.CreateVersion7()}", invalidRequest);
@@ -151,5 +152,51 @@ public class UpdateApartmentTests : BaseIntegrationTest
         apartmentResponse.CleaningFee.Amount.Should().Be(updateRequest.CleaningFee.Amount);
         apartmentResponse.CleaningFee.Currency.Should().Be(updateRequest.CleaningFee.Currency);
         apartmentResponse.Address.City.Should().Be(updateRequest.Address.City);
+    }
+
+    [Fact]
+    public async Task UpdateApartment_ShouldSetInstantBooking_WhenRequestHasInstantBookingTrue()
+    {
+        // Arrange: promote user to Admin
+        string adminEmail = UserData.UpdateApartmentAdminUserRequest.Email;
+        await PromoteToAdminAsync(adminEmail);
+
+        string accessToken = await GetAccessToken(
+            adminEmail,
+            UserData.UpdateApartmentAdminUserRequest.Password);
+
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme,
+            accessToken);
+
+        // 1. Create an apartment first (InstantBooking is false by default)
+        var createRequest = ApartmentData.ValidCreateApartmentRequest;
+        HttpResponseMessage createResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", createRequest);
+        createResponse.EnsureSuccessStatusCode();
+        Uri locationUri = createResponse.Headers.Location!;
+
+        // 2. Prepare update request with InstantBooking = true
+        var updateRequest = new UpdateApartmentRequest(
+            createRequest.Name,
+            createRequest.Description,
+            createRequest.Address,
+            createRequest.Price,
+            createRequest.CleaningFee,
+            createRequest.Amenities,
+            true);
+
+        // Act: Update the created apartment
+        HttpResponseMessage updateResponse = await HttpClient.PutAsJsonAsync(locationUri, updateRequest);
+
+        // Assert Update Response
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Sub-request: Validate the GET endpoint returns the updated value
+        HttpResponseMessage getResponse = await HttpClient.GetAsync(locationUri);
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var apartmentResponse = await getResponse.Content.ReadFromJsonAsync<Application.Apartments.GetApartment.ApartmentResponse>();
+        apartmentResponse.Should().NotBeNull();
+        apartmentResponse!.InstantBooking.Should().BeTrue();
     }
 }

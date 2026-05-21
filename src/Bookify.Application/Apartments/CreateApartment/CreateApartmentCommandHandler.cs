@@ -53,7 +53,8 @@ internal sealed class CreateApartmentCommandHandler : ICommandHandler<CreateApar
                 price,
                 cleaningFee,
                 amenities,
-                _dateTimeProvider.UtcNow);
+                _dateTimeProvider.UtcNow,
+                request.InstantBooking);
 
             _apartmentRepository.Add(apartment);
 

@@ -14,4 +14,5 @@ public record CreateApartmentCommand(
     string PriceCurrency,
     decimal CleaningFeeAmount,
     string CleaningFeeCurrency,
-    IReadOnlyList<int> Amenities) : ICommand<Guid>;
+    IReadOnlyList<int> Amenities,
+    bool InstantBooking = false) : ICommand<Guid>;

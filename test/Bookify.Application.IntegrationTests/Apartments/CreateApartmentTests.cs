@@ -131,4 +131,35 @@ public class CreateApartmentTests : BaseIntegrationTest
         apartmentResponse.Price.Amount.Should().Be(request.Price.Amount);
         apartmentResponse.Price.Currency.Should().Be(request.Price.Currency);
     }
+
+    [Fact]
+    public async Task CreateApartment_ShouldSetInstantBooking_WhenRequestHasInstantBookingTrue()
+    {
+        // Arrange
+        string adminEmail = UserData.CreateApartmentAdminUserRequest.Email;
+        await PromoteToAdminAsync(adminEmail);
+
+        string accessToken = await GetAccessToken(
+            adminEmail,
+            UserData.CreateApartmentAdminUserRequest.Password);
+
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme,
+            accessToken);
+
+        var request = ApartmentData.ValidCreateApartmentInstantBookingRequest;
+
+        // Act
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/apartments", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        HttpResponseMessage getResponse = await HttpClient.GetAsync(response.Headers.Location);
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var apartmentResponse = await getResponse.Content.ReadFromJsonAsync<Application.Apartments.GetApartment.ApartmentResponse>();
+        apartmentResponse.Should().NotBeNull();
+        apartmentResponse.InstantBooking.Should().BeTrue();
+    }
 }
