@@ -57,8 +57,8 @@ public class CancelBookingTests
         var command = new CancelBookingCommand(Guid.NewGuid());
         var booking = (Bookify.Domain.Bookings.Booking)Activator.CreateInstance(typeof(Bookify.Domain.Bookings.Booking), true)!;
 
-        // Ensure status is NotConfirmed, specifically set it to Reserved
-        typeof(Bookify.Domain.Bookings.Booking).GetProperty("Status")!.SetValue(booking, BookingStatus.Reserved);
+        // Ensure status is NotConfirmed, specifically set it to Rejected
+        typeof(Bookify.Domain.Bookings.Booking).GetProperty("Status")!.SetValue(booking, BookingStatus.Rejected);
 
         _bookingRepositoryMock.GetByIdAsync(command.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);

@@ -52,6 +52,7 @@ public class ReviewTests : BaseTest
 
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         booking.Confirm(utcNow);
+        booking.CheckIn(utcNow);
         booking.Complete(utcNow); // Status is now Completed
 
         var rating = Rating.Create(5).Value;
@@ -80,6 +81,7 @@ public class ReviewTests : BaseTest
 
         var bookingOriginal = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         bookingOriginal.Confirm(utcNow);
+        bookingOriginal.CheckIn(utcNow);
         bookingOriginal.Complete(utcNow);
 
         var bookingOther = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
@@ -113,6 +115,7 @@ public class ReviewTests : BaseTest
         // Force a review to exist
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         booking.Confirm(utcNow);
+        booking.CheckIn(utcNow);
         booking.Complete(utcNow);
         var review = Review.Create(booking, Rating.Create(5).Value, new Comment("Great"), utcNow).Value;
 
@@ -142,6 +145,7 @@ public class ReviewTests : BaseTest
 
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         booking.Confirm(utcNow);
+        booking.CheckIn(utcNow);
         booking.Complete(utcNow);
         var review = Review.Create(booking, Rating.Create(5).Value, new Comment("Great"), utcNow).Value;
 
@@ -168,6 +172,7 @@ public class ReviewTests : BaseTest
 
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         booking.Confirm(utcNow);
+        booking.CheckIn(utcNow);
         booking.Complete(utcNow);
         var review = Review.Create(booking, Rating.Create(5).Value, new Comment("Great"), utcNow).Value;
 
@@ -203,6 +208,7 @@ public class ReviewTests : BaseTest
 
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         booking.Confirm(utcNow);
+        booking.CheckIn(utcNow);
         booking.Complete(utcNow);
         var review = Review.Create(booking, Rating.Create(5).Value, new Comment("Great"), utcNow).Value;
 

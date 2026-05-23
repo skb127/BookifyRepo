@@ -8,6 +8,7 @@ using Bookify.Domain.Bookings;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 
@@ -51,16 +52,23 @@ public class CancelBookingTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task CancelBooking_ShouldReturnFailure_WhenBookingIsNotConfirmed()
+    public async Task CancelBooking_ShouldReturnFailure_WhenBookingIsInvalidForCancellation()
     {
         // Arrange
         var (_, _, bookingId, accessToken, _) = await BookingTestHelpers.SetupReservedBookingAsync(this);
+
+        // Update the booking status in the DB to Rejected so that cancellation fails
+        await DbContext.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE bookings
+            SET status = {(int)BookingStatus.Rejected}
+            WHERE id = {bookingId}
+            """);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
 
-        // Act - Attempt to cancel a reserved (not confirmed) booking
+        // Act - Attempt to cancel a rejected (invalid) booking
         HttpResponseMessage response = await HttpClient.PutAsync(
             new Uri($"api/v1/bookings/{bookingId}/cancellation", UriKind.Relative),
             null);

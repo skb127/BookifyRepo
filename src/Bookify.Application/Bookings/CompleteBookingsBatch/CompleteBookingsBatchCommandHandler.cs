@@ -34,7 +34,7 @@ internal sealed class CompleteBookingsBatchCommandHandler : ICommandHandler<Comp
 
         if (bookingIds.Count == 0)
         {
-            _logger.LogInformation("No confirmed bookings ready to be completed found.");
+            _logger.LogInformation("No in-progress bookings ready to be completed found.");
             return Result.Success();
         }
 
@@ -83,7 +83,7 @@ internal sealed class CompleteBookingsBatchCommandHandler : ICommandHandler<Comp
             sql,
             new
             {
-                Status = (int)BookingStatus.Confirmed,
+                Status = (int)BookingStatus.InProgress,
                 TodayDate = DateOnly.FromDateTime(_dateTimeProvider.UtcNow)
             },
             transaction: transaction);

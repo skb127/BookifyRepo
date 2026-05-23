@@ -73,13 +73,16 @@ public class NotifyCompletedBookingsTests : BaseIntegrationTest
 
         // Move all 5 bookings to the past so they are eligible for completion
         // Execute parameterised SQL to move duration_end to the past to avoid SQL injection warnings
+        // Also set status to InProgress so they can be picked up by the CompleteBookingsBatchCommandHandler
         foreach (var id in bookingIds)
         {
             await DbContext.Database.ExecuteSqlInterpolatedAsync($@"
-                UPDATE bookings
-                SET duration_end = '2000-01-01'
-                WHERE id = {id}
-            ");
+    -- NOTE: Future phases will require explicit CheckIn before setting InProgress.
+    UPDATE bookings
+    SET duration_end = '2000-01-01',
+        status = {(int)BookingStatus.InProgress}
+    WHERE id = {id}
+");
         }
 
         // Clear mock emails before the actual test actions begin

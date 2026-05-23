@@ -137,7 +137,7 @@ public class BookingTests : BaseTest
     }
 
     [Fact]
-    public void Cancel_ShouldReturnFailure_WhenStatusIsNotConfirmed()
+    public void Cancel_ShouldReturnFailure_WhenStatusIsInvalid()
     {
         // Arrange
         var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
@@ -149,6 +149,7 @@ public class BookingTests : BaseTest
         DateTime utcNow = DateTime.UtcNow;
 
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.Reject(utcNow); // Rejected status is invalid for cancel
 
         // Act
         Result result = booking.Cancel(utcNow);
@@ -266,7 +267,7 @@ public class BookingTests : BaseTest
     }
 
     [Fact]
-    public void Complete_ShouldReturnFailure_WhenStatusIsNotConfirmed()
+    public void Complete_ShouldReturnFailure_WhenStatusIsNotInProgress()
     {
         // Arrange
         var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
@@ -284,11 +285,11 @@ public class BookingTests : BaseTest
 
         // Assert
         result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be(BookingErrors.NotConfirmed);
+        result.Error.Should().Be(BookingErrors.NotInProgress);
     }
 
     [Fact]
-    public void Complete_ShouldSucceed_WhenStatusIsConfirmed()
+    public void Complete_ShouldSucceed_WhenStatusIsInProgress()
     {
         // Arrange
         var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
@@ -301,6 +302,7 @@ public class BookingTests : BaseTest
 
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         booking.Confirm(utcNow);
+        booking.CheckIn(utcNow);
 
         DateTime completionDate = new(2025, 12, 16, 12, 0, 0, DateTimeKind.Utc);
 
@@ -314,6 +316,32 @@ public class BookingTests : BaseTest
 
         BookingCompletedDomainEvent domainEvent = AssertDomainEventWasPublished<BookingCompletedDomainEvent>(booking);
 
+        domainEvent.BookingId.Should().Be(booking.Id);
+    }
+
+    [Fact]
+    public void Cancel_ShouldSucceed_WhenStatusIsReserved()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = DateTime.UtcNow;
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+
+        // Act
+        Result result = booking.Cancel(utcNow);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        booking.Status.Should().Be(BookingStatus.Cancelled);
+        booking.CancelledOnUtc.Should().Be(utcNow);
+
+        BookingCancelledDomainEvent domainEvent = AssertDomainEventWasPublished<BookingCancelledDomainEvent>(booking);
         domainEvent.BookingId.Should().Be(booking.Id);
     }
 }

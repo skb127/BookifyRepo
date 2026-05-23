@@ -351,6 +351,7 @@ public static class DependencyInjection
     {
         services.Configure<BookifyAppOptions>(configuration.GetSection("BookifyApp"));
         services.Configure<ExpirationOptions>(configuration.GetSection("Expiration"));
+        services.Configure<BookingOptions>(configuration.GetSection("Booking"));
     }
 
     private static void AddRateLimiting(IServiceCollection services, IConfiguration configuration)

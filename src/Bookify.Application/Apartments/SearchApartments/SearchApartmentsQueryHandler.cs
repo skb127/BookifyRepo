@@ -1,5 +1,6 @@
 using System.Data;
 using System.Text;
+using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Application.Common;
@@ -11,17 +12,24 @@ namespace Bookify.Application.Apartments.SearchApartments;
 
 internal sealed class SearchApartmentsQueryHandler : IQueryHandler<SearchApartmentsQuery, PagedResponse<ApartmentResponse>>
 {
-    private static readonly int[] ActiveBookingStatuses =
+    private static readonly int[] HardBlockStatuses =
     [
-        (int)BookingStatus.Reserved,
         (int)BookingStatus.Confirmed,
-        (int)BookingStatus.Completed
+        (int)BookingStatus.InProgress
     ];
 
-    private readonly ISqlConnectionFactory _sqlConnectionFactory;
+    private const int ReservedStatus = (int)BookingStatus.Reserved;
 
-    public SearchApartmentsQueryHandler(ISqlConnectionFactory sqlConnectionFactory) =>
+    private readonly ISqlConnectionFactory _sqlConnectionFactory;
+    private readonly IDateTimeProvider _dateTimeProvider;
+
+    public SearchApartmentsQueryHandler(
+        ISqlConnectionFactory sqlConnectionFactory,
+        IDateTimeProvider dateTimeProvider)
+    {
         _sqlConnectionFactory = sqlConnectionFactory;
+        _dateTimeProvider = dateTimeProvider;
+    }
 
     public async Task<Result<PagedResponse<ApartmentResponse>>> Handle(SearchApartmentsQuery request, CancellationToken cancellationToken)
     {
@@ -31,7 +39,9 @@ internal sealed class SearchApartmentsQueryHandler : IQueryHandler<SearchApartme
         var parameters = new DynamicParameters();
 
         builder.AppendLine("WHERE a.deleted_at IS NULL");
-        parameters.Add("ActiveBookingStatuses", ActiveBookingStatuses);
+        parameters.Add("HardBlockStatuses", HardBlockStatuses);
+        parameters.Add("ReservedStatus", ReservedStatus);
+        parameters.Add("UtcNow", _dateTimeProvider.UtcNow);
 
         string isAvailableExpression = "true";
 
@@ -42,7 +52,10 @@ internal sealed class SearchApartmentsQueryHandler : IQueryHandler<SearchApartme
                     SELECT 1
                     FROM bookings AS b
                     WHERE b.apartment_id = a.id 
-                    AND b.status = ANY(@ActiveBookingStatuses)
+                    AND (
+                        b.status = ANY(@HardBlockStatuses)
+                        OR (b.status = @ReservedStatus AND b.expires_at > @UtcNow)
+                    )
                     AND b.duration_start <= @EndDate 
                     AND b.duration_end >= @StartDate
                 )");

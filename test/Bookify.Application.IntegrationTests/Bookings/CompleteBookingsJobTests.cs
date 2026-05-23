@@ -26,10 +26,11 @@ public class CompleteBookingsJobTests : BaseIntegrationTest
         var confirmCommand = new Bookify.Application.Bookings.ConfirmBooking.ConfirmBookingCommand(bookingId);
         await Sender.Send(confirmCommand);
 
-        // Modify the end date to be in the past directly in the database to simulate time passing
+        // NOTE: Future phases will require explicit CheckIn before completing. Ensure status is set to InProgress here as part of that flow.
         await DbContext.Database.ExecuteSqlInterpolatedAsync($"""
             UPDATE bookings
-            SET duration_end = '2000-01-01'
+            SET duration_end = '2000-01-01',
+                status = {(int)BookingStatus.InProgress}
             WHERE id = {bookingId}
             """);
 
