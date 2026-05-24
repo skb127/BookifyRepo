@@ -1,10 +1,13 @@
 using Asp.Versioning;
 using Bookify.Application.Bookings.CancelBooking;
+using Bookify.Application.Bookings.CheckInBooking;
+using Bookify.Application.Bookings.CheckOutBooking;
 using Bookify.Application.Bookings.CompleteBooking;
 using Bookify.Application.Bookings.ConfirmBooking;
 using Bookify.Application.Bookings.GetBooking;
 using Bookify.Application.Bookings.GetBookings;
 using Bookify.Application.Bookings.GetUserBookings;
+using Bookify.Application.Bookings.MarkNoShowBooking;
 using Bookify.Application.Bookings.RejectBooking;
 using Bookify.Application.Bookings.ReserveBooking;
 using Bookify.Application.Common;
@@ -144,9 +147,10 @@ public sealed class BookingsController : ControllerBase
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> CancelBooking(
         Guid id,
+        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] BookingReasonRequest? request,
         CancellationToken cancellationToken)
     {
-        var command = new CancelBookingCommand(id);
+        var command = new CancelBookingCommand(id, request?.Type, request?.Description);
 
         Result result = await _sender.Send(command, cancellationToken);
 
@@ -173,9 +177,10 @@ public sealed class BookingsController : ControllerBase
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> RejectBooking(
         Guid id,
+        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] BookingReasonRequest? request,
         CancellationToken cancellationToken)
     {
-        var command = new RejectBookingCommand(id);
+        var command = new RejectBookingCommand(id, request?.Type, request?.Description);
 
         Result result = await _sender.Send(command, cancellationToken);
 
@@ -214,6 +219,94 @@ public sealed class BookingsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var command = new CompleteBookingCommand(id);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            if (result.Error == BookingErrors.NotFound)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    detail: result.Error.Name,
+                    title: result.Error.Code);
+            }
+
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return NoContent();
+    }
+
+    [HttpPut("{id:guid}/check-in")]
+    [EnableRateLimiting("write-operations")]
+    public async Task<IActionResult> CheckInBooking(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var command = new CheckInBookingCommand(id);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            if (result.Error == BookingErrors.NotFound)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    detail: result.Error.Name,
+                    title: result.Error.Code);
+            }
+
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return NoContent();
+    }
+
+    [HttpPut("{id:guid}/check-out")]
+    [EnableRateLimiting("write-operations")]
+    public async Task<IActionResult> CheckOutBooking(
+        Guid id,
+        [FromBody] BookingReasonRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new CheckOutBookingCommand(id, request.Type, request.Description);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            if (result.Error == BookingErrors.NotFound)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    detail: result.Error.Name,
+                    title: result.Error.Code);
+            }
+
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return NoContent();
+    }
+
+    [HttpPut("{id:guid}/no-show")]
+    [EnableRateLimiting("write-operations")]
+    public async Task<IActionResult> MarkNoShowBooking(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var command = new MarkNoShowBookingCommand(id);
 
         Result result = await _sender.Send(command, cancellationToken);
 

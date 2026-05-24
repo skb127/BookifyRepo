@@ -72,17 +72,16 @@ public class NotifyCompletedBookingsTests : BaseIntegrationTest
         }
 
         // Move all 5 bookings to the past so they are eligible for completion
-        // Execute parameterised SQL to move duration_end to the past to avoid SQL injection warnings
-        // Also set status to InProgress so they can be picked up by the CompleteBookingsBatchCommandHandler
+        // Also check in all 5 bookings so they are set to InProgress
         foreach (var id in bookingIds)
         {
+            var checkInCommand = new Bookify.Application.Bookings.CheckInBooking.CheckInBookingCommand(id);
+            await Sender.Send(checkInCommand);
+
             await DbContext.Database.ExecuteSqlInterpolatedAsync($@"
-    -- NOTE: Future phases will require explicit CheckIn before setting InProgress.
-    UPDATE bookings
-    SET duration_end = '2000-01-01',
-        status = {(int)BookingStatus.InProgress}
-    WHERE id = {id}
-");
+                UPDATE bookings
+                SET duration_end = '2000-01-01'
+                WHERE id = {id}");
         }
 
         // Clear mock emails before the actual test actions begin

@@ -215,12 +215,11 @@ internal static class BookingTestHelpers
             null).ConfigureAwait(true);
         confirmResponse.EnsureSuccessStatusCode();
 
-        // NOTE: Future phases will require explicit CheckIn before setting InProgress.
-        await test.DbContext.Database.ExecuteSqlInterpolatedAsync($"""
-            UPDATE bookings
-            SET status = {(int)BookingStatus.InProgress}
-            WHERE id = {bookingId}
-            """).ConfigureAwait(false);
+        // Check in booking (to transition from Confirmed to InProgress)
+        HttpResponseMessage checkInResponse = await test.HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{bookingId}/check-in", UriKind.Relative),
+            null).ConfigureAwait(true);
+        checkInResponse.EnsureSuccessStatusCode();
 
         // 3. Complete booking as Admin/Owner (Requires BookingsWrite)
         HttpResponseMessage completeResponse = await test.HttpClient.PutAsync(
@@ -306,12 +305,11 @@ internal static class BookingTestHelpers
                 new Uri($"api/v1/bookings/{bookingId}/confirmation", UriKind.Relative), null).ConfigureAwait(true);
             confirmResponse.EnsureSuccessStatusCode();
 
-            // NOTE: Future phases will require explicit CheckIn before setting InProgress.
-            await test.DbContext.Database.ExecuteSqlInterpolatedAsync($"""
-                UPDATE bookings
-                SET status = {(int)BookingStatus.InProgress}
-                WHERE id = {bookingId}
-                """).ConfigureAwait(false);
+            // Check in booking (to transition from Confirmed to InProgress)
+            HttpResponseMessage checkInResponse = await test.HttpClient.PutAsync(
+                new Uri($"api/v1/bookings/{bookingId}/check-in", UriKind.Relative),
+                null).ConfigureAwait(true);
+            checkInResponse.EnsureSuccessStatusCode();
 
             // Complete booking as Admin/Owner
             HttpResponseMessage completeResponse = await test.HttpClient.PutAsync(

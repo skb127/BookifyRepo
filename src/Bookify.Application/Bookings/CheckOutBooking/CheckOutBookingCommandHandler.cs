@@ -3,15 +3,15 @@ using Bookify.Application.Abstractions.Messaging;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
 
-namespace Bookify.Application.Bookings.CancelBooking;
+namespace Bookify.Application.Bookings.CheckOutBooking;
 
-internal sealed class CancelBookingCommandHandler : ICommandHandler<CancelBookingCommand>
+internal sealed class CheckOutBookingCommandHandler : ICommandHandler<CheckOutBookingCommand>
 {
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IBookingRepository _bookingRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public CancelBookingCommandHandler(
+    public CheckOutBookingCommandHandler(
         IDateTimeProvider dateTimeProvider,
         IBookingRepository bookingRepository,
         IUnitOfWork unitOfWork)
@@ -22,7 +22,7 @@ internal sealed class CancelBookingCommandHandler : ICommandHandler<CancelBookin
     }
 
     public async Task<Result> Handle(
-        CancelBookingCommand request,
+        CheckOutBookingCommand request,
         CancellationToken cancellationToken)
     {
         Booking? booking = await _bookingRepository.GetByIdAsync(request.BookingId, cancellationToken);
@@ -38,7 +38,7 @@ internal sealed class CancelBookingCommandHandler : ICommandHandler<CancelBookin
             reason = BookingReason.Create(request.ReasonType.Value, request.ReasonDescription, _dateTimeProvider.UtcNow);
         }
 
-        Result result = booking.Cancel(_dateTimeProvider.UtcNow, reason);
+        Result result = booking.CheckOut(_dateTimeProvider.UtcNow, reason);
 
         if (result.IsFailure)
         {

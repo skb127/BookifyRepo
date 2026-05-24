@@ -3,15 +3,15 @@ using Bookify.Application.Abstractions.Messaging;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
 
-namespace Bookify.Application.Bookings.CancelBooking;
+namespace Bookify.Application.Bookings.CheckInBooking;
 
-internal sealed class CancelBookingCommandHandler : ICommandHandler<CancelBookingCommand>
+internal sealed class CheckInBookingCommandHandler : ICommandHandler<CheckInBookingCommand>
 {
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IBookingRepository _bookingRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public CancelBookingCommandHandler(
+    public CheckInBookingCommandHandler(
         IDateTimeProvider dateTimeProvider,
         IBookingRepository bookingRepository,
         IUnitOfWork unitOfWork)
@@ -22,7 +22,7 @@ internal sealed class CancelBookingCommandHandler : ICommandHandler<CancelBookin
     }
 
     public async Task<Result> Handle(
-        CancelBookingCommand request,
+        CheckInBookingCommand request,
         CancellationToken cancellationToken)
     {
         Booking? booking = await _bookingRepository.GetByIdAsync(request.BookingId, cancellationToken);
@@ -32,13 +32,7 @@ internal sealed class CancelBookingCommandHandler : ICommandHandler<CancelBookin
             return Result.Failure(BookingErrors.NotFound);
         }
 
-        BookingReason? reason = null;
-        if (request.ReasonType.HasValue && request.ReasonType.Value != ReasonType.None)
-        {
-            reason = BookingReason.Create(request.ReasonType.Value, request.ReasonDescription, _dateTimeProvider.UtcNow);
-        }
-
-        Result result = booking.Cancel(_dateTimeProvider.UtcNow, reason);
+        Result result = booking.CheckIn(_dateTimeProvider.UtcNow);
 
         if (result.IsFailure)
         {
