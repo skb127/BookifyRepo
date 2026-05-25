@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Domain.Abstractions;
@@ -6,7 +6,7 @@ using Dapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
+using Bookify.Application.Abstractions.Serialization;
 using Quartz;
 
 namespace Bookify.Infrastructure.Outbox;
@@ -14,11 +14,6 @@ namespace Bookify.Infrastructure.Outbox;
 [DisallowConcurrentExecution] // Ensures that multiple instances of the job do not run concurrently
 internal sealed class ProcessOutboxMessagesJob : IJob
 {
-    private static readonly JsonSerializerSettings JsonSerializerSettings = new()
-    {
-        TypeNameHandling = TypeNameHandling.All
-    };
-
     private readonly ISqlConnectionFactory _sqlConnectionFactory;
     private readonly IPublisher _publisher; // To publish the individual domain events
     private readonly IDateTimeProvider _dateTimeProvider;
@@ -54,7 +49,7 @@ internal sealed class ProcessOutboxMessagesJob : IJob
             try
             {
                 IDomainEvent domainEvent =
-                    JsonConvert.DeserializeObject<IDomainEvent>(outboxMessage.Content, JsonSerializerSettings)!;
+                    DomainEventSerializer.Deserialize(outboxMessage.Type, outboxMessage.Content)!;
 
                 await _publisher.Publish(domainEvent, context.CancellationToken);
             }
@@ -77,7 +72,7 @@ internal sealed class ProcessOutboxMessagesJob : IJob
         IDbTransaction transaction)
     {
         string sql = $"""
-                      SELECT Id, Content
+                      SELECT Id, Type, Content
                       FROM outbox_messages
                       WHERE processed_on_utc IS NULL
                       ORDER BY occurred_on_utc

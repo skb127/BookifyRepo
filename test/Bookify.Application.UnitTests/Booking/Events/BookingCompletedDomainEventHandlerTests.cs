@@ -124,9 +124,9 @@ public class BookingCompletedDomainEventHandlerTests
         string expectedEmailBody = "<html>Email Content</html>";
 
         _emailTemplateServiceMock.GenerateEmailBodyAsync(
-            "BookingCompleted.html",
-            Arg.Any<object>(),
-            Arg.Any<CancellationToken>())
+                "BookingCompleted.html",
+                Arg.Any<object>(),
+                Arg.Any<CancellationToken>())
             .Returns(expectedEmailBody);
 
         // Act
@@ -144,7 +144,7 @@ public class BookingCompletedDomainEventHandlerTests
         await _emailServiceMock.Received(1).SendAsync(
             Arg.Is<EmailMessage>(m =>
                 m.To == user.Email.Value &&
-                m.Subject == "Stay Completed" &&
+                m.Subject == $"Stay Completed - {domainEvent.BookingId}" &&
                 m.Body == expectedEmailBody),
             Arg.Any<CancellationToken>());
 

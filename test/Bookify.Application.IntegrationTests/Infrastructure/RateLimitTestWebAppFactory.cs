@@ -65,13 +65,6 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
             services.Configure<Bookify.Infrastructure.Bookings.CompleteBookingsJobOptions>(o =>
                 o.CronExpression = "*/2 * * * * ?"); // Every two seconds
 
-            // Configure NotifyCompletedBookings job for integration tests.
-            services.Configure<Bookify.Infrastructure.Bookings.NotifyCompletedBookingsJobOptions>(o =>
-            {
-                o.CronExpression = "0 0 0 1 1 ? 2099"; // Effectively disabled —  1st January 2099
-                o.BatchSize = 10;
-            });
-
             services.Configure<Options.ExpirationOptions>(options =>
             {
                 options.EmailChangeExpirationSeconds = 20;

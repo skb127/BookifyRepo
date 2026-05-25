@@ -70,7 +70,7 @@ internal sealed class BookingCompletedDomainEventHandler : INotificationHandler<
 
         var emailMessage = new EmailMessage(
             user.Email.Value,
-            "Stay Completed",
+            $"Stay Completed - {booking.Id}",
             emailBody);
 
         await _emailService.SendAsync(emailMessage, cancellationToken);

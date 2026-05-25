@@ -62,7 +62,7 @@ internal sealed class BookingExpiredDomainEventHandler : INotificationHandler<Bo
 
         var emailMessage = new EmailMessage(
             user.Email.Value,
-            "Booking Expired",
+            $"Booking Expired - {booking.Id}",
             emailBody);
 
         await _emailService.SendAsync(emailMessage, cancellationToken);
