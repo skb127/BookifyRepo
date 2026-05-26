@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Abstractions.Clock;
+using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
@@ -32,7 +32,13 @@ internal sealed class CancelBookingCommandHandler : ICommandHandler<CancelBookin
             return Result.Failure(BookingErrors.NotFound);
         }
 
-        Result result = booking.Cancel(_dateTimeProvider.UtcNow);
+        BookingReason? reason = null;
+        if (request.ReasonType.HasValue && request.ReasonType.Value != ReasonType.None)
+        {
+            reason = BookingReason.Create(request.ReasonType.Value, request.ReasonDescription, _dateTimeProvider.UtcNow);
+        }
+
+        Result result = booking.Cancel(_dateTimeProvider.UtcNow, reason);
 
         if (result.IsFailure)
         {

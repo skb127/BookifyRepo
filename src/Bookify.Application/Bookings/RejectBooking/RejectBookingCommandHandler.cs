@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Abstractions.Authentication;
+using Bookify.Application.Abstractions.Authentication;
 using Bookify.Application.Abstractions.Authorization;
 using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Messaging;
@@ -64,7 +64,13 @@ internal sealed class RejectBookingCommandHandler : ICommandHandler<RejectBookin
             }
         }
 
-        Result result = booking.Reject(_dateTimeProvider.UtcNow);
+        BookingReason? reason = null;
+        if (request.ReasonType.HasValue && request.ReasonType.Value != ReasonType.None)
+        {
+            reason = BookingReason.Create(request.ReasonType.Value, request.ReasonDescription, _dateTimeProvider.UtcNow);
+        }
+
+        Result result = booking.Reject(_dateTimeProvider.UtcNow, reason);
 
         if (result.IsFailure)
         {

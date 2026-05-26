@@ -102,6 +102,10 @@ namespace Bookify.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("cancelled_on_utc");
 
+                    b.Property<DateTime?>("CheckedInOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("checked_in_on_utc");
+
                     b.Property<DateTime?>("CompletedNotificationSentAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("completed_notification_sent_at");
@@ -117,6 +121,22 @@ namespace Bookify.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedOnUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on_utc");
+
+                    b.Property<DateTime?>("ExpiredOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expired_on_utc");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTime?>("NoShowAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("no_show_at");
+
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_status");
 
                     b.Property<DateTime?>("RejectedOnUtc")
                         .HasColumnType("timestamp with time zone")
@@ -797,6 +817,45 @@ namespace Bookify.Infrastructure.Migrations
                                 .HasConstraintName("fk_bookings_bookings_id");
                         });
 
+                    b.OwnsMany("Bookify.Domain.Bookings.BookingReason", "Reasons", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<DateTime>("CreatedOnUtc")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("created_on_utc")
+                                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                            b1.Property<string>("Description")
+                                .HasMaxLength(500)
+                                .HasColumnType("character varying(500)")
+                                .HasColumnName("description");
+
+                            b1.Property<int>("Type")
+                                .HasColumnType("integer")
+                                .HasColumnName("reason_type");
+
+                            b1.Property<Guid>("booking_id")
+                                .HasColumnType("uuid")
+                                .HasColumnName("booking_id");
+
+                            b1.HasKey("Id")
+                                .HasName("pk_booking_reasons");
+
+                            b1.HasIndex("booking_id")
+                                .HasDatabaseName("ix_booking_reasons_booking_id");
+
+                            b1.ToTable("booking_reasons", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("booking_id")
+                                .HasConstraintName("fk_booking_reasons_bookings_booking_id");
+                        });
+
                     b.Navigation("AmenitiesUpCharge")
                         .IsRequired();
 
@@ -808,6 +867,8 @@ namespace Bookify.Infrastructure.Migrations
 
                     b.Navigation("PriceForPeriod")
                         .IsRequired();
+
+                    b.Navigation("Reasons");
 
                     b.Navigation("TotalPrice")
                         .IsRequired();

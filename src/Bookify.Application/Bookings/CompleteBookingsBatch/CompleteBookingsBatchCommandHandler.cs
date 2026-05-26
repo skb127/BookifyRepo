@@ -4,8 +4,10 @@ using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
+using Bookify.Domain.Bookings.Events;
 using Dapper;
 using Microsoft.Extensions.Logging;
+using Bookify.Application.Abstractions.Serialization;
 
 namespace Bookify.Application.Bookings.CompleteBookingsBatch;
 
@@ -34,7 +36,7 @@ internal sealed class CompleteBookingsBatchCommandHandler : ICommandHandler<Comp
 
         if (bookingIds.Count == 0)
         {
-            _logger.LogInformation("No confirmed bookings ready to be completed found.");
+            _logger.LogInformation("No in-progress bookings ready to be completed found.");
             return Result.Success();
         }
 
@@ -56,6 +58,21 @@ internal sealed class CompleteBookingsBatchCommandHandler : ICommandHandler<Comp
                 BookingIds = bookingIds
             },
             transaction: transaction);
+
+        var outboxMessages = bookingIds.Select(id => new
+        {
+            Id = Guid.CreateVersion7(),
+            OccurredOnUtc = _dateTimeProvider.UtcNow,
+            Type = nameof(BookingCompletedDomainEvent),
+            Content = DomainEventSerializer.Serialize(new BookingCompletedDomainEvent(id))
+        }).ToList();
+
+        const string insertOutboxSql = """
+            INSERT INTO outbox_messages (id, occurred_on_utc, type, content)
+            VALUES (@Id, @OccurredOnUtc, @Type, @Content::jsonb)
+            """;
+
+        await connection.ExecuteAsync(insertOutboxSql, outboxMessages, transaction: transaction);
 
         transaction.Commit();
 
@@ -83,7 +100,7 @@ internal sealed class CompleteBookingsBatchCommandHandler : ICommandHandler<Comp
             sql,
             new
             {
-                Status = (int)BookingStatus.Confirmed,
+                Status = (int)BookingStatus.InProgress,
                 TodayDate = DateOnly.FromDateTime(_dateTimeProvider.UtcNow)
             },
             transaction: transaction);

@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Abstractions;
+using Bookify.Domain.Abstractions;
 
 namespace Bookify.Domain.Bookings;
 
@@ -27,4 +27,20 @@ public static class BookingErrors
     public static Error Unauthorized { get; } = new(
         "Booking.Unauthorized",
         "You do not have permission to perform this action on this booking");
+
+    public static Error NotInProgress { get; } = new(
+        "Booking.NotInProgress",
+        "The booking is not currently in progress");
+
+    public static Error CannotMarkNoShow { get; } = new(
+        "Booking.CannotMarkNoShow",
+        "The booking cannot be marked as a no-show because the start date has not been reached yet or is invalid");
+
+    public static Error AlreadyExpired { get; } = new(
+        "Booking.AlreadyExpired",
+        "The booking has already expired");
+
+    public static Error AlreadyCheckedIn { get; } = new(
+        "Booking.AlreadyCheckedIn",
+        "The booking has already been checked in");
 }

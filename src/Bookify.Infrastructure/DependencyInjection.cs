@@ -218,10 +218,9 @@ public static class DependencyInjection
         // Uses raw SQL for performance
         services.Configure<CompleteBookingsJobOptions>(configuration.GetSection("CompleteBookings"));
 
-        // --- Notify completed bookings job ---
-        // Sends email notifications to users whose bookings were completed by the batch job.
-        // Runs separately because the batch job uses raw SQL and does not generate domain events.
-        services.Configure<NotifyCompletedBookingsJobOptions>(configuration.GetSection("NotifyCompletedBookings"));
+        // --- Expire bookings batch job ---
+        // Automatically marks reserved bookings as expired when their expires_at has passed.
+        services.Configure<ExpireBookingsJobOptions>(configuration.GetSection("ExpireBookings"));
 
         services.AddQuartz();
 
@@ -232,9 +231,7 @@ public static class DependencyInjection
         services
             .ConfigureOptions<ProcessOutboxMessagesJobSetup>(); // Configure the Quartz job to process outbox messages
         services.ConfigureOptions<CompleteBookingsJobSetup>(); // Configure the Quartz job to complete bookings
-        services
-            .ConfigureOptions<
-                NotifyCompletedBookingsJobSetup>(); // Configure the Quartz job to notify completed bookings
+        services.ConfigureOptions<ExpireBookingsJobSetup>(); // Configure the Quartz job to expire bookings
 
         AddEmailNotificationResiliencePipeline(services);
     }
@@ -351,6 +348,7 @@ public static class DependencyInjection
     {
         services.Configure<BookifyAppOptions>(configuration.GetSection("BookifyApp"));
         services.Configure<ExpirationOptions>(configuration.GetSection("Expiration"));
+        services.Configure<BookingOptions>(configuration.GetSection("Booking"));
     }
 
     private static void AddRateLimiting(IServiceCollection services, IConfiguration configuration)

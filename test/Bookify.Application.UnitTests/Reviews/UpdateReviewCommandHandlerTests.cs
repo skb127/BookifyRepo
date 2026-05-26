@@ -70,6 +70,7 @@ public class UpdateReviewCommandHandlerTests
         Apartment apartment = ApartmentData.Create();
         var booking = Domain.Bookings.Booking.Reserve(apartment, callerId /* Different ID */, DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)), UtcNow, new PricingService());
         booking.Confirm(UtcNow);
+        booking.CheckIn(UtcNow);
         booking.Complete(UtcNow);
 
         var review = Review.Create(booking, Rating.Create(5).Value, new Comment("Great"), UtcNow).Value;
@@ -100,6 +101,7 @@ public class UpdateReviewCommandHandlerTests
         Apartment apartment = ApartmentData.Create();
         var booking = Domain.Bookings.Booking.Reserve(apartment, userId, DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)), UtcNow, new PricingService());
         booking.Confirm(UtcNow);
+        booking.CheckIn(UtcNow);
         booking.Complete(UtcNow);
 
         var review = Review.Create(booking, Rating.Create(5).Value, new Comment("Great"), UtcNow).Value;
@@ -135,6 +137,7 @@ public class UpdateReviewCommandHandlerTests
         Apartment apartment = ApartmentData.Create();
         var booking = Domain.Bookings.Booking.Reserve(apartment, userId, DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)), UtcNow, new PricingService());
         booking.Confirm(UtcNow);
+        booking.CheckIn(UtcNow);
         booking.Complete(UtcNow);
 
         var review = Review.Create(booking, Rating.Create(5).Value, new Comment("Great"), UtcNow).Value;

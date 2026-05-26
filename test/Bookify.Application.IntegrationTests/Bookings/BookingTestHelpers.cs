@@ -4,6 +4,8 @@ using Bookify.Api.Controllers.Bookings;
 using Bookify.Application.IntegrationTests.Apartments;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Bookify.Domain.Bookings;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 
@@ -213,6 +215,12 @@ internal static class BookingTestHelpers
             null).ConfigureAwait(true);
         confirmResponse.EnsureSuccessStatusCode();
 
+        // Check in booking (to transition from Confirmed to InProgress)
+        HttpResponseMessage checkInResponse = await test.HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{bookingId}/check-in", UriKind.Relative),
+            null).ConfigureAwait(true);
+        checkInResponse.EnsureSuccessStatusCode();
+
         // 3. Complete booking as Admin/Owner (Requires BookingsWrite)
         HttpResponseMessage completeResponse = await test.HttpClient.PutAsync(
             new Uri($"api/v1/bookings/{bookingId}/completion", UriKind.Relative),
@@ -296,6 +304,12 @@ internal static class BookingTestHelpers
             HttpResponseMessage confirmResponse = await test.HttpClient.PutAsync(
                 new Uri($"api/v1/bookings/{bookingId}/confirmation", UriKind.Relative), null).ConfigureAwait(true);
             confirmResponse.EnsureSuccessStatusCode();
+
+            // Check in booking (to transition from Confirmed to InProgress)
+            HttpResponseMessage checkInResponse = await test.HttpClient.PutAsync(
+                new Uri($"api/v1/bookings/{bookingId}/check-in", UriKind.Relative),
+                null).ConfigureAwait(true);
+            checkInResponse.EnsureSuccessStatusCode();
 
             // Complete booking as Admin/Owner
             HttpResponseMessage completeResponse = await test.HttpClient.PutAsync(

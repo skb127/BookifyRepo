@@ -65,7 +65,9 @@ internal sealed class GetBookingsQueryHandler
                 total_price_currency AS TotalPriceCurrency,
                 duration_start AS DurationStart,
                 duration_end AS DurationEnd,
-                created_on_utc AS CreatedOnUtc
+                created_on_utc AS CreatedOnUtc,
+                payment_status AS PaymentStatus,
+                expires_at AS ExpiresAt
             FROM bookings
             {where}
             ORDER BY created_on_utc DESC

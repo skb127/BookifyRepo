@@ -74,14 +74,9 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             services.Configure<Bookify.Infrastructure.Bookings.CompleteBookingsJobOptions>(o =>
                 o.CronExpression = "*/2 * * * * ?"); // Every two seconds
 
-            // Configure NotifyCompletedBookings job for integration tests.
-            // Uses a long interval to prevent interference with existing tests.
-            // Tests that specifically need this job can override this configuration.
-            services.Configure<Bookify.Infrastructure.Bookings.NotifyCompletedBookingsJobOptions>(o =>
-            {
-                o.CronExpression = "0 0 0 1 1 ? 2099"; // Effectively disabled —  1st January 2099
-                o.BatchSize = 10;
-            });
+            // Speed up ExpireBookings processing for integration tests (default is every 15 minutes)
+            services.Configure<Bookify.Infrastructure.Bookings.ExpireBookingsJobOptions>(o =>
+                o.CronExpression = "*/1 * * * * ?"); // Every second
 
             services.Configure<ExpirationOptions>(options =>
             {

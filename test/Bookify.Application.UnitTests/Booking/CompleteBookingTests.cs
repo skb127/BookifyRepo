@@ -58,11 +58,11 @@ public class CompleteBookingTests
     }
 
     [Fact]
-    public async Task Handle_ShouldReturnFailure_WhenBookingIsNotConfirmed()
+    public async Task Handle_ShouldReturnFailure_WhenBookingIsNotInProgress()
     {
         // Arrange
         var command = new CompleteBookingCommand(Guid.NewGuid());
-        var booking = CreateBooking(BookingStatus.Reserved); // Status is Reserved, not Confirmed
+        var booking = CreateBooking(BookingStatus.Reserved); // Status is Reserved, not InProgress
 
         _bookingRepositoryMock.GetByIdAsync(command.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
@@ -72,7 +72,7 @@ public class CompleteBookingTests
 
         // Assert
         result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be(BookingErrors.NotConfirmed);
+        result.Error.Should().Be(BookingErrors.NotInProgress);
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class CompleteBookingTests
     {
         // Arrange
         var command = new CompleteBookingCommand(Guid.NewGuid());
-        var booking = CreateBooking(BookingStatus.Confirmed);
+        var booking = CreateBooking(BookingStatus.InProgress);
 
         _bookingRepositoryMock.GetByIdAsync(command.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
@@ -98,7 +98,7 @@ public class CompleteBookingTests
     {
         // Arrange
         var command = new CompleteBookingCommand(Guid.NewGuid());
-        var booking = CreateBooking(BookingStatus.Confirmed);
+        var booking = CreateBooking(BookingStatus.InProgress);
 
         _bookingRepositoryMock.GetByIdAsync(command.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);

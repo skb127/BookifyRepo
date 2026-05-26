@@ -1,19 +1,14 @@
-﻿using Bookify.Application.Abstractions.Clock;
+using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Exceptions;
 using Bookify.Domain.Abstractions;
 using Bookify.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
+using Bookify.Application.Abstractions.Serialization;
 
 namespace Bookify.Infrastructure;
 
 public sealed class ApplicationDbContext : DbContext, IUnitOfWork
 {
-    private static readonly JsonSerializerSettings JsonSerializerSettings = new()
-    {
-        TypeNameHandling = TypeNameHandling.All
-    };
-
     private readonly IDateTimeProvider _dateTimeProvider;
 
     public ApplicationDbContext(DbContextOptions options, IDateTimeProvider dateTimeProvider)
@@ -70,7 +65,7 @@ public sealed class ApplicationDbContext : DbContext, IUnitOfWork
                 Guid.CreateVersion7(),
                 _dateTimeProvider.UtcNow,
                 domainEvent.GetType().Name,
-                JsonConvert.SerializeObject(domainEvent, JsonSerializerSettings)))
+                DomainEventSerializer.Serialize(domainEvent)))
             .ToList();
 
         AddRange(outboxMessages);

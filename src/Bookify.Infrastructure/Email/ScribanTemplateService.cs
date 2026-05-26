@@ -10,7 +10,7 @@ public class ScribanTemplateService : IEmailTemplateService
 {
     // Thread-Safe Cache (Static or Singleton to persist in memory)
     // save the already parsed Template so we don't have to read the disk every time
-    private static readonly ConcurrentDictionary<string, Template> _templateCache = new();
+    private static readonly ConcurrentDictionary<string, Template> TemplateCache = new();
 
     private readonly EmailOptions _emailOptions;
     private readonly string _templatesPath;
@@ -26,7 +26,7 @@ public class ScribanTemplateService : IEmailTemplateService
         CancellationToken cancellationToken = default)
     {
         // Try to get the template from the cache
-        if (_templateCache.TryGetValue(templateName, out Template? template))
+        if (TemplateCache.TryGetValue(templateName, out Template? template))
         {
             return await RenderTemplateAsync(template, model);
         }
@@ -52,7 +52,7 @@ public class ScribanTemplateService : IEmailTemplateService
         }
 
         // Save in cache for next time
-        _templateCache.TryAdd(templateName, template);
+        TemplateCache.TryAdd(templateName, template);
 
         // Render the template with the data (The model)
         return await RenderTemplateAsync(template, model);

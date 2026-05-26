@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Apartments;
+using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,20 +6,14 @@ namespace Bookify.Infrastructure.Repositories;
 
 internal sealed class BookingRepository : Repository<Booking>, IBookingRepository
 {
-    private static readonly BookingStatus[] ActiveBookingStatuses = [
-        BookingStatus.Reserved,
-        BookingStatus.Confirmed,
-        BookingStatus.Completed
-    ];
 
-    private static readonly BookingStatus[] BlockingDeleteBookingStatuses = [
-        BookingStatus.Reserved,
-        BookingStatus.Confirmed
-    ];
+    private readonly Bookify.Application.Abstractions.Clock.IDateTimeProvider _dateTimeProvider;
 
-    public BookingRepository(ApplicationDbContext dbContext) : base(dbContext)
-    {
-    }
+    public BookingRepository(
+        ApplicationDbContext dbContext,
+        Bookify.Application.Abstractions.Clock.IDateTimeProvider dateTimeProvider)
+        : base(dbContext) =>
+        _dateTimeProvider = dateTimeProvider;
 
     public async Task<bool> IsOverlappingAsync(Apartment apartment, DateRange duration,
         CancellationToken cancellationToken = default) =>
@@ -30,7 +24,9 @@ internal sealed class BookingRepository : Repository<Booking>, IBookingRepositor
                     booking.ApartmentId == apartment.Id &&
                     booking.Duration.Start <= duration.End &&
                     booking.Duration.End >= duration.Start &&
-                    ActiveBookingStatuses.Contains(booking.Status),
+                    (booking.Status == BookingStatus.Confirmed ||
+                     booking.Status == BookingStatus.InProgress ||
+                     booking.Status == BookingStatus.Reserved && booking.ExpiresAt > _dateTimeProvider.UtcNow),
             cancellationToken);
 
     public async Task<bool> HasActiveBookingsAsync(Guid apartmentId, CancellationToken cancellationToken = default) =>
@@ -39,6 +35,8 @@ internal sealed class BookingRepository : Repository<Booking>, IBookingRepositor
             .AnyAsync(
                 booking =>
                     booking.ApartmentId == apartmentId &&
-                    BlockingDeleteBookingStatuses.Contains(booking.Status),
+                    (booking.Status == BookingStatus.Reserved ||
+                     booking.Status == BookingStatus.Confirmed ||
+                     booking.Status == BookingStatus.InProgress),
                 cancellationToken);
 }
