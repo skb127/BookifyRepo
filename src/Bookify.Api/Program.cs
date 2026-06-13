@@ -41,6 +41,8 @@ if (app.Environment.IsDevelopment())
 
     app.ApplyMigrations();
 
+    app.EnsureQuartzSchema();
+
     app.SeedData(); // Uncomment this line for integration testing to seed data and comment it out for local development to avoid duplicate key errors
 }
 

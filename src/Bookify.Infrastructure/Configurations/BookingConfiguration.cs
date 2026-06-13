@@ -81,5 +81,56 @@ internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
                 .HasColumnName("created_on_utc")
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
+
+        builder.Property<string>("status_literal")
+            .HasMaxLength(50)
+            .HasDefaultValue("Reserved")
+            .IsRequired();
+
+        builder.Property<string>("payment_status_literal")
+            .HasMaxLength(50)
+            .HasDefaultValue("Unpaid")
+            .IsRequired();
+
+        builder.OwnsMany(booking => booking.Taxes, taxBuilder =>
+        {
+            taxBuilder.ToTable("booking_taxes");
+            taxBuilder.WithOwner().HasForeignKey("booking_id");
+            taxBuilder.Property(bt => bt.Id).ValueGeneratedNever();
+            taxBuilder.HasKey(bt => bt.Id);
+
+            taxBuilder.Property(bt => bt.TaxRuleName)
+                .HasColumnName("tax_rule_name")
+                .HasMaxLength(200)
+                .IsRequired();
+
+            taxBuilder.Property(bt => bt.TaxType)
+                .HasColumnName("tax_type")
+                .HasConversion<int>()
+                .IsRequired();
+
+            taxBuilder.Property(bt => bt.Rate)
+                .HasColumnName("rate")
+                .HasPrecision(18, 4)
+                .IsRequired();
+
+            taxBuilder.OwnsOne(bt => bt.CalculatedAmount, amountBuilder =>
+            {
+                amountBuilder.Property(money => money.Amount)
+                    .HasColumnName("calculated_amount_amount")
+                    .HasPrecision(18, 4)
+                    .IsRequired();
+
+                amountBuilder.Property(money => money.Currency)
+                    .HasColumnName("calculated_amount_currency")
+                    .HasConversion(currency => currency.Code, code => Currency.FromCode(code))
+                    .HasMaxLength(3)
+                    .IsRequired();
+            });
+
+            taxBuilder.Property(bt => bt.CreatedOnUtc)
+                .HasColumnName("created_on_utc")
+                .IsRequired();
+        });
     }
 }

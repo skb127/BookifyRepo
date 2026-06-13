@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Bogus;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Domain.Apartments;
@@ -34,6 +34,27 @@ internal static class SeedDataExtensions
         };
 
         connection.Execute(insertSystemUserSql, systemUser);
+
+        const string insertDefaultCancellationPolicySql = """
+            INSERT INTO public.cancellation_policies (id, name, early_guest_penalty_rate, late_guest_penalty_rate, early_host_penalty_rate, late_host_penalty_rate, threshold_hours, is_default, created_on_utc)
+            VALUES (@Id, @Name, @EarlyGuestPenaltyRate, @LateGuestPenaltyRate, @EarlyHostPenaltyRate, @LateHostPenaltyRate, @ThresholdHours, @IsDefault, @CreatedOnUtc)
+            ON CONFLICT (id) DO NOTHING;
+            """;
+
+        var defaultPolicy = new
+        {
+            Id = new Guid("c0000000-0000-0000-0000-000000000001"),
+            Name = "Default Cancellation Policy",
+            EarlyGuestPenaltyRate = 0.10m,
+            LateGuestPenaltyRate = 0.50m,
+            EarlyHostPenaltyRate = 0.10m,
+            LateHostPenaltyRate = 0.50m,
+            ThresholdHours = 48,
+            IsDefault = true,
+            CreatedOnUtc = new DateTime(2026, 6, 13, 0, 0, 0, DateTimeKind.Utc)
+        };
+
+        connection.Execute(insertDefaultCancellationPolicySql, defaultPolicy);
 
         var faker = new Faker();
 

@@ -62,6 +62,9 @@ public sealed class Booking : Entity
     private readonly List<BookingReason> _reasons = [];
     public IReadOnlyList<BookingReason> Reasons => _reasons.AsReadOnly();
 
+    private readonly List<BookingTax> _taxes = [];
+    public IReadOnlyList<BookingTax> Taxes => _taxes.AsReadOnly();
+
     // Factory Method
     public static Booking Reserve(
         Apartment apartment,

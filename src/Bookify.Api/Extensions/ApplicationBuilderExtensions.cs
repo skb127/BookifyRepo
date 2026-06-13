@@ -1,6 +1,8 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Bookify.Api.Middleware;
+using Bookify.Application.Abstractions.Data;
 using Bookify.Infrastructure;
+using Dapper;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +23,37 @@ internal static class ApplicationBuilderExtensions
         dbContext.Database.Migrate();
     }
 
-    public static void UseCustomExceptionHandler(this IApplicationBuilder app) => 
+    public static void EnsureQuartzSchema(this IApplicationBuilder app)
+    {
+        using IServiceScope scope = app.ApplicationServices.CreateScope();
+
+        ISqlConnectionFactory sqlConnectionFactory = scope.ServiceProvider.GetRequiredService<ISqlConnectionFactory>();
+        using System.Data.IDbConnection connection = sqlConnectionFactory.CreateConnection();
+
+        const string checkSchemaSql = """
+                                      SELECT EXISTS (
+                                          SELECT 1 
+                                          FROM information_schema.schemata 
+                                          WHERE schema_name = 'quartz'
+                                      );
+                                      """;
+
+        bool schemaExists = connection.ExecuteScalar<bool>(checkSchemaSql);
+
+        if (!schemaExists)
+        {
+            string scriptPath = Path.Combine(AppContext.BaseDirectory, "Quartz", "QuartzSchemaScript.sql");
+            if (!File.Exists(scriptPath))
+            {
+                throw new FileNotFoundException("Quartz initialization SQL script not found.", scriptPath);
+            }
+
+            string sql = File.ReadAllText(scriptPath);
+            connection.Execute(sql);
+        }
+    }
+
+    public static void UseCustomExceptionHandler(this IApplicationBuilder app) =>
         app.UseMiddleware<ExceptionHandlingMiddleware>();
 
     public static IApplicationBuilder UseRequestContextLogging(this IApplicationBuilder app)
@@ -35,7 +67,8 @@ internal static class ApplicationBuilderExtensions
         // Adds services for using problem details format
         services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
         {
-            context.ProblemDetails.Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path}";
+            context.ProblemDetails.Instance =
+                $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path}";
             context.ProblemDetails.Extensions.TryAdd("timestamp", DateTime.UtcNow.ToString("o"));
             context.ProblemDetails.Extensions.TryAdd("requestId", context.HttpContext.TraceIdentifier);
             Activity? activity = context.HttpContext.Features.Get<IHttpActivityFeature>()?.Activity;
