@@ -29,7 +29,7 @@ public class GetBookingsQueryValidatorTests
 
     [Theory]
     [InlineData(0)]
-    [InlineData(6)]
+    [InlineData(10)]
     public void Status_ShouldFail_WhenOutOfRange(int status)
     {
         // Arrange

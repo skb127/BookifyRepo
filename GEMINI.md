@@ -69,6 +69,12 @@ Domain events are raised inside aggregates and persisted via the **Outbox patter
 
 ## Infrastructure Layer
 
+# Migrations
+
+When developing, the name of the migration file should follow the same format as the existing ones in `src/Bookify.Infrastructure/Migrations`.
+
+Migrations needs to be applied manually by the developer, not by the AI agent, the AI agent should provide the commands to be executed by the developer for creating and applying migrations, and tell him that the DB container should be running when applying migrations. and in the the connection string, the Host should be changed temporarily to `localhost` to run the migrations locally and then back to the original host.
+
 ### Key Services
 
 | Service | Implementation |

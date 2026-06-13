@@ -10,11 +10,12 @@ public enum BookingStatus
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1700:Do not name enum values 'Reserved'",
         Justification = "Reserved is a valid status used throughout the application.")]
     Reserved = 1,
-    Confirmed = 2,
-    Rejected = 3,
-    Cancelled = 4,
-    Completed = 5,
+    PendingPayment = 2,
+    Confirmed = 3,
+    Rejected = 4,
+    Cancelled = 5,
     InProgress = 6,
-    Expired = 7,
-    NoShow = 8
+    Completed = 7,
+    Expired = 8,
+    NoShow = 9
 }

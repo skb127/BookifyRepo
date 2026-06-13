@@ -7,6 +7,6 @@ internal sealed class GetBookingsQueryValidator : PagedQueryValidator<GetBooking
 {
     public GetBookingsQueryValidator() =>
         RuleFor(q => q.Status)
-            .InclusiveBetween(1, 5)
+            .InclusiveBetween(1, 9)
             .When(q => q.Status.HasValue);
 }
