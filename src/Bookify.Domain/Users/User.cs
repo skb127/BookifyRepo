@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Abstractions;
+using Bookify.Domain.Abstractions;
 using Bookify.Domain.Shared;
 using Bookify.Domain.Users.Events;
 
@@ -43,6 +43,7 @@ public sealed class User : Entity
     public PasswordResetToken? PasswordResetToken { get; private set; }
     public EmailChangeToken? EmailChangeToken { get; private set; }
     public DateTime? EmailChangedAt { get; private set; }
+    public string? StripeCustomerId { get; private set; }
 
     public static User Create(FirstName firstName, LastName lastName, Email email, DateOfBirth dateOfBirth)
     {
@@ -58,6 +59,9 @@ public sealed class User : Entity
     public void SetIdentityId(string identityId) =>
 
         IdentityId = identityId;
+
+    public void SetStripeCustomerId(string customerId) =>
+        StripeCustomerId = customerId;
 
     public void ChangePassword()
     {

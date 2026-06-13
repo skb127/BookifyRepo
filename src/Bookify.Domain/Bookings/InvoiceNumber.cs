@@ -12,5 +12,7 @@ public record InvoiceNumber
     public static InvoiceNumber CreateCreditNote(Guid bookingId)
         => new($"CN-{bookingId:N}".ToUpperInvariant());
 
+    public static InvoiceNumber FromValue(string value) => new(value);
+
     public override string ToString() => Value;
 }

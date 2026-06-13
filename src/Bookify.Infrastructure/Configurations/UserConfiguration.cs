@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Shared;
+using Bookify.Domain.Shared;
 using Bookify.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -55,6 +55,10 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .WithOne()
             .HasForeignKey<EmailChangeToken>(ect => ect.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(user => user.StripeCustomerId)
+            .HasMaxLength(255)
+            .IsRequired(false);
 
         builder.HasQueryFilter(user => user.Status != UserStatus.Deleted);
     }

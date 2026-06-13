@@ -4,8 +4,6 @@ using Bookify.Api.Controllers.Bookings;
 using Bookify.Application.IntegrationTests.Apartments;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
-using Bookify.Domain.Bookings;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 

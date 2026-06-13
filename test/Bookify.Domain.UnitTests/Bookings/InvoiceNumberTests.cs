@@ -63,4 +63,18 @@ public class InvoiceNumberTests
         invoice.Should().NotBe(creditNote);
         invoice.Value.Should().NotBe(creditNote.Value);
     }
+
+    [Fact]
+    public void FromValue_ShouldCreateInvoiceNumber_WithCorrectValue()
+    {
+        // Arrange
+        var expectedValue = "INV-CUSTOM123456";
+
+        // Act
+        var invoiceNumber = InvoiceNumber.FromValue(expectedValue);
+
+        // Assert
+        invoiceNumber.Value.Should().Be(expectedValue);
+        invoiceNumber.ToString().Should().Be(expectedValue);
+    }
 }
