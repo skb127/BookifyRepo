@@ -57,11 +57,16 @@ Domain  ←  Application  ←  Infrastructure
 
 - All registrations go into dedicated private `Add*` methods in `Bookify.Infrastructure/DependencyInjection.cs`.
 - New services must be registered inside the appropriate method; do not inline ad-hoc registrations.
+- When creating new migrations, the name of the migration file should follow the same format as the existing ones in `src/Bookify.Infrastructure/Migrations`.
 - EF Core entity configurations live in `Configurations/` and must implement `IEntityTypeConfiguration<T>`.
 - Use **snake_case** column naming (`UseSnakeCaseNamingConvention()`).
 - Read-side (list/search) queries: use **Dapper** with raw SQL; write-side: use EF Core.
 - Background jobs: implement via Quartz.NET; add a `*Setup.cs` class alongside the job.
 - Resilience pipelines: use `Microsoft.Extensions.Resilience` (`AddResiliencePipeline` / `AddResilienceHandler`). Never add Polly strategies inline in service classes.
+
+### Implementation of migrations for db 
+
+Migrations needs to be applied manually by the developer, not by the AI agent, the AI agent should provide the commands to be executed by the developer for creating and applying migrations, and tell him that the DB container should be running when applying migrations. and in the the connection string, the Host should be changed temporarily to `localhost` to run the migrations locally and then back to the original host.
 
 ---
 

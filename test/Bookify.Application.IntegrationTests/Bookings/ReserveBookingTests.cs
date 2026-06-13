@@ -156,6 +156,6 @@ public class ReserveBookingTests : BaseIntegrationTest
         var bookingResponse = await getResponse.Content.ReadFromJsonAsync<BookingResponse>();
         bookingResponse.Should().NotBeNull();
         bookingResponse.UserId.Should().Be(guestUserId);
-        bookingResponse.Status.Should().Be(2); // BookingStatus.Confirmed
+        bookingResponse.Status.Should().Be((int)Domain.Bookings.BookingStatus.Confirmed);
     }
 }
