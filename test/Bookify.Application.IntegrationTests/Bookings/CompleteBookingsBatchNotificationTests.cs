@@ -60,6 +60,11 @@ public class CompleteBookingsBatchNotificationTests : BaseIntegrationTest
 
             var newBookingId = await reserveResponse.Content.ReadFromJsonAsync<Guid>();
             bookingIds.Add(newBookingId);
+
+            // Transition the booking from PendingPayment to Reserved
+            Booking? booking = await DbContext.Set<Booking>().FindAsync(newBookingId);
+            booking!.AuthorizePayment($"session_{newBookingId}", $"intent_{newBookingId}");
+            await DbContext.SaveChangesAsync();
         }
 
         // Confirm all 5 bookings bypassing HTTP to speed up (we already have tests for confirm booking)

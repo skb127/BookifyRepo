@@ -76,6 +76,7 @@ public class ReserveBookingTests : BaseIntegrationTest
         var bookingResponse = await getResponse.Content.ReadFromJsonAsync<BookingResponse>();
         bookingResponse.Should().NotBeNull();
         bookingResponse.UserId.Should().Be(guestUserId);
+        bookingResponse.Status.Should().Be((int)Domain.Bookings.BookingStatus.PendingPayment);
     }
 
     [Fact]
@@ -102,7 +103,7 @@ public class ReserveBookingTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task ReserveBooking_ShouldReturn201AndStatusConfirmed_WhenApartmentHasInstantBooking()
+    public async Task ReserveBooking_ShouldReturn201AndStatusPendingPayment_WhenApartmentHasInstantBooking()
     {
         // Arrange
         // 1. Create an admin to create the apartment
@@ -156,6 +157,6 @@ public class ReserveBookingTests : BaseIntegrationTest
         var bookingResponse = await getResponse.Content.ReadFromJsonAsync<BookingResponse>();
         bookingResponse.Should().NotBeNull();
         bookingResponse.UserId.Should().Be(guestUserId);
-        bookingResponse.Status.Should().Be((int)Domain.Bookings.BookingStatus.Confirmed);
+        bookingResponse.Status.Should().Be((int)Domain.Bookings.BookingStatus.PendingPayment);
     }
 }

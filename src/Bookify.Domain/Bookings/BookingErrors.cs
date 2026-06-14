@@ -43,4 +43,16 @@ public static class BookingErrors
     public static Error AlreadyCheckedIn { get; } = new(
         "Booking.AlreadyCheckedIn",
         "The booking has already been checked in");
+
+    public static Error NotPendingPayment { get; } = new(
+        "Booking.NotPendingPayment",
+        "The booking is not in PendingPayment status");
+
+    public static Error RefundNotEligible { get; } = new(
+        "Booking.RefundNotEligible",
+        "The booking is not eligible for a refund");
+
+    public static Error NotExpirable { get; } = new(
+        "Booking.NotExpirable",
+        "The booking cannot be expired in its current status");
 }

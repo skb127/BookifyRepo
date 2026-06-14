@@ -26,7 +26,8 @@ internal sealed class BookingRepository : Repository<Booking>, IBookingRepositor
                     booking.Duration.End >= duration.Start &&
                     (booking.Status == BookingStatus.Confirmed ||
                      booking.Status == BookingStatus.InProgress ||
-                     booking.Status == BookingStatus.Reserved && booking.ExpiresAt > _dateTimeProvider.UtcNow),
+                     (booking.Status == BookingStatus.Reserved || booking.Status == BookingStatus.PendingPayment) &&
+                     (booking.ExpiresAt == null || booking.ExpiresAt > _dateTimeProvider.UtcNow)),
             cancellationToken);
 
     public async Task<bool> HasActiveBookingsAsync(Guid apartmentId, CancellationToken cancellationToken = default) =>

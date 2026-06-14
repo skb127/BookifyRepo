@@ -156,6 +156,7 @@ public class AddReviewCommandHandlerTests
             [],
             DateTime.UtcNow);
         var booking = Domain.Bookings.Booking.Reserve(apartment, userId, DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)), UtcNow, new PricingService());
+        booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(UtcNow);
         booking.CheckIn(UtcNow);
         booking.Complete(UtcNow); // Required to pass the state validation if rating had been valid
@@ -233,6 +234,7 @@ public class AddReviewCommandHandlerTests
             DateTime.UtcNow);
 
         var booking = Domain.Bookings.Booking.Reserve(apartment, userId, DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)), UtcNow, new PricingService());
+        booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(UtcNow);
         booking.CheckIn(UtcNow);
         booking.Complete(UtcNow); // Valid state

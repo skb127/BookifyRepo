@@ -10,7 +10,8 @@ using Dapper;
 
 namespace Bookify.Application.Apartments.SearchApartments;
 
-internal sealed class SearchApartmentsQueryHandler : IQueryHandler<SearchApartmentsQuery, PagedResponse<ApartmentResponse>>
+internal sealed class
+    SearchApartmentsQueryHandler : IQueryHandler<SearchApartmentsQuery, PagedResponse<ApartmentResponse>>
 {
     private static readonly int[] HardBlockStatuses =
     [
@@ -19,6 +20,7 @@ internal sealed class SearchApartmentsQueryHandler : IQueryHandler<SearchApartme
     ];
 
     private const int ReservedStatus = (int)BookingStatus.Reserved;
+    private const int PendingPaymentStatus = (int)BookingStatus.PendingPayment;
 
     private readonly ISqlConnectionFactory _sqlConnectionFactory;
     private readonly IDateTimeProvider _dateTimeProvider;
@@ -31,7 +33,8 @@ internal sealed class SearchApartmentsQueryHandler : IQueryHandler<SearchApartme
         _dateTimeProvider = dateTimeProvider;
     }
 
-    public async Task<Result<PagedResponse<ApartmentResponse>>> Handle(SearchApartmentsQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PagedResponse<ApartmentResponse>>> Handle(SearchApartmentsQuery request,
+        CancellationToken cancellationToken)
     {
         using IDbConnection connection = _sqlConnectionFactory.CreateConnection();
 
@@ -41,11 +44,12 @@ internal sealed class SearchApartmentsQueryHandler : IQueryHandler<SearchApartme
         builder.AppendLine("WHERE a.deleted_at IS NULL");
         parameters.Add("HardBlockStatuses", HardBlockStatuses);
         parameters.Add("ReservedStatus", ReservedStatus);
+        parameters.Add("PendingPaymentStatus", PendingPaymentStatus);
         parameters.Add("UtcNow", _dateTimeProvider.UtcNow);
 
         string isAvailableExpression = "true";
 
-        if (request.StartDate.HasValue && request.EndDate.HasValue)
+        if (request is { StartDate: not null, EndDate: not null })
         {
             builder.AppendLine(@"
                 AND NOT EXISTS (
@@ -54,7 +58,7 @@ internal sealed class SearchApartmentsQueryHandler : IQueryHandler<SearchApartme
                     WHERE b.apartment_id = a.id 
                     AND (
                         b.status = ANY(@HardBlockStatuses)
-                        OR (b.status = @ReservedStatus AND b.expires_at > @UtcNow)
+                        OR ((b.status = @ReservedStatus OR b.status = @PendingPaymentStatus) AND (b.expires_at IS NULL OR b.expires_at > @UtcNow))
                     )
                     AND b.duration_start <= @EndDate 
                     AND b.duration_end >= @StartDate
@@ -192,5 +196,4 @@ internal sealed class SearchApartmentsQueryHandler : IQueryHandler<SearchApartme
         public string Street { get; init; } = default!;
     }
 #pragma warning restore S1144, S3459 // Unused private types or members - Properties are set by Dapper via reflection
-
 }

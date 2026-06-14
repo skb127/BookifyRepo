@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Bookify.Api.Controllers.Bookings;
 using Bookify.Application.IntegrationTests.Apartments;
 using Bookify.Application.IntegrationTests.Infrastructure;
+using Bookify.Domain.Bookings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
@@ -94,6 +95,11 @@ internal static class BookingTestHelpers
 
         Guid bookingId = await reserveResponse.Content.ReadFromJsonAsync<Guid>().ConfigureAwait(true);
 
+        // Transition the booking from PendingPayment to Reserved
+        Booking? booking = await test.DbContext.Set<Booking>().FindAsync(bookingId).ConfigureAwait(true);
+        booking!.AuthorizePayment("session_123", "intent_123");
+        await test.DbContext.SaveChangesAsync().ConfigureAwait(true);
+
         return (guestUserId, apartmentId, bookingId, guestAccessToken, guestEmail);
     }
 
@@ -128,6 +134,11 @@ internal static class BookingTestHelpers
         reserveResponse2.EnsureSuccessStatusCode();
 
         Guid bookingId2 = await reserveResponse2.Content.ReadFromJsonAsync<Guid>().ConfigureAwait(false);
+
+        // Transition Booking 2 from PendingPayment to Reserved before confirming
+        Booking? booking2 = await test.DbContext.Set<Booking>().FindAsync(bookingId2).ConfigureAwait(true);
+        booking2!.AuthorizePayment("session_456", "intent_456");
+        await test.DbContext.SaveChangesAsync().ConfigureAwait(true);
 
         // CONFIRM Booking 2
         HttpResponseMessage confirmResponse = await test.HttpClient.PutAsync(
@@ -191,6 +202,11 @@ internal static class BookingTestHelpers
         reserveResponse.EnsureSuccessStatusCode();
 
         Guid bookingId = await reserveResponse.Content.ReadFromJsonAsync<Guid>().ConfigureAwait(true);
+
+        // Transition the booking from PendingPayment to Reserved
+        Booking? booking = await test.DbContext.Set<Booking>().FindAsync(bookingId).ConfigureAwait(true);
+        booking!.AuthorizePayment("session_789", "intent_789");
+        await test.DbContext.SaveChangesAsync().ConfigureAwait(true);
 
         return (apartmentId, bookingId, ownerAccessToken, ownerEmail, guestAccessToken, guestEmail);
     }
@@ -294,6 +310,11 @@ internal static class BookingTestHelpers
 
             Guid bookingId = await reserveResponse.Content.ReadFromJsonAsync<Guid>().ConfigureAwait(true);
             bookingIds.Add(bookingId);
+
+            // Transition booking from PendingPayment to Reserved
+            Booking? booking = await test.DbContext.Set<Booking>().FindAsync(bookingId).ConfigureAwait(true);
+            booking!.AuthorizePayment($"session_{bookingId}", $"intent_{bookingId}");
+            await test.DbContext.SaveChangesAsync().ConfigureAwait(true);
 
             // Confirm booking as Admin/Owner
             test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
