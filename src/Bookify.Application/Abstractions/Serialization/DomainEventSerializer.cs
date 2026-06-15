@@ -30,6 +30,9 @@ public static class DomainEventSerializer
         { nameof(BookingCancelledDomainEvent), typeof(BookingCancelledDomainEvent) },
         { nameof(BookingRejectedDomainEvent), typeof(BookingRejectedDomainEvent) },
         { nameof(BookingNoShowDomainEvent), typeof(BookingNoShowDomainEvent) },
+        { nameof(BookingPaymentAuthorizedDomainEvent), typeof(BookingPaymentAuthorizedDomainEvent) },
+        { nameof(BookingPaymentCompletedDomainEvent), typeof(BookingPaymentCompletedDomainEvent) },
+        { nameof(BookingRefundInitiatedDomainEvent), typeof(BookingRefundInitiatedDomainEvent) },
         { nameof(ReviewCreatedDomainEvent), typeof(ReviewCreatedDomainEvent) },
         { nameof(ReviewUpdatedDomainEvent), typeof(ReviewUpdatedDomainEvent) }
     };

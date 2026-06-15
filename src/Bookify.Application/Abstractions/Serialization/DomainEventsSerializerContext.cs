@@ -25,6 +25,9 @@ namespace Bookify.Application.Abstractions.Serialization;
 [JsonSerializable(typeof(BookingCancelledDomainEvent))]
 [JsonSerializable(typeof(BookingRejectedDomainEvent))]
 [JsonSerializable(typeof(BookingNoShowDomainEvent))]
+[JsonSerializable(typeof(BookingPaymentAuthorizedDomainEvent))]
+[JsonSerializable(typeof(BookingPaymentCompletedDomainEvent))]
+[JsonSerializable(typeof(BookingRefundInitiatedDomainEvent))]
 [JsonSerializable(typeof(ReviewCreatedDomainEvent))]
 [JsonSerializable(typeof(ReviewUpdatedDomainEvent))]
 public sealed partial class DomainEventsSerializerContext : JsonSerializerContext

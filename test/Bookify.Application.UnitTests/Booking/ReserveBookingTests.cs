@@ -238,7 +238,7 @@ public class ReserveBookingTests
     }
 
     [Fact]
-    public async Task Handle_ShouldCreateBookingInConfirmedState_WhenInstantBookingIsTrue()
+    public async Task Handle_ShouldCreateBookingInPendingPaymentState_WhenInstantBookingIsTrue()
     {
         // Arrange
         var apartment = ApartmentData.CreateWithInstantBooking();
@@ -266,6 +266,6 @@ public class ReserveBookingTests
         result.IsSuccess.Should().BeTrue();
         _bookingRepositoryMock
             .Received(1)
-            .Add(Arg.Is<Domain.Bookings.Booking>(b => b.Id == result.Value && b.Status == BookingStatus.Confirmed));
+            .Add(Arg.Is<Domain.Bookings.Booking>(b => b.Id == result.Value && b.Status == BookingStatus.PendingPayment));
     }
 }

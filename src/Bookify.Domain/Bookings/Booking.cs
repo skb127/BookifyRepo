@@ -54,7 +54,9 @@ public sealed class Booking : Entity
     public DateTime? CompletedNotificationSentAt { get; private set; }
     public DateTime? CancelledOnUtc { get; private set; }
     public PaymentStatus PaymentStatus { get; private set; } = PaymentStatus.Unpaid;
+#pragma warning disable S1144
     public DateTime? ExpiresAt { get; private set; }
+#pragma warning restore S1144
     public DateTime? CheckedInOnUtc { get; private set; }
     public DateTime? NoShowAt { get; private set; }
     public DateTime? ExpiredOnUtc { get; private set; }
@@ -71,9 +73,7 @@ public sealed class Booking : Entity
         Guid userId,
         DateRange duration,
         DateTime utcNow,
-        PricingService pricingService,
-        bool instantBooking = false,
-        int courtesyBlockHours = 24)
+        PricingService pricingService)
     {
         PricingDetails pricingDetails = pricingService.CalculatePrice(apartment, duration);
 
@@ -86,23 +86,59 @@ public sealed class Booking : Entity
             pricingDetails.CleaningFee,
             pricingDetails.AmenitiesUpCharge,
             pricingDetails.TotalPrice,
-            instantBooking ? BookingStatus.Confirmed : BookingStatus.Reserved,
+            BookingStatus.PendingPayment,
             utcNow);
 
-        if (instantBooking)
-        {
-            booking.ConfirmedOnUtc = utcNow;
-            booking.RaiseDomainEvent(new BookingConfirmedDomainEvent(booking.Id));
-        }
-        else
-        {
-            booking.ExpiresAt = utcNow.AddHours(courtesyBlockHours);
-            booking.RaiseDomainEvent(new BookingReservedDomainEvent(booking.Id));
-        }
+        booking.RaiseDomainEvent(new BookingReservedDomainEvent(booking.Id));
 
         apartment.LastBookedOnUtc = utcNow;
 
         return booking;
+    }
+
+    public Result AuthorizePayment(string stripeSessionId, string? stripePaymentIntentId)
+    {
+        if (Status != BookingStatus.PendingPayment)
+        {
+            return Result.Failure(BookingErrors.NotPendingPayment);
+        }
+
+        Status = BookingStatus.Reserved;
+        PaymentStatus = PaymentStatus.Authorized;
+
+        RaiseDomainEvent(new BookingPaymentAuthorizedDomainEvent(Id, stripeSessionId, stripePaymentIntentId));
+
+        return Result.Success();
+    }
+
+    public Result MarkAsPaid(string stripePaymentIntentId, DateTime utcNow)
+    {
+        if (Status != BookingStatus.PendingPayment)
+        {
+            return Result.Failure(BookingErrors.NotPendingPayment);
+        }
+
+        Status = BookingStatus.Confirmed;
+        PaymentStatus = PaymentStatus.Paid;
+        ConfirmedOnUtc = utcNow;
+
+        RaiseDomainEvent(new BookingPaymentCompletedDomainEvent(Id, stripePaymentIntentId));
+
+        return Result.Success();
+    }
+
+    public Result InitiateRefund(decimal refundAmount, string currency, string reason)
+    {
+        if (Status != BookingStatus.Cancelled || PaymentStatus != PaymentStatus.Paid)
+        {
+            return Result.Failure(BookingErrors.RefundNotEligible);
+        }
+
+        PaymentStatus = PaymentStatus.RefundProcessing;
+
+        RaiseDomainEvent(new BookingRefundInitiatedDomainEvent(Id, refundAmount, currency, reason));
+
+        return Result.Success();
     }
 
     public Result Confirm(DateTime utcNow)
@@ -133,6 +169,11 @@ public sealed class Booking : Entity
         if (reason is not null)
         {
             _reasons.Add(reason);
+        }
+
+        if (PaymentStatus == PaymentStatus.Authorized)
+        {
+            PaymentStatus = PaymentStatus.AuthorizationReleased;
         }
 
         RaiseDomainEvent(new BookingRejectedDomainEvent(Id));
@@ -178,6 +219,11 @@ public sealed class Booking : Entity
         if (reason is not null)
         {
             _reasons.Add(reason);
+        }
+
+        if (PaymentStatus == PaymentStatus.Authorized)
+        {
+            PaymentStatus = PaymentStatus.AuthorizationReleased;
         }
 
         RaiseDomainEvent(new BookingCancelledDomainEvent(Id));
@@ -242,13 +288,18 @@ public sealed class Booking : Entity
 
     public Result Expire(DateTime utcNow)
     {
-        if (Status != BookingStatus.Reserved)
+        if (Status != BookingStatus.Reserved && Status != BookingStatus.PendingPayment)
         {
-            return Result.Failure(BookingErrors.NotReserved);
+            return Result.Failure(BookingErrors.NotExpirable);
         }
 
         Status = BookingStatus.Expired;
         ExpiredOnUtc = utcNow;
+
+        if (PaymentStatus == PaymentStatus.Authorized)
+        {
+            PaymentStatus = PaymentStatus.AuthorizationReleased;
+        }
 
         RaiseDomainEvent(new BookingExpiredDomainEvent(Id));
 

@@ -51,6 +51,7 @@ public class ReviewTests : BaseTest
         DateTime utcNow = DateTime.UtcNow;
 
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(utcNow);
         booking.CheckIn(utcNow);
         booking.Complete(utcNow); // Status is now Completed
@@ -80,6 +81,7 @@ public class ReviewTests : BaseTest
         DateTime utcNow = DateTime.UtcNow;
 
         var bookingOriginal = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        bookingOriginal.AuthorizePayment("session-id", "intent-id");
         bookingOriginal.Confirm(utcNow);
         bookingOriginal.CheckIn(utcNow);
         bookingOriginal.Complete(utcNow);
@@ -114,6 +116,7 @@ public class ReviewTests : BaseTest
 
         // Force a review to exist
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(utcNow);
         booking.CheckIn(utcNow);
         booking.Complete(utcNow);
@@ -144,6 +147,7 @@ public class ReviewTests : BaseTest
         DateTime utcNow = DateTime.UtcNow;
 
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(utcNow);
         booking.CheckIn(utcNow);
         booking.Complete(utcNow);
@@ -171,6 +175,7 @@ public class ReviewTests : BaseTest
         DateTime utcNow = DateTime.UtcNow;
 
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(utcNow);
         booking.CheckIn(utcNow);
         booking.Complete(utcNow);
@@ -207,6 +212,7 @@ public class ReviewTests : BaseTest
         DateTime utcNow = DateTime.UtcNow;
 
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(utcNow);
         booking.CheckIn(utcNow);
         booking.Complete(utcNow);

@@ -9,5 +9,6 @@ public enum PaymentStatus
     Authorized = 1,
     Paid = 2,
     RefundProcessing = 3,
-    Refunded = 4
+    Refunded = 4,
+    AuthorizationReleased = 5
 }
