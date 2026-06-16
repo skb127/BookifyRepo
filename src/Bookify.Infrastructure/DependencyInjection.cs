@@ -28,6 +28,9 @@ using Bookify.Infrastructure.Repositories;
 using Bookify.Infrastructure.Security;
 using Dapper;
 using MailKit.Net.Smtp;
+using Bookify.Application.Abstractions.Payments;
+using Bookify.Infrastructure.Payments;
+using Stripe;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -74,6 +77,8 @@ public static class DependencyInjection
         AddBackgroundJobs(services, configuration);
 
         AddTurnstile(services, configuration);
+
+        AddStripe(services, configuration);
 
         AddOptions(services, configuration);
 
@@ -408,5 +413,29 @@ public static class DependencyInjection
                     }, token);
             };
         });
+    }
+
+    private static void AddStripe(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<StripeOptions>(configuration.GetSection("Stripe"));
+
+        services.AddHttpClient("Stripe")
+                .AddStandardResilienceHandler();
+
+        services.AddTransient<IStripeClient, StripeClient>(s =>
+        {
+            StripeOptions stripeOptions = s.GetRequiredService<IOptions<StripeOptions>>().Value;
+            IHttpClientFactory clientFactory = s.GetRequiredService<IHttpClientFactory>();
+
+            var httpClient = new SystemNetHttpClient(
+                httpClient: clientFactory.CreateClient("Stripe"),
+                maxNetworkRetries: 0
+            );
+
+            return new StripeClient(stripeOptions.SecretKey, httpClient: httpClient);
+        });
+
+        services.AddScoped<IPaymentGateway, StripePaymentService>();
+        services.AddScoped<IStripeCustomerService, StripeCustomerService>();
     }
 }
