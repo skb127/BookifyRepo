@@ -1,4 +1,4 @@
-﻿namespace Bookify.Application.Bookings.GetBooking;
+namespace Bookify.Application.Bookings.GetBooking;
 
 public sealed class BookingResponse
 {
@@ -9,6 +9,8 @@ public sealed class BookingResponse
     public Guid ApartmentId { get; init; }
 
     public int Status { get; init; }
+
+    public int PaymentStatus { get; init; }
 
     public decimal PriceAmount { get; init; }
 

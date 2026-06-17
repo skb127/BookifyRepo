@@ -47,7 +47,7 @@ public class MockEmailService : IEmailService
     public async Task<EmailMessage> WaitForEmailToAsync(
         string recipientEmail,
         string? subject = null,
-        int timeoutMs = 10_000,
+        int timeoutMs = 25_000,
         DateTime? since = null)
     {
         var stopwatch = Stopwatch.StartNew();

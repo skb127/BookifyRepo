@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Quartz;
 using Testcontainers.Keycloak;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
@@ -37,9 +38,27 @@ public class FunctionalTestWebAppFactory : WebApplicationFactory<Program>, IAsyn
         .WithCommand("--import-realm")
         .Build();
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder) =>
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.UseSetting("ConnectionStrings:Database", _dbContainer.GetConnectionString());
+
         builder.ConfigureTestServices(services =>
         {
+            // Remove scheduler to avoid concurrency issues in integration tests
+            // Use in-memory scheduler for testing
+            services.Configure<QuartzOptions>(options =>
+            {
+                options.Remove("quartz.jobStore.tablePrefix");
+                options.Remove("quartz.jobStore.useProperties");
+                options.Remove("quartz.jobStore.dataSource");
+                options.Remove("quartz.jobStore.driverDelegateType");
+                options.Remove("quartz.jobStore.serializer.type");
+
+                options["quartz.jobStore.type"] = "Quartz.Simpl.RAMJobStore, Quartz";
+            });
+
             services.RemoveAll<DbContextOptions<ApplicationDbContext>>();
 
             services.AddDbContext<ApplicationDbContext>(options =>
@@ -75,6 +94,7 @@ public class FunctionalTestWebAppFactory : WebApplicationFactory<Program>, IAsyn
                 options.SecretKey = "1x0000000000000000000000000000000AA";
             });
         });
+    }
 
     public async Task InitializeAsync()
     {
@@ -88,10 +108,12 @@ public class FunctionalTestWebAppFactory : WebApplicationFactory<Program>, IAsyn
     // We decorate DisposeAsync with a 'new' keyword because the WebApplicationFactory already implements IAsyncLifetime
     public new async Task DisposeAsync()
     {
+        await base.DisposeAsync().ConfigureAwait(false);
+
         await _dbContainer.StopAsync().ConfigureAwait(false);
         await _redisContainer.StopAsync().ConfigureAwait(false);
         await _keycloakContainer.StopAsync().ConfigureAwait(false);
-        
+
         await _dbContainer.DisposeAsync().ConfigureAwait(false);
         await _redisContainer.DisposeAsync().ConfigureAwait(false);
         await _keycloakContainer.DisposeAsync().ConfigureAwait(false);
@@ -106,8 +128,11 @@ public class FunctionalTestWebAppFactory : WebApplicationFactory<Program>, IAsyn
         HttpClient httpClient = CreateClient();
         httpClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
 
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest2).ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest3).ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest2)
+            .ConfigureAwait(false);
+        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest3)
+            .ConfigureAwait(false);
     }
 }

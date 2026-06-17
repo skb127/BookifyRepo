@@ -6,6 +6,7 @@ using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Email;
 using Bookify.Application.Abstractions.Identity;
 using Bookify.Application.Abstractions.Security;
+using Bookify.Application.Abstractions.Scheduling;
 using Bookify.Application.Options;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
@@ -26,6 +27,7 @@ using Bookify.Infrastructure.Outbox;
 using Bookify.Infrastructure.RateLimiting;
 using Bookify.Infrastructure.Repositories;
 using Bookify.Infrastructure.Security;
+using Bookify.Infrastructure.Scheduling;
 using Dapper;
 using MailKit.Net.Smtp;
 using Bookify.Application.Abstractions.Payments;
@@ -233,11 +235,19 @@ public static class DependencyInjection
         // Uses raw SQL for performance
         services.Configure<CompleteBookingsJobOptions>(configuration.GetSection("CompleteBookings"));
 
-        // --- Expire bookings batch job ---
-        // Automatically marks reserved bookings as expired when their expires_at has passed.
-        services.Configure<ExpireBookingsJobOptions>(configuration.GetSection("ExpireBookings"));
+        services.AddTransient<IJobScheduler, JobScheduler>();
 
-        services.AddQuartz();
+        services.AddQuartz(options =>
+            options.UsePersistentStore(store =>
+            {
+                store.UsePostgres(postgres =>
+                {
+                    postgres.ConnectionString = configuration.GetConnectionString("Database")!;
+                    postgres.TablePrefix = "quartz.qrtz_";
+                });
+                store.UseNewtonsoftJsonSerializer();
+                store.UseProperties = true;
+            }));
 
         services.AddQuartzHostedService(options =>
             options.WaitForJobsToComplete =
@@ -246,7 +256,8 @@ public static class DependencyInjection
         services
             .ConfigureOptions<ProcessOutboxMessagesJobSetup>(); // Configure the Quartz job to process outbox messages
         services.ConfigureOptions<CompleteBookingsJobSetup>(); // Configure the Quartz job to complete bookings
-        services.ConfigureOptions<ExpireBookingsJobSetup>(); // Configure the Quartz job to expire bookings
+        services.ConfigureOptions<ExpireCheckoutSessionJobSetup>(); // Register ExpireCheckoutSessionJob durably
+        services.ConfigureOptions<ExpireHostApprovalJobSetup>(); // Register ExpireHostApprovalJob durably
 
         AddEmailNotificationResiliencePipeline(services);
     }

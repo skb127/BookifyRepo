@@ -21,6 +21,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Quartz.Extensions.Hosting" />
+    <PackageReference Include="Quartz.Serialization.Json" />
     <PackageReference Include="Scriban" />
     <PackageReference Include="Microsoft.Extensions.Resilience" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
