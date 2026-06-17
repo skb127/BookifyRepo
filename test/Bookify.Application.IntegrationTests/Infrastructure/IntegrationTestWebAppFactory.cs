@@ -1,12 +1,14 @@
 using System.Net.Http.Json;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Email;
+using Bookify.Application.Abstractions.Payments;
 using Bookify.Application.IntegrationTests.Users;
 using Bookify.Application.Options;
 using Bookify.Infrastructure;
 using Bookify.Infrastructure.Authentication;
 using Bookify.Infrastructure.Data;
 using Bookify.Infrastructure.Outbox;
+using NSubstitute;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -15,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Quartz;
 using Testcontainers.Keycloak;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
@@ -43,12 +46,29 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
 
     public MockEmailService MockEmailService { get; } = new();
 
+    public IPaymentGateway MockPaymentGateway { get; } = Substitute.For<IPaymentGateway>();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
+        builder.UseSetting("ConnectionStrings:Database", _dbContainer.GetConnectionString());
+
         builder.ConfigureTestServices(services =>
         {
+            // Remove scheduler to avoid concurrency issues in integration tests
+            // Use in-memory scheduler for testing
+            services.Configure<QuartzOptions>(options =>
+            {
+                options.Remove("quartz.jobStore.tablePrefix");
+                options.Remove("quartz.jobStore.useProperties");
+                options.Remove("quartz.jobStore.dataSource");
+                options.Remove("quartz.jobStore.driverDelegateType");
+                options.Remove("quartz.jobStore.serializer.type");
+
+                options["quartz.jobStore.type"] = "Quartz.Simpl.RAMJobStore, Quartz";
+            });
+
             services.RemoveAll<DbContextOptions<ApplicationDbContext>>();
 
             services.AddDbContext<ApplicationDbContext>(options =>
@@ -67,16 +87,22 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             services.Configure<OutboxOptions>(o =>
             {
                 o.IntervalInSeconds = 1;
-                o.BatchSize = 1000; 
+                o.BatchSize = 1000;
             });
 
             // Speed up CompleteBookings processing for integration tests (default is daily)
             services.Configure<Bookify.Infrastructure.Bookings.CompleteBookingsJobOptions>(o =>
                 o.CronExpression = "*/2 * * * * ?"); // Every two seconds
 
-            // Speed up ExpireBookings processing for integration tests (default is every 15 minutes)
-            services.Configure<Bookify.Infrastructure.Bookings.ExpireBookingsJobOptions>(o =>
-                o.CronExpression = "*/1 * * * * ?"); // Every second
+            // Configure booking TTL options to be extremely short for integration tests
+            services.Configure<BookingOptions>(options =>
+            {
+                options.CheckoutSessionTtlMinutes = 0.05; // 3 seconds
+                options.HostApprovalTtlHours = 0.00083; // 3 seconds
+            });
+
+            services.RemoveAll<IPaymentGateway>();
+            services.AddSingleton(MockPaymentGateway);
 
             services.Configure<ExpirationOptions>(options =>
             {
@@ -103,14 +129,21 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             services.AddSingleton<IEmailService>(MockEmailService);
 
             // Bypass RateLimiting for all old integration tests
-            services.RemoveAll<Microsoft.Extensions.Options.IConfigureOptions<Microsoft.AspNetCore.RateLimiting.RateLimiterOptions>>();
+            services
+                .RemoveAll<Microsoft.Extensions.Options.IConfigureOptions<
+                    Microsoft.AspNetCore.RateLimiting.RateLimiterOptions>>();
             services.AddRateLimiter(options =>
             {
-                options.AddPolicy("write-operations", _ => System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("bypass"));
-                options.AddPolicy("search", _ => System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("bypass"));
-                options.AddPolicy("health-checks", _ => System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("bypass"));
-                options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<Microsoft.AspNetCore.Http.HttpContext, string>(
+                options.AddPolicy("write-operations",
                     _ => System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("bypass"));
+                options.AddPolicy("search",
+                    _ => System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("bypass"));
+                options.AddPolicy("health-checks",
+                    _ => System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("bypass"));
+                options.GlobalLimiter =
+                    System.Threading.RateLimiting.PartitionedRateLimiter
+                        .Create<Microsoft.AspNetCore.Http.HttpContext, string>(_ =>
+                            System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("bypass"));
             });
 
             services.Configure<Bookify.Infrastructure.Security.TurnstileOptions>(options =>
@@ -133,6 +166,8 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
     // We decorate DisposeAsync with a 'new' keyword because the WebApplicationFactory already implements IAsyncLifetime
     public new async Task DisposeAsync()
     {
+        await base.DisposeAsync().ConfigureAwait(false);
+
         await _dbContainer.StopAsync().ConfigureAwait(false);
         await _redisContainer.StopAsync().ConfigureAwait(false);
         await _keycloakContainer.StopAsync().ConfigureAwait(false);

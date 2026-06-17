@@ -175,6 +175,19 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
                 options.BaseUrl = new Uri("https://challenges.cloudflare.com/turnstile/v0/");
                 options.SecretKey = "1x0000000000000000000000000000000AA";
             });
+
+            // Remove scheduler to avoid concurrency issues in integration tests
+            // Use in-memory scheduler for testing
+            services.Configure<Quartz.QuartzOptions>(options =>
+            {
+                options.Remove("quartz.jobStore.tablePrefix");
+                options.Remove("quartz.jobStore.useProperties");
+                options.Remove("quartz.jobStore.dataSource");
+                options.Remove("quartz.jobStore.driverDelegateType");
+                options.Remove("quartz.jobStore.serializer.type");
+
+                options["quartz.jobStore.type"] = "Quartz.Simpl.RAMJobStore, Quartz";
+            });
         });
     }
 
@@ -188,6 +201,8 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
 
     public new async Task DisposeAsync()
     {
+        await base.DisposeAsync().ConfigureAwait(false);
+
         await _dbContainer.StopAsync().ConfigureAwait(false);
         await _redisContainer.StopAsync().ConfigureAwait(false);
         await _keycloakContainer.StopAsync().ConfigureAwait(false);

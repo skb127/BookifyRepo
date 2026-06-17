@@ -54,9 +54,7 @@ public sealed class Booking : Entity
     public DateTime? CompletedNotificationSentAt { get; private set; }
     public DateTime? CancelledOnUtc { get; private set; }
     public PaymentStatus PaymentStatus { get; private set; } = PaymentStatus.Unpaid;
-#pragma warning disable S1144
     public DateTime? ExpiresAt { get; private set; }
-#pragma warning restore S1144
     public DateTime? CheckedInOnUtc { get; private set; }
     public DateTime? NoShowAt { get; private set; }
     public DateTime? ExpiredOnUtc { get; private set; }
@@ -121,6 +119,7 @@ public sealed class Booking : Entity
         Status = BookingStatus.Confirmed;
         PaymentStatus = PaymentStatus.Paid;
         ConfirmedOnUtc = utcNow;
+        ExpiresAt = null;
 
         RaiseDomainEvent(new BookingPaymentCompletedDomainEvent(Id, stripePaymentIntentId));
 
@@ -150,6 +149,7 @@ public sealed class Booking : Entity
 
         Status = BookingStatus.Confirmed;
         ConfirmedOnUtc = utcNow;
+        ExpiresAt = null;
 
         RaiseDomainEvent(new BookingConfirmedDomainEvent(Id));
 
@@ -165,6 +165,7 @@ public sealed class Booking : Entity
 
         Status = BookingStatus.Rejected;
         RejectedOnUtc = utcNow;
+        ExpiresAt = null;
 
         if (reason is not null)
         {
@@ -215,6 +216,7 @@ public sealed class Booking : Entity
 
         Status = BookingStatus.Cancelled;
         CancelledOnUtc = utcNow;
+        ExpiresAt = null;
 
         if (reason is not null)
         {
@@ -295,6 +297,7 @@ public sealed class Booking : Entity
 
         Status = BookingStatus.Expired;
         ExpiredOnUtc = utcNow;
+        ExpiresAt = null;
 
         if (PaymentStatus == PaymentStatus.Authorized)
         {
@@ -308,4 +311,7 @@ public sealed class Booking : Entity
 
     public void MarkCompletionNotified(DateTime utcNow) =>
         CompletedNotificationSentAt = utcNow;
+    
+    public void SetExpiresAt(DateTime? expiresAt) => 
+        ExpiresAt = expiresAt;
 }

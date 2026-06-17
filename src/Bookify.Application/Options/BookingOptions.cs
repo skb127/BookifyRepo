@@ -1,9 +1,11 @@
 namespace Bookify.Application.Options;
 
 /// <summary>
-/// Options for configuring booking behavior, such as the courtesy block period.
+/// Options for configuring booking behavior, such as checkout session TTL and host approval TTL.
 /// </summary>
 public sealed class BookingOptions
 {
-    public int CourtesyBlockHours { get; set; } = 24;
+    public double CheckoutSessionTtlMinutes { get; set; } = 30.0;
+
+    public double HostApprovalTtlHours { get; set; } = 24.0;
 }

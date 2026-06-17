@@ -1,10 +1,17 @@
+using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Email;
 using Bookify.Application.Abstractions.Email.Models;
+using Bookify.Application.Abstractions.Scheduling;
 using Bookify.Application.Bookings.Events;
 using Bookify.Application.Options;
+using Bookify.Application.UnitTests.Apartments;
+using Bookify.Domain.Abstractions;
+using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Bookings.Events;
 using Bookify.Domain.Users;
+using FluentAssertions;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 
@@ -12,10 +19,18 @@ namespace Bookify.Application.UnitTests.Booking.Events;
 
 public class BookingPaymentAuthorizedDomainEventHandlerTests
 {
+    private static readonly DateTime UtcNow = DateTime.UtcNow;
+
     private readonly IBookingRepository _bookingRepositoryMock;
     private readonly IUserRepository _userRepositoryMock;
     private readonly IEmailService _emailServiceMock;
     private readonly IEmailTemplateService _emailTemplateServiceMock;
+    private readonly IJobScheduler _jobSchedulerMock;
+    private readonly IDateTimeProvider _dateTimeProviderMock;
+    private readonly IUnitOfWork _unitOfWorkMock;
+    private readonly IOptions<BookifyAppOptions> _appOptionsMock;
+    private readonly IOptions<BookingOptions> _bookingOptionsMock;
+
     private readonly BookingPaymentAuthorizedDomainEventHandler _handler;
 
     public BookingPaymentAuthorizedDomainEventHandlerTests()
@@ -24,10 +39,23 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
         _userRepositoryMock = Substitute.For<IUserRepository>();
         _emailServiceMock = Substitute.For<IEmailService>();
         _emailTemplateServiceMock = Substitute.For<IEmailTemplateService>();
+        _jobSchedulerMock = Substitute.For<IJobScheduler>();
+        _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
+        _unitOfWorkMock = Substitute.For<IUnitOfWork>();
+        _appOptionsMock = Substitute.For<IOptions<BookifyAppOptions>>();
+        _bookingOptionsMock = Substitute.For<IOptions<BookingOptions>>();
 
-        var options = Microsoft.Extensions.Options.Options.Create(new BookifyAppOptions
+        _dateTimeProviderMock.UtcNow.Returns(UtcNow);
+
+        _appOptionsMock.Value.Returns(new BookifyAppOptions
         {
             FrontendUrl = new Uri("https://test.bookify.com")
+        });
+
+        _bookingOptionsMock.Value.Returns(new BookingOptions
+        {
+            CheckoutSessionTtlMinutes = 30.0,
+            HostApprovalTtlHours = 24.0
         });
 
         _handler = new BookingPaymentAuthorizedDomainEventHandler(
@@ -35,7 +63,11 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
             _userRepositoryMock,
             _emailServiceMock,
             _emailTemplateServiceMock,
-            options);
+            _jobSchedulerMock,
+            _dateTimeProviderMock,
+            _unitOfWorkMock,
+            _appOptionsMock,
+            _bookingOptionsMock);
     }
 
     private static User CreateUser()
@@ -49,7 +81,7 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ShouldNotSendEmail_WhenBookingNotFound()
+    public async Task Handle_ShouldNotSendEmail_OrScheduleJobs_WhenBookingNotFound()
     {
         // Arrange
         var domainEvent = new BookingPaymentAuthorizedDomainEvent(Guid.NewGuid(), "session-id", "intent-id");
@@ -61,6 +93,9 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
         await _handler.Handle(domainEvent, CancellationToken.None);
 
         // Assert
+        await _jobSchedulerMock.DidNotReceiveWithAnyArgs().CancelExpireCheckoutSessionAsync(Guid.Empty);
+        await _jobSchedulerMock.DidNotReceiveWithAnyArgs().ScheduleExpireHostApprovalAsync(Guid.Empty, default);
+        await _unitOfWorkMock.DidNotReceiveWithAnyArgs().SaveChangesAsync();
         await _emailTemplateServiceMock.DidNotReceiveWithAnyArgs()
             .GenerateEmailBodyAsync(null!, null!, CancellationToken.None);
         await _emailServiceMock.DidNotReceiveWithAnyArgs().SendAsync(null!, CancellationToken.None);
@@ -70,10 +105,15 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
     public async Task Handle_ShouldNotSendEmail_WhenUserNotFound()
     {
         // Arrange
-        var domainEvent = new BookingPaymentAuthorizedDomainEvent(Guid.NewGuid(), "session-id", "intent-id");
+        Apartment apartment = ApartmentData.Create();
+        var booking = Domain.Bookings.Booking.Reserve(
+            apartment,
+            Guid.NewGuid(),
+            DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)),
+            UtcNow,
+            new PricingService());
 
-        var booking = (Domain.Bookings.Booking)Activator.CreateInstance(typeof(Domain.Bookings.Booking), true)!;
-        typeof(Domain.Bookings.Booking).GetProperty("UserId")!.SetValue(booking, Guid.NewGuid());
+        var domainEvent = new BookingPaymentAuthorizedDomainEvent(booking.Id, "session-id", "intent-id");
 
         _bookingRepositoryMock.GetByIdAsync(domainEvent.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
@@ -85,22 +125,30 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
         await _handler.Handle(domainEvent, CancellationToken.None);
 
         // Assert
+        await _jobSchedulerMock.Received(1).CancelExpireCheckoutSessionAsync(domainEvent.BookingId, Arg.Any<CancellationToken>());
+        await _jobSchedulerMock.Received(1).ScheduleExpireHostApprovalAsync(domainEvent.BookingId, Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+        await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+
         await _emailTemplateServiceMock.DidNotReceiveWithAnyArgs()
             .GenerateEmailBodyAsync(null!, null!, CancellationToken.None);
         await _emailServiceMock.DidNotReceiveWithAnyArgs().SendAsync(null!, CancellationToken.None);
     }
 
     [Fact]
-    public async Task Handle_ShouldSendEmail_WhenValid()
+    public async Task Handle_ShouldCancelTtl1_ScheduleTtl2_AndSendEmail_WhenValid()
     {
         // Arrange
-        var domainEvent = new BookingPaymentAuthorizedDomainEvent(Guid.CreateVersion7(), "session-id", "intent-id");
-
         var user = CreateUser();
 
-        var booking = (Domain.Bookings.Booking)Activator.CreateInstance(typeof(Domain.Bookings.Booking), true)!;
-        typeof(Domain.Bookings.Booking).GetProperty("UserId")!.SetValue(booking, user.Id);
-        typeof(Domain.Bookings.Booking).GetProperty("Id")!.SetValue(booking, domainEvent.BookingId);
+        Apartment apartment = ApartmentData.Create();
+        var booking = Domain.Bookings.Booking.Reserve(
+            apartment,
+            user.Id,
+            DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)),
+            UtcNow,
+            new PricingService());
+
+        var domainEvent = new BookingPaymentAuthorizedDomainEvent(booking.Id, "session-id", "intent-id");
 
         _bookingRepositoryMock.GetByIdAsync(domainEvent.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
@@ -116,10 +164,22 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
                 Arg.Any<CancellationToken>())
             .Returns(expectedEmailBody);
 
+        var expectedExpiresAt = UtcNow.AddHours(24.0);
+
         // Act
         await _handler.Handle(domainEvent, CancellationToken.None);
 
         // Assert
+        booking.ExpiresAt.Should().BeCloseTo(expectedExpiresAt, TimeSpan.FromMilliseconds(100));
+
+        await _jobSchedulerMock.Received(1).CancelExpireCheckoutSessionAsync(domainEvent.BookingId, Arg.Any<CancellationToken>());
+        await _jobSchedulerMock.Received(1).ScheduleExpireHostApprovalAsync(
+            domainEvent.BookingId,
+            Arg.Is<DateTime>(dt => Math.Abs((dt - expectedExpiresAt).TotalMilliseconds) < 100),
+            Arg.Any<CancellationToken>());
+
+        await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+
         await _emailTemplateServiceMock.Received(1).GenerateEmailBodyAsync(
             "BookingPaymentAuthorized.html",
             Arg.Is<object>(m =>

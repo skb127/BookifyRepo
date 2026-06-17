@@ -1,5 +1,6 @@
-﻿using Bookify.Application.Abstractions.Clock;
+using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Messaging;
+using Bookify.Application.Abstractions.Scheduling;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
 
@@ -9,15 +10,18 @@ internal sealed class ConfirmBookingCommandHandler : ICommandHandler<ConfirmBook
 {
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IBookingRepository _bookingRepository;
+    private readonly IJobScheduler _jobScheduler;
     private readonly IUnitOfWork _unitOfWork;
 
     public ConfirmBookingCommandHandler(
         IDateTimeProvider dateTimeProvider,
         IBookingRepository bookingRepository,
+        IJobScheduler jobScheduler,
         IUnitOfWork unitOfWork)
     {
         _dateTimeProvider = dateTimeProvider;
         _bookingRepository = bookingRepository;
+        _jobScheduler = jobScheduler;
         _unitOfWork = unitOfWork;
     }
 
@@ -38,6 +42,8 @@ internal sealed class ConfirmBookingCommandHandler : ICommandHandler<ConfirmBook
         {
             return result;
         }
+
+        await _jobScheduler.CancelExpireHostApprovalAsync(booking.Id, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

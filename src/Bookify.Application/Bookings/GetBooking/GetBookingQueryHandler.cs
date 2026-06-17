@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Bookify.Application.Abstractions.Authentication;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Messaging;
@@ -29,6 +29,7 @@ internal sealed class GetBookingQueryHandler : IQueryHandler<GetBookingQuery, Bo
                 apartment_id AS ApartmentId,
                 user_id AS UserId,
                 status AS Status,
+                payment_status AS PaymentStatus,
                 price_for_period_amount AS PriceAmount,
                 price_for_period_currency AS PriceCurrency,
                 cleaning_fee_amount AS CleaningFeeAmount,

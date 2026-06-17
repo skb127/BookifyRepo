@@ -54,15 +54,25 @@ public class UserCacheInvalidationTests : BaseIntegrationTest
         HttpResponseMessage updateResponse = await HttpClient.PutAsJsonAsync("api/v1/users/profile", updateRequest);
         updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // 4. Wait for the Outbox processor to fire the event and invalidate the cache
-        await Task.Delay(TimeSpan.FromSeconds(3));
+        // 4. Poll GET until cache is invalidated (FirstName changes from "CacheUser" to "CacheTest")
+        var timeoutAt = DateTime.UtcNow.AddSeconds(15);
+        UserResponse? freshUser = null;
+
+        while (DateTime.UtcNow < timeoutAt)
+        {
+            HttpResponseMessage secondGetResponse = await HttpClient.GetAsync(getUserUri);
+            secondGetResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            freshUser = await secondGetResponse.Content.ReadFromJsonAsync<UserResponse>();
+            if (freshUser?.FirstName == "CacheTest")
+            {
+                break;
+            }
+
+            await Task.Delay(500);
+        }
 
         // Assert
-        // GET again — cache invalidated, should return fresh data from DB
-        HttpResponseMessage secondGetResponse = await HttpClient.GetAsync(getUserUri);
-        secondGetResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        UserResponse? freshUser = await secondGetResponse.Content.ReadFromJsonAsync<UserResponse>();
         freshUser.Should().NotBeNull();
         freshUser.FirstName.Should().Be("CacheTest");
         freshUser.LastName.Should().Be("UpdatedLastName");
