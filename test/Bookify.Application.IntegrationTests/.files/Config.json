@@ -1,0 +1,21 @@
+{
+  "UserConfig": {
+    "Logging": {
+      "Type": "Console"
+    },
+    "Namespaces": [
+      {
+        "Name": "sbemulatorns",
+        "Queues": [
+          {
+            "Name": "stripe-events",
+            "Properties": {
+              "MaxDeliveryCount": 3,
+              "DefaultMessageTimeToLive": "PT1H"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

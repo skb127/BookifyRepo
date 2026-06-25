@@ -28,3 +28,10 @@ README.md
 !.git/config
 !.git/packed-refs
 !.git/refs/heads/**
+.containers
+.containers/
+.containers/**
+**/.containers
+**/.containers/**
+/.containers
+/.containers/**

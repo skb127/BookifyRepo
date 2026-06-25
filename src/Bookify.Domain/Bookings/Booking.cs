@@ -309,6 +309,34 @@ public sealed class Booking : Entity
         return Result.Success();
     }
 
+    public Result CompleteRefund(DateTime utcNow)
+    {
+        _ = utcNow;
+
+        if (PaymentStatus != PaymentStatus.RefundProcessing)
+        {
+            return Result.Failure(BookingErrors.RefundNotEligible);
+        }
+
+        PaymentStatus = PaymentStatus.Refunded;
+
+        return Result.Success();
+    }
+
+    public Result RevertRefundFailure(DateTime utcNow)
+    {
+        _ = utcNow;
+
+        if (PaymentStatus != PaymentStatus.RefundProcessing)
+        {
+            return Result.Failure(BookingErrors.RefundNotEligible);
+        }
+
+        PaymentStatus = PaymentStatus.Paid;
+
+        return Result.Success();
+    }
+
     public void MarkCompletionNotified(DateTime utcNow) =>
         CompletedNotificationSentAt = utcNow;
     

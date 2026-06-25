@@ -21,6 +21,7 @@ using Quartz;
 using Testcontainers.Keycloak;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
+using Testcontainers.ServiceBus;
 
 namespace Bookify.Application.IntegrationTests.Infrastructure;
 
@@ -44,6 +45,13 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
         .WithCommand("--import-realm")
         .Build();
 
+    private readonly ServiceBusContainer _serviceBusContainer = new ServiceBusBuilder()
+        .WithAcceptLicenseAgreement(true)
+        .WithResourceMapping(
+            new FileInfo(".files/Config.json"),
+            "/ServiceBus_Emulator/ConfigFiles")
+        .Build();
+
     public MockEmailService MockEmailService { get; } = new();
 
     public IPaymentGateway MockPaymentGateway { get; } = Substitute.For<IPaymentGateway>();
@@ -53,6 +61,7 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.UseSetting("ConnectionStrings:Database", _dbContainer.GetConnectionString());
+        builder.UseSetting("ConnectionStrings:ServiceBus", _serviceBusContainer.GetConnectionString());
 
         builder.ConfigureTestServices(services =>
         {
@@ -159,6 +168,7 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
         await _dbContainer.StartAsync().ConfigureAwait(false);
         await _redisContainer.StartAsync().ConfigureAwait(false);
         await _keycloakContainer.StartAsync().ConfigureAwait(false);
+        await _serviceBusContainer.StartAsync().ConfigureAwait(false);
 
         await InitializeTestUserAsync().ConfigureAwait(false);
     }
@@ -171,10 +181,12 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
         await _dbContainer.StopAsync().ConfigureAwait(false);
         await _redisContainer.StopAsync().ConfigureAwait(false);
         await _keycloakContainer.StopAsync().ConfigureAwait(false);
+        await _serviceBusContainer.StopAsync().ConfigureAwait(false);
 
         await _dbContainer.DisposeAsync().ConfigureAwait(false);
         await _redisContainer.DisposeAsync().ConfigureAwait(false);
         await _keycloakContainer.DisposeAsync().ConfigureAwait(false);
+        await _serviceBusContainer.DisposeAsync().ConfigureAwait(false);
     }
 
     /// <summary>

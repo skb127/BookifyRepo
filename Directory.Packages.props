@@ -44,6 +44,7 @@
     <PackageVersion Include="Testcontainers.Keycloak" Version="4.9.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.9.0" />
     <PackageVersion Include="Testcontainers.Redis" Version="4.9.0" />
+    <PackageVersion Include="Testcontainers.ServiceBus" Version="4.9.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="MailKit" Version="4.16.0" />
@@ -51,5 +52,7 @@
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.10.0" />
     <PackageVersion Include="Scriban" Version="7.2.0" />
     <PackageVersion Include="Stripe.net" Version="52.0.0" />
+    <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
+    <PackageVersion Include="AspNetCore.HealthChecks.AzureServiceBus" Version="9.0.0" />
   </ItemGroup>
 </Project>
