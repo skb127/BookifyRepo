@@ -74,4 +74,14 @@ public abstract class BaseIntegrationTest
         await cacheService.RemoveAsync($"auth:roles-{identityId}").ConfigureAwait(false);
         await cacheService.RemoveAsync($"auth:permissions-{identityId}").ConfigureAwait(false);
     }
+
+    protected async Task<string> GetAdminTokenAsync(string password = "Password123!")
+    {
+        var adminEmail = $"admin_{Guid.CreateVersion7()}@test.com";
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        _ = await Sender.Send(registerAdminCommand).ConfigureAwait(false);
+        await PromoteToAdminAsync(adminEmail).ConfigureAwait(false);
+        return await GetAccessToken(adminEmail, password).ConfigureAwait(false);
+    }
 }

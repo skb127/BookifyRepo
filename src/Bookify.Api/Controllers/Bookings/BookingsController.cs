@@ -10,6 +10,7 @@ using Bookify.Application.Bookings.GetUserBookings;
 using Bookify.Application.Bookings.MarkNoShowBooking;
 using Bookify.Application.Bookings.RejectBooking;
 using Bookify.Application.Bookings.ReserveBooking;
+using Bookify.Application.Bookings.GetBookingTransactions;
 using Bookify.Application.Common;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
@@ -353,6 +354,27 @@ public sealed class BookingsController : ControllerBase
 
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok(result.Value);
+    }
+
+    [Authorize(Roles = Roles.Admin)]
+    [HttpGet("{id:guid}/transactions")]
+    public async Task<IActionResult> GetBookingTransactions(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetBookingTransactionsQuery(id);
+
+        Result<IReadOnlyList<BookingTransactionResponse>> result = await _sender.Send(query, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status404NotFound,
                 detail: result.Error.Name,
                 title: result.Error.Code);
         }

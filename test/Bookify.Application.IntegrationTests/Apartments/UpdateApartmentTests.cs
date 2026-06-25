@@ -197,6 +197,6 @@ public class UpdateApartmentTests : BaseIntegrationTest
 
         var apartmentResponse = await getResponse.Content.ReadFromJsonAsync<Application.Apartments.GetApartment.ApartmentResponse>();
         apartmentResponse.Should().NotBeNull();
-        apartmentResponse!.InstantBooking.Should().BeTrue();
+        apartmentResponse.InstantBooking.Should().BeTrue();
     }
 }

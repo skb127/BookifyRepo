@@ -33,6 +33,8 @@ using MailKit.Net.Smtp;
 using Bookify.Application.Abstractions.Payments;
 using Bookify.Infrastructure.Payments;
 using Stripe;
+using Bookify.Application.Abstractions.Messaging;
+using Bookify.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -81,6 +83,8 @@ public static class DependencyInjection
         AddTurnstile(services, configuration);
 
         AddStripe(services, configuration);
+
+        AddServiceBus(services, configuration);
 
         AddOptions(services, configuration);
 
@@ -153,7 +157,10 @@ public static class DependencyInjection
             throw new ArgumentNullException(nameof(configuration));
 
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+            options.UseNpgsql(
+                connectionString,
+                npgsqlOptions => npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+            .UseSnakeCaseNamingConvention());
 
         services.AddScoped<IUserRepository, UserRepository>();
 
@@ -206,7 +213,11 @@ public static class DependencyInjection
         services.AddHealthChecks()
             .AddNpgSql(configuration.GetConnectionString("Database")!)
             .AddRedis(configuration.GetConnectionString("Cache")!)
-            .AddUrlGroup(new Uri(configuration["Keycloak:BaseUrl"]!), HttpMethod.Get, "keycloak");
+            .AddUrlGroup(new Uri(configuration["Keycloak:BaseUrl"]!), HttpMethod.Get, "keycloak")
+            .AddAzureServiceBusQueue(
+                configuration.GetConnectionString("ServiceBus")!,
+                configuration["ServiceBus:QueueName"]!,
+                name: "azure-service-bus");
 
     private static void AddApiVersioning(IServiceCollection services) =>
         // Add API Versioning to the services collection, this is going to allow us to version our API endpoints
@@ -448,5 +459,18 @@ public static class DependencyInjection
 
         services.AddScoped<IPaymentGateway, StripePaymentService>();
         services.AddScoped<IStripeCustomerService, StripeCustomerService>();
+    }
+
+    private static void AddServiceBus(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<ServiceBusOptions>(options =>
+        {
+            options.ConnectionString = configuration.GetConnectionString("ServiceBus") ?? string.Empty;
+            options.QueueName = configuration["ServiceBus:QueueName"] ?? "stripe-events";
+        });
+
+        services.AddSingleton<ServiceBusEventConsumer>();
+        services.AddHostedService(sp => sp.GetRequiredService<ServiceBusEventConsumer>());
+        services.AddSingleton<IEventBusConsumer>(sp => sp.GetRequiredService<ServiceBusEventConsumer>());
     }
 }
