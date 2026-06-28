@@ -18,6 +18,7 @@ using Testcontainers.Keycloak;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
 using Testcontainers.ServiceBus;
+using DotNet.Testcontainers.Builders;
 
 namespace Bookify.Application.IntegrationTests.Infrastructure;
 
@@ -39,6 +40,7 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
             new FileInfo(".files/bookify-realm-export.json"),
             new FileInfo("/opt/keycloak/data/import/realm.json"))
         .WithCommand("--import-realm")
+        .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(r => r.ForPath("/realms/bookify").ForPort(8080)))
         .Build();
 
     private readonly ServiceBusContainer _serviceBusContainer = new ServiceBusBuilder()
@@ -119,7 +121,7 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
                                  ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                     return RateLimitPartition.GetFixedWindowLimiter(key, _ =>
                         new FixedWindowRateLimiterOptions
-                            { PermitLimit = 2, Window = TimeSpan.FromSeconds(10), QueueLimit = 0 });
+                            { PermitLimit = 2, Window = TimeSpan.FromSeconds(15), QueueLimit = 0 });
                 });
 
                 options.AddPolicy("search", ctx =>
@@ -135,7 +137,7 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
                     return RateLimitPartition.GetSlidingWindowLimiter(key, _ =>
                         new SlidingWindowRateLimiterOptions
                         {
-                            PermitLimit = 2, Window = TimeSpan.FromSeconds(10), SegmentsPerWindow = 2, QueueLimit = 0
+                            PermitLimit = 2, Window = TimeSpan.FromSeconds(15), SegmentsPerWindow = 2, QueueLimit = 0
                         });
                 });
 
@@ -150,7 +152,7 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
                                  ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                     return RateLimitPartition.GetFixedWindowLimiter(key, _ =>
                         new FixedWindowRateLimiterOptions
-                            { PermitLimit = 2, Window = TimeSpan.FromSeconds(10), QueueLimit = 0 });
+                            { PermitLimit = 2, Window = TimeSpan.FromSeconds(15), QueueLimit = 0 });
                 });
 
                 options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
@@ -165,7 +167,7 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
                                  ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                     return RateLimitPartition.GetSlidingWindowLimiter(key, _ =>
                         new SlidingWindowRateLimiterOptions
-                            { PermitLimit = 3, Window = TimeSpan.FromSeconds(10), SegmentsPerWindow = 2 });
+                            { PermitLimit = 3, Window = TimeSpan.FromSeconds(15), SegmentsPerWindow = 2 });
                 });
 
                 options.OnRejected = async (context, token) =>
@@ -225,20 +227,21 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
     }
 
     private async Task RegisterTestUsersAsync()
-    {
-        using HttpClient client = CreateClient();
-        client.DefaultRequestHeaders.Add("X-Test-Bypass-RateLimit", "true");
-        client.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
-        
-        await client.PostAsJsonAsync("api/v1/users/register", RateLimitUserData.WriteOpsUser)
-            .ConfigureAwait(false);
-        await client.PostAsJsonAsync("api/v1/users/register", RateLimitUserData.SearchUser)
-            .ConfigureAwait(false);
-        await client.PostAsJsonAsync("api/v1/users/register", RateLimitUserData.GlobalLimiterUserA)
-            .ConfigureAwait(false);
-        await client.PostAsJsonAsync("api/v1/users/register", RateLimitUserData.GlobalLimiterUserB)
-            .ConfigureAwait(false);
+    {   
+        async Task Register(RegisterUserRequest request)
+        {
+            using HttpClient client = CreateClient();
+            client.DefaultRequestHeaders.Add("X-Test-Bypass-RateLimit", "true");
+            client.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
 
+            HttpResponseMessage response = await client.PostAsJsonAsync("api/v1/users/register", request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+        }
+
+        await Register(RateLimitUserData.WriteOpsUser).ConfigureAwait(false);
+        await Register(RateLimitUserData.SearchUser).ConfigureAwait(false);
+        await Register(RateLimitUserData.GlobalLimiterUserA).ConfigureAwait(false);
+        await Register(RateLimitUserData.GlobalLimiterUserB).ConfigureAwait(false);
     }
 }
 

@@ -184,6 +184,14 @@ public sealed class UsersController : ControllerBase
 
         Result<UserResponse> result = await _sender.Send(query, cancellationToken);
 
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
         return Ok(result.Value);
     }
 

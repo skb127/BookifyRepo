@@ -26,7 +26,8 @@ public class SearchApartmentsTests : BaseIntegrationTest
         // Arrange - New signature uses nullable optional params.
         var query = new SearchApartmentsQuery(
             new DateOnly(2027, 2, 20), // start
-            new DateOnly(2027, 2, 12), // end (invalid because > start, will fail validation, but validating the handler's bounds logic)
+            new DateOnly(2027, 2,
+                12), // end (invalid because > start, will fail validation, but validating the handler's bounds logic)
             null, null, null, null, null, null, 1, 20);
 
         // Act
@@ -162,7 +163,8 @@ public class SearchApartmentsTests : BaseIntegrationTest
             accessToken);
 
         // Act - send request with query parameters for pagination
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/apartments?page=1&pageSize=20", UriKind.Relative));
+        HttpResponseMessage response =
+            await HttpClient.GetAsync(new Uri("api/v1/apartments?page=1&pageSize=20", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -190,7 +192,8 @@ public class SearchApartmentsTests : BaseIntegrationTest
             accessToken);
 
         // Act - invalid query parameters
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/apartments?startDate=2026-05-01", UriKind.Relative));
+        HttpResponseMessage response =
+            await HttpClient.GetAsync(new Uri("api/v1/apartments?startDate=2026-05-01", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -212,7 +215,7 @@ public class SearchApartmentsTests : BaseIntegrationTest
         var request = new CreateApartmentRequest(
             "City Test Apartment",
             "Description",
-            new AddressRequest("Country", "State", "ZipCode", ApartmentData.TestCity_SearchFilter, "Street"),
+            new AddressRequest("Country", "State", "ZipCode", ApartmentData.TestCitySearchFilter, "Street"),
             new MoneyRequest(100.0m, "USD"),
             new MoneyRequest(50.0m, "USD"),
             []);
@@ -222,7 +225,7 @@ public class SearchApartmentsTests : BaseIntegrationTest
 
         var query = new SearchApartmentsQuery(
             null, null,
-            ApartmentData.TestCity_SearchFilter,
+            ApartmentData.TestCitySearchFilter,
             null, null, null, null, null, 1, 10);
 
         // Act
@@ -232,7 +235,7 @@ public class SearchApartmentsTests : BaseIntegrationTest
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value.TotalCount.Should().BeGreaterThanOrEqualTo(1);
-        result.Value.Items.Should().Contain(a => a.Address.City == ApartmentData.TestCity_SearchFilter);
+        result.Value.Items.Should().Contain(a => a.Address.City == ApartmentData.TestCitySearchFilter);
     }
 
     [Fact]
@@ -388,14 +391,18 @@ public class SearchApartmentsTests : BaseIntegrationTest
         };
 
         // This creates an apartment, completes multiple bookings, and adds reviews for them
-        var (apartmentId, _, _, _, guestToken, _) = await Bookings.BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate);
+        var (apartmentId, _, _, _, guestToken, _) =
+            await Bookings.BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate);
 
         // First we need to find the city of the apartment that was created by the helper to isolate it
-        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
-        var getApartmentResponse = await HttpClient.GetAsync(new Uri($"api/v1/apartments/{apartmentId}", UriKind.Relative));
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+        var getApartmentResponse =
+            await HttpClient.GetAsync(new Uri($"api/v1/apartments/{apartmentId}", UriKind.Relative));
         getApartmentResponse.IsSuccessStatusCode.Should().BeTrue();
 
-        var apartmentDetails = await getApartmentResponse.Content.ReadFromJsonAsync<Bookify.Application.Apartments.GetApartment.ApartmentResponse>();
+        var apartmentDetails = await getApartmentResponse.Content
+            .ReadFromJsonAsync<Bookify.Application.Apartments.GetApartment.ApartmentResponse>();
         var city = apartmentDetails!.Address.City;
 
         var query = new SearchApartmentsQuery(
@@ -415,5 +422,4 @@ public class SearchApartmentsTests : BaseIntegrationTest
         // The average of 3 and 5 is 4.0
         apartment.AverageRating.Should().Be(4.0);
     }
-
 }

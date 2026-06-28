@@ -164,6 +164,14 @@ public sealed class BookingsController : ControllerBase
                     detail: result.Error.Name,
                     title: result.Error.Code);
             }
+            
+            if (result.Error == BookingErrors.Unauthorized)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status403Forbidden,
+                    detail: result.Error.Name,
+                    title: result.Error.Code);
+            }
 
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,

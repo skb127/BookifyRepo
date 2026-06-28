@@ -23,6 +23,9 @@ public abstract class BaseIntegrationTest
     {
         ArgumentNullException.ThrowIfNull(factory);
 
+        factory.MockEmailService.Clear();
+        factory.MockPaymentGateway.Clear();
+
         _scope = factory.Services.CreateScope();
 
         Sender = _scope.ServiceProvider.GetRequiredService<ISender>();

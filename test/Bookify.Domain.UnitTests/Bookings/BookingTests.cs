@@ -2,6 +2,7 @@ using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Bookings.Events;
+using Bookify.Domain.CancellationPolicies;
 using Bookify.Domain.Shared;
 using Bookify.Domain.UnitTests.Apartments;
 using Bookify.Domain.UnitTests.Infrastructure;
@@ -97,11 +98,11 @@ public class BookingTests : BaseTest
         booking.Reject(utcNow); // Rejected status is invalid for cancel
 
         // Act
-        Result result = booking.Cancel(utcNow);
+        var result = booking.Cancel(utcNow, null, null, false);
 
         // Assert
         result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be(BookingErrors.NotConfirmed);
+        result.Error.Should().Be(BookingErrors.NotCancellable);
     }
 
     [Fact]
@@ -123,7 +124,7 @@ public class BookingTests : BaseTest
         DateTime cancellationDate = new(2025, 12, 2, 12, 0, 0, DateTimeKind.Utc);
 
         // Act
-        Result result = booking.Cancel(cancellationDate);
+        var result = booking.Cancel(cancellationDate, null, null, false);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -147,9 +148,11 @@ public class BookingTests : BaseTest
         booking.Confirm(utcNow);
 
         DateTime cancellationDate = new(2025, 11, 30, 12, 0, 0, DateTimeKind.Utc);
+        var policy = CancellationPolicy.Create("Test Policy", 0.00m, 0.50m, 0.10m, 1.00m, 24, true, utcNow);
+        var engine = new CancellationPolicyEngine();
 
         // Act
-        Result result = booking.Cancel(cancellationDate);
+        var result = booking.Cancel(cancellationDate, policy, engine, false);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -285,7 +288,7 @@ public class BookingTests : BaseTest
         booking.AuthorizePayment("session-id", "intent-id");
 
         // Act
-        Result result = booking.Cancel(utcNow);
+        var result = booking.Cancel(utcNow, null, null, false);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -294,6 +297,91 @@ public class BookingTests : BaseTest
 
         BookingCancelledDomainEvent domainEvent = AssertDomainEventWasPublished<BookingCancelledDomainEvent>(booking);
         domainEvent.BookingId.Should().Be(booking.Id);
+    }
+
+    [Fact]
+    public void Cancel_ShouldSucceed_WhenStatusIsPendingPayment()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = DateTime.UtcNow;
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+
+        // Act
+        var result = booking.Cancel(utcNow, null, null, false);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        booking.Status.Should().Be(BookingStatus.Cancelled);
+        booking.CancelledOnUtc.Should().Be(utcNow);
+        booking.PaymentStatus.Should().Be(PaymentStatus.Unpaid);
+
+        BookingCancelledDomainEvent domainEvent = AssertDomainEventWasPublished<BookingCancelledDomainEvent>(booking);
+        domainEvent.BookingId.Should().Be(booking.Id);
+        domainEvent.RefundAmount.Should().BeNull();
+        domainEvent.CancelledByHost.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Cancel_ShouldFail_WhenStatusIsPendingPaymentAndCancelledByHost()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = DateTime.UtcNow;
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+
+        // Act
+        var result = booking.Cancel(utcNow, null, null, true);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.NotCancellable);
+    }
+
+    [Fact]
+    public void Cancel_ShouldRaiseBookingCancelledDomainEvent_WithRefundDetails()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 11, 29, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.MarkAsPaid("intent-id", utcNow);
+
+        var policy = CancellationPolicy.Create("Test Policy", 0.00m, 0.50m, 0.10m, 1.00m, 24, true, utcNow);
+        var engine = new CancellationPolicyEngine();
+
+        // Act
+        var result = booking.Cancel(utcNow, policy, engine, true);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        booking.Status.Should().Be(BookingStatus.Cancelled);
+        booking.CancelledOnUtc.Should().Be(utcNow);
+
+        BookingCancelledDomainEvent domainEvent = AssertDomainEventWasPublished<BookingCancelledDomainEvent>(booking);
+        domainEvent.BookingId.Should().Be(booking.Id);
+        domainEvent.RefundAmount.Should().Be(140.0m);
+        domainEvent.CancelledByHost.Should().BeTrue();
+        domainEvent.Currency.Should().Be("USD");
+        domainEvent.HostPenaltyAmount.Should().Be(14.0m);
     }
 
     [Fact]
@@ -615,7 +703,9 @@ public class BookingTests : BaseTest
 
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         booking.MarkAsPaid("intent_123", utcNow);
-        booking.Cancel(utcNow);
+        var policy = CancellationPolicy.Create("Policy", 0m, 0.5m, 0.1m, 1m, 24, true, utcNow);
+        var engine = new CancellationPolicyEngine();
+        booking.Cancel(utcNow, policy, engine, false);
 
         // Act
         Result result = booking.InitiateRefund(100.0m, "USD", "Guest cancellation");
@@ -647,7 +737,7 @@ public class BookingTests : BaseTest
         booking.AuthorizePayment("session_123", "intent_123");
 
         // Act
-        Result result = booking.Cancel(utcNow);
+        var result = booking.Cancel(utcNow, null, null, false);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -736,7 +826,7 @@ public class BookingTests : BaseTest
         DateTime utcNow = new(2025, 11, 30, 12, 0, 0, DateTimeKind.Utc);
 
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
-        booking.Cancel(utcNow);
+        booking.Cancel(utcNow, null, null, false);
 
         // Act
         Result result = booking.InitiateRefund(100.0m, "USD", "Guest cancellation");

@@ -35,7 +35,7 @@ public class HealthCheckRateLimitTests : RateLimitIntegrationTest
         problemDetails.Title.Should().Be("Too Many Requests");
 
         // Wait for window to pass, adding a small margin (1s) to avoid race conditions with the time window
-        await Task.Delay(11000);
+        await Task.Delay(16000);
 
         // Should be able to request again
         var resetResponse = await HttpClient.GetAsync("/health");

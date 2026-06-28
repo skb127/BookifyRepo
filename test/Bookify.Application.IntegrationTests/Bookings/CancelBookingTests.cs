@@ -1,10 +1,11 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Bookify.Api.Controllers.Bookings;
 using Bookify.Application.Abstractions.Email.Models;
-using Bookify.Application.Bookings.GetBooking;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Domain.Bookings;
+using Dapper;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
@@ -15,11 +16,13 @@ namespace Bookify.Application.IntegrationTests.Bookings;
 public class CancelBookingTests : BaseIntegrationTest
 {
     private readonly MockEmailService _mockEmailService;
+    private readonly MockPaymentGateway _mockPaymentGateway;
 
     public CancelBookingTests(IntegrationTestWebAppFactory factory)
         : base(factory)
     {
         _mockEmailService = factory.MockEmailService;
+        _mockPaymentGateway = factory.MockPaymentGateway;
     }
 
     [Fact]
@@ -54,19 +57,23 @@ public class CancelBookingTests : BaseIntegrationTest
     [Fact]
     public async Task CancelBooking_ShouldReturnFailure_WhenBookingIsInvalidForCancellation()
     {
-        // Arrange
-        var (_, _, bookingId, accessToken, _) = await BookingTestHelpers.SetupReservedBookingAsync(this);
+        // Arrange - Setup apartment and booking with owner and guest tokens
+        var (_, bookingId, ownerToken, _, guestToken, _) = await BookingTestHelpers.SetupApartmentWithOwnerAsync(this);
 
-        // Update the booking status in the DB to Rejected so that cancellation fails
-        await DbContext.Database.ExecuteSqlInterpolatedAsync($"""
-            UPDATE bookings
-            SET status = {(int)BookingStatus.Rejected}
-            WHERE id = {bookingId}
-            """);
-
+        // Reject the booking using the rejection endpoint and the owner's token
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
-            accessToken);
+            ownerToken);
+
+        var rejectResponse = await HttpClient.PutAsJsonAsync(
+            new Uri($"api/v1/bookings/{bookingId}/rejection", UriKind.Relative),
+            new BookingReasonRequest(ReasonType.None, "Test rejection"));
+        rejectResponse.EnsureSuccessStatusCode();
+
+        // Now authenticate as the guest
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme,
+            guestToken);
 
         // Act - Attempt to cancel a rejected (invalid) booking
         HttpResponseMessage response = await HttpClient.PutAsync(
@@ -76,17 +83,18 @@ public class CancelBookingTests : BaseIntegrationTest
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        // Verify it was a NotConfirmed error
+        // Verify it was a NotCancellable error
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
         problemDetails.Should().NotBeNull();
-        problemDetails.Title.Should().Be(BookingErrors.NotConfirmed.Code);
+        problemDetails.Title.Should().Be(BookingErrors.NotCancellable.Code);
     }
 
     [Fact]
     public async Task CancelBooking_ShouldSucceed_WhenBookingIsConfirmed()
     {
         // Arrange
-        var (_, _, bookingId, accessToken, guestEmail) = await BookingTestHelpers.SetupReservedBookingAsync(this);
+        var (_, _, bookingId, accessToken, guestEmail, hostEmail) = 
+            await BookingTestHelpers.SetupReservedBookingWithHostAsync(this);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
@@ -109,18 +117,452 @@ public class CancelBookingTests : BaseIntegrationTest
         cancelResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify Status is Cancelled
-        HttpResponseMessage getResponse = await HttpClient.GetAsync(new Uri($"api/v1/bookings/{bookingId}", UriKind.Relative));
-        getResponse.EnsureSuccessStatusCode();
-        var bookingDetails = await getResponse.Content.ReadFromJsonAsync<BookingResponse>();
+        var bookingDetails = await BookingTestHelpers.GetBookingViaApiAsync(this, bookingId, accessToken);
 
         bookingDetails.Should().NotBeNull();
         bookingDetails.Status.Should().Be((int)BookingStatus.Cancelled);
 
-        // Verify Email was Sent (Outbox simulation via Mock)
+        // Verify Email was Sent to guest
         EmailMessage cancellationEmail = await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled", since: since);
-
-        _mockEmailService.HasEmailTo(guestEmail, since).Should().BeTrue("A cancellation email should be sent to the guest");
         cancellationEmail.Subject.Should().Be("Booking Cancelled");
+
+        // Verify Email was Sent to host
+        EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
+        hostCancellationEmail.Subject.Should().Be("Booking Cancelled by Guest");
     }
 
+    [Fact]
+    public async Task CancelBooking_ShouldSucceedSilently_WhenBookingIsUnpaid()
+    {
+        // Arrange - Setup a booking in PendingPayment (Unpaid)
+        var (_, _, bookingId, accessToken, guestEmail, hostEmail) = 
+            await BookingTestHelpers.SetupPendingPaymentBookingWithHostAsync(this);
+
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme,
+            accessToken);
+
+        DateTime since = DateTime.UtcNow;
+
+        // Act - Cancel the unpaid booking
+        HttpResponseMessage cancelResponse = await HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{bookingId}/cancellation", UriKind.Relative),
+            null);
+
+        // Assert Cancellation Success
+        cancelResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Verify Status is Cancelled
+        var bookingDetails = await BookingTestHelpers.GetBookingViaApiAsync(this, bookingId, accessToken);
+
+        bookingDetails.Should().NotBeNull();
+        bookingDetails.Status.Should().Be((int)BookingStatus.Cancelled);
+
+        // Verify NO Cancellation Email was Sent to guest or host
+        await Task.Delay(2000); // Wait briefly to make sure outbox processor has run or not sent
+        _mockEmailService.GetEmailTo(guestEmail, "Booking Cancelled", since).Should().BeNull("An unpaid booking cancellation must not send a cancellation email");
+        _mockEmailService.GetEmailTo(hostEmail, "Booking Cancelled by Guest", since).Should().BeNull("An unpaid booking cancellation must not send a cancellation email to the host");
+    }
+
+    [Fact]
+    public async Task CancelBooking_ShouldFail_WhenHostCancelsBookingInPendingPaymentStatus()
+    {
+        // Arrange - Setup a booking in PendingPayment (Unpaid)
+        var (_, _, bookingId, _, _, hostEmail) = 
+            await BookingTestHelpers.SetupPendingPaymentBookingWithHostAsync(this);
+
+        string password = "Password123!";
+        string hostAccessToken = await GetAccessToken(hostEmail, password);
+
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme,
+            hostAccessToken);
+
+        // Act - Host cancels the unpaid booking
+        HttpResponseMessage cancelResponse = await HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{bookingId}/cancellation", UriKind.Relative),
+            null);
+
+        // Assert - Should return 400 Bad Request
+        cancelResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CancelBooking_ShouldSucceedAndReleaseAuthorization_WhenBookingIsAuthorized()
+    {
+        // Arrange
+        var (_, _, bookingId, accessToken, guestEmail, hostEmail) = 
+            await BookingTestHelpers.SetupReservedBookingWithHostAsync(this);
+
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme,
+            accessToken);
+
+        DateTime since = DateTime.UtcNow;
+
+        // Act - Cancel the authorized booking
+        HttpResponseMessage cancelResponse = await HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{bookingId}/cancellation", UriKind.Relative),
+            null);
+
+        // Assert Cancellation Success
+        cancelResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Verify Status is Cancelled
+        var bookingDetails = await BookingTestHelpers.GetBookingViaApiAsync(this, bookingId, accessToken);
+
+        bookingDetails.Should().NotBeNull();
+        bookingDetails.Status.Should().Be((int)BookingStatus.Cancelled);
+
+        // Verify Email was Sent to guest (since it was authorized and cancelled)
+        EmailMessage cancellationEmail = await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled", since: since);
+        cancellationEmail.Subject.Should().Be("Booking Cancelled");
+
+        // Verify Email was Sent to host
+        EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
+        hostCancellationEmail.Subject.Should().Be("Booking Cancelled by Guest");
+
+        // Verify Stripe cancellation was initiated
+        _mockPaymentGateway.CancelledPaymentIntents.Should().Contain($"intent_{bookingId}");
+    }
+
+    [Fact]
+    public async Task CancelBooking_ShouldSucceedAndInitiateRefund_WhenGuestCancelsPaidBooking()
+    {
+        // Arrange - Setup a confirmed paid booking (starts in 2027, so it's early cancellation)
+        var (_, _, bookingId, accessToken, guestEmail, hostEmail) = 
+            await BookingTestHelpers.SetupConfirmedPaidBookingWithHostAsync(this);
+
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme,
+            accessToken);
+
+        DateTime since = DateTime.UtcNow;
+
+        // Act - Cancel the paid booking
+        HttpResponseMessage cancelResponse = await HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{bookingId}/cancellation", UriKind.Relative),
+            null);
+
+        // Assert Cancellation Success
+        cancelResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Wait for background outbox processor to run and transition the booking payment status to RefundProcessing
+        bool isRefundProcessing = false;
+        for (int i = 0; i < 30; i++)
+        {
+            var booking = await BookingTestHelpers.GetBookingViaApiAsync(this, bookingId, accessToken);
+            if (booking.PaymentStatus == (int)PaymentStatus.RefundProcessing)
+            {
+                isRefundProcessing = true;
+                break;
+            }
+            await Task.Delay(500);
+        }
+
+        isRefundProcessing.Should().BeTrue("The outbox processor should transition payment status to RefundProcessing after initiating the refund");
+
+        // Verify Email was Sent to guest
+        EmailMessage cancellationEmail = await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled", since: since);
+        cancellationEmail.Subject.Should().Be("Booking Cancelled");
+
+        // Verify Email was Sent to host
+        EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
+        hostCancellationEmail.Subject.Should().Be("Booking Cancelled by Guest");
+
+        // Verify Stripe refund was initiated
+        _mockPaymentGateway.RefundRequests.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task CancelBooking_ShouldSucceedAndApplyHostPenalty_WhenHostCancelsPaidBooking()
+    {
+        // Arrange - Setup a confirmed paid booking (early cancellation)
+        var (_, _, bookingId, guestToken, guestEmail, hostEmail) = 
+            await BookingTestHelpers.SetupConfirmedPaidBookingWithHostAsync(this);
+
+        // Authenticate as Host
+        string hostAccessToken = await GetAccessToken(hostEmail, "Password123!");
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme,
+            hostAccessToken);
+
+        DateTime since = DateTime.UtcNow;
+
+        // Act - Host cancels the booking via HTTP PUT
+        HttpResponseMessage cancelResponse = await HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{bookingId}/cancellation", UriKind.Relative),
+            null);
+
+        // Assert
+        cancelResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Verify booking status is Cancelled
+        var booking = await BookingTestHelpers.GetBookingViaApiAsync(this, bookingId, guestToken);
+        booking.Should().NotBeNull();
+        booking.Status.Should().Be((int)BookingStatus.Cancelled);
+
+        // Verify host penalty was recorded in host_balances (95.0 USD) - 10% early host penalty rate for 950 USD total price
+        await using var connection = DbContext.Database.GetDbConnection();
+        var balance = await connection.QuerySingleOrDefaultAsync<decimal>(
+            "SELECT amount FROM host_balances WHERE booking_id = @BookingId AND reason = 'host_compensation'",
+            new { BookingId = bookingId });
+        balance.Should().Be(95.0m);
+
+        // Wait for background outbox processor to run and transition the booking payment status to RefundProcessing
+        bool isRefundProcessing = false;
+        for (int i = 0; i < 30; i++)
+        {
+            var b = await BookingTestHelpers.GetBookingViaApiAsync(this, bookingId, guestToken);
+            if (b.PaymentStatus == (int)PaymentStatus.RefundProcessing)
+            {
+                isRefundProcessing = true;
+                break;
+            }
+            await Task.Delay(500);
+        }
+
+        isRefundProcessing.Should().BeTrue("The outbox processor should transition payment status to RefundProcessing after initiating the refund");
+
+        EmailMessage guestEmailMsg = await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled by Host", since: since);
+        guestEmailMsg.Subject.Should().Be("Booking Cancelled by Host");
+
+        EmailMessage hostEmailMsg = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled - Penalty Applied", since: since);
+        hostEmailMsg.Subject.Should().Be("Booking Cancelled - Penalty Applied");
+
+        // Verify Stripe refund was initiated
+        _mockPaymentGateway.RefundRequests.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task CancelBooking_ShouldSucceedAndApplyHostPenalty_WhenHostCancelsPaidBookingLate()
+    {
+        // Arrange - Setup a confirmed paid booking starting TOMORROW (so it's a late cancellation)
+        var password = "Password123!";
+        var (apartmentId, guestToken, guestEmail, hostEmail) = 
+            await BookingTestHelpers.SetupApartmentAndGuestWithHostAsync(this, password);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var startDate = today.AddDays(1); // tomorrow
+        var endDate = today.AddDays(5);
+
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        var reserveRequest = new ReserveBookingRequest(
+            apartmentId,
+            startDate,
+            endDate)
+        {
+            ApartmentId = apartmentId,
+            StartDate = startDate,
+            EndDate = endDate
+        };
+
+        HttpResponseMessage reserveResponse =
+            await HttpClient.PostAsJsonAsync("api/v1/bookings", reserveRequest);
+        reserveResponse.EnsureSuccessStatusCode();
+
+        Guid bookingId = await reserveResponse.Content.ReadFromJsonAsync<Guid>();
+
+        // Confirm payment (marks as Paid and Confirmed for instant booking)
+        var confirmPaymentCommand = new Bookify.Application.Payments.ConfirmPayment.ConfirmPaymentCommand(
+            bookingId, $"session_{bookingId}", $"intent_{bookingId}", IsInstantBooking: true);
+        var confirmPaymentResult = await Sender.Send(confirmPaymentCommand);
+        confirmPaymentResult.IsSuccess.Should().BeTrue();
+
+        // Authenticate as Host
+        string hostAccessToken = await GetAccessToken(hostEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme, hostAccessToken);
+
+        DateTime since = DateTime.UtcNow;
+
+        // Act - Host cancels via HTTP
+        HttpResponseMessage cancelResponse = await HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{bookingId}/cancellation", UriKind.Relative),
+            null);
+
+        // Assert
+        cancelResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Verify booking status is Cancelled
+        var booking = await BookingTestHelpers.GetBookingViaApiAsync(this, bookingId, guestToken);
+        booking.Should().NotBeNull();
+        booking.Status.Should().Be((int)BookingStatus.Cancelled);
+
+        // Late host penalty rate is 50% = 225 USD.
+        // Penalty should be recorded in host_balances under reason 'host_compensation'
+        await using var connection = DbContext.Database.GetDbConnection();
+        var hostPenalty = await connection.QuerySingleOrDefaultAsync<decimal>(
+            "SELECT amount FROM host_balances WHERE booking_id = @BookingId AND reason = 'host_compensation'",
+            new { BookingId = bookingId });
+        hostPenalty.Should().Be(225.0m);
+
+
+        // Verify Emails were Sent
+        EmailMessage guestCancellationEmail = await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled by Host", since: since);
+        guestCancellationEmail.Subject.Should().Be("Booking Cancelled by Host");
+
+        EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled - Penalty Applied", since: since);
+        hostCancellationEmail.Subject.Should().Be("Booking Cancelled - Penalty Applied");
+
+        // Verify Stripe refund was initiated
+        _mockPaymentGateway.RefundRequests.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task CancelBooking_ShouldReturnForbidden_WhenUnauthorizedUserCancelsBooking()
+    {
+        // Arrange - Setup a confirmed paid booking (Guest A, Host B)
+        var (_, _, bookingId, _, _, _) = 
+            await BookingTestHelpers.SetupConfirmedPaidBookingWithHostAsync(this);
+
+        // Create Guest C (unauthorized user)
+        var unauthorizedEmail = $"stranger_{Guid.CreateVersion7()}@test.com";
+        var password = "Password123!";
+        var registerCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            unauthorizedEmail, "Stranger", "User", password, new DateOnly(1990, 1, 1));
+        var registerResult = await Sender.Send(registerCommand);
+        registerResult.IsSuccess.Should().BeTrue();
+
+        string unauthorizedToken = await GetAccessToken(unauthorizedEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme,
+            unauthorizedToken);
+
+        // Act - Attempt to cancel using unauthorized Guest C token
+        HttpResponseMessage cancelResponse = await HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{bookingId}/cancellation", UriKind.Relative),
+            null);
+
+        // Assert
+        cancelResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var problemDetails = await cancelResponse.Content.ReadFromJsonAsync<ProblemDetails>();
+        problemDetails.Should().NotBeNull();
+        problemDetails.Title.Should().Be(BookingErrors.Unauthorized.Code);
+    }
+
+
+    [Fact]
+    public async Task CancelBooking_ShouldSucceedAndApplyGuestPenalty_WhenGuestCancelsPaidBookingLate()
+    {
+        // Arrange - Setup a confirmed paid booking starting TOMORROW (so it's a late cancellation)
+        var password = "Password123!";
+        var (apartmentId, guestToken, guestEmail, hostEmail) = 
+            await BookingTestHelpers.SetupApartmentAndGuestWithHostAsync(this, password);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var startDate = today.AddDays(1); // tomorrow
+        var endDate = today.AddDays(5);
+
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        var reserveRequest = new ReserveBookingRequest(
+            apartmentId,
+            startDate,
+            endDate)
+        {
+            ApartmentId = apartmentId,
+            StartDate = startDate,
+            EndDate = endDate
+        };
+
+        HttpResponseMessage reserveResponse =
+            await HttpClient.PostAsJsonAsync("api/v1/bookings", reserveRequest);
+        reserveResponse.EnsureSuccessStatusCode();
+
+        Guid bookingId = await reserveResponse.Content.ReadFromJsonAsync<Guid>();
+
+        // Confirm payment (which marks as Paid and Confirmed for instant booking)
+        var confirmPaymentCommand = new Bookify.Application.Payments.ConfirmPayment.ConfirmPaymentCommand(
+            bookingId, $"session_{bookingId}", $"intent_{bookingId}", IsInstantBooking: true);
+        var confirmPaymentResult = await Sender.Send(confirmPaymentCommand);
+        confirmPaymentResult.IsSuccess.Should().BeTrue();
+
+        DateTime since = DateTime.UtcNow;
+
+        // Act - Cancel as guest
+        HttpResponseMessage cancelResponse = await HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{bookingId}/cancellation", UriKind.Relative),
+            null);
+
+        // Assert
+        cancelResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Verify booking status is Cancelled
+        var booking = await BookingTestHelpers.GetBookingViaApiAsync(this, bookingId, guestToken);
+        booking.Should().NotBeNull();
+        booking.Status.Should().Be((int)BookingStatus.Cancelled);
+
+        // Total price = 4 nights * 100 + 50 cleaning = 450 USD.
+        // Late guest penalty is 50% = 225 USD.
+        // Penalty should be recorded in host_balances under reason 'guest_penalty'
+        await using var connection = DbContext.Database.GetDbConnection();
+        var guestPenalty = await connection.QuerySingleOrDefaultAsync<decimal>(
+            "SELECT amount FROM host_balances WHERE booking_id = @BookingId AND reason = 'guest_penalty'",
+            new { BookingId = bookingId });
+        guestPenalty.Should().Be(225.0m);
+
+        // Verify Emails were Sent
+        EmailMessage guestCancellationEmail = await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled", since: since);
+        guestCancellationEmail.Subject.Should().Be("Booking Cancelled");
+
+        EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
+        hostCancellationEmail.Subject.Should().Be("Booking Cancelled by Guest");
+
+        // Verify Stripe refund was initiated
+        _mockPaymentGateway.RefundRequests.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task CancelBooking_ShouldReturnFailure_WhenBookingHasAlreadyStarted()
+    {
+        // Arrange
+        var password = "Password123!";
+        var (apartmentId, guestToken) = await BookingTestHelpers.SetupApartmentAndGuestAsync(this, password);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var startDate = today.AddDays(-2);
+        var endDate = today.AddDays(5);
+
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        var reserveRequest = new ReserveBookingRequest(
+            apartmentId,
+            startDate,
+            endDate)
+        {
+            ApartmentId = apartmentId,
+            StartDate = startDate,
+            EndDate = endDate
+        };
+
+        HttpResponseMessage reserveResponse =
+            await HttpClient.PostAsJsonAsync("api/v1/bookings", reserveRequest);
+        reserveResponse.EnsureSuccessStatusCode();
+
+        Guid bookingId = await reserveResponse.Content.ReadFromJsonAsync<Guid>();
+
+        // Confirm payment (which marks as Paid and Confirmed for instant booking)
+        var confirmPaymentCommand = new Bookify.Application.Payments.ConfirmPayment.ConfirmPaymentCommand(
+            bookingId, $"session_{bookingId}", $"intent_{bookingId}", IsInstantBooking: true);
+        var confirmPaymentResult = await Sender.Send(confirmPaymentCommand);
+        confirmPaymentResult.IsSuccess.Should().BeTrue();
+
+        // Act - Attempt to cancel the already started booking
+        HttpResponseMessage response = await HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{bookingId}/cancellation", UriKind.Relative),
+            null);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        problemDetails.Should().NotBeNull();
+        problemDetails.Title.Should().Be(BookingErrors.AlreadyStarted.Code);
+    }
 }

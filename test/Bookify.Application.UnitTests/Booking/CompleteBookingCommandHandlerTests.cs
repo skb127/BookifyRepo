@@ -10,20 +10,20 @@ using NSubstitute.ReturnsExtensions;
 
 namespace Bookify.Application.UnitTests.Booking;
 
-public class CompleteBookingTests
+public class CompleteBookingCommandHandlerTests
 {
     private static readonly DateTime UtcNow = DateTime.UtcNow;
-    
+
     private readonly IDateTimeProvider _dateTimeProviderMock;
     private readonly IBookingRepository _bookingRepositoryMock;
     private readonly IUnitOfWork _unitOfWorkMock;
     private readonly CompleteBookingCommandHandler _handler;
 
-    public CompleteBookingTests()
+    public CompleteBookingCommandHandlerTests()
     {
         _bookingRepositoryMock = Substitute.For<IBookingRepository>();
         _unitOfWorkMock = Substitute.For<IUnitOfWork>();
-        
+
         _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
         _dateTimeProviderMock.UtcNow.Returns(UtcNow);
 
@@ -50,7 +50,7 @@ public class CompleteBookingTests
             .ReturnsNull();
 
         // Act
-        Result result = await _handler.Handle(command, default);
+        Result result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -68,7 +68,7 @@ public class CompleteBookingTests
             .Returns(booking);
 
         // Act
-        Result result = await _handler.Handle(command, default);
+        Result result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -86,7 +86,7 @@ public class CompleteBookingTests
             .Returns(booking);
 
         // Act
-        Result result = await _handler.Handle(command, default);
+        Result result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -109,7 +109,7 @@ public class CompleteBookingTests
             .ThrowsAsync(new ConcurrencyException("Concurrency", new InvalidOperationException()));
 
         // Act
-        Func<Task> act = async () => await _handler.Handle(command, default);
+        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<ConcurrencyException>();

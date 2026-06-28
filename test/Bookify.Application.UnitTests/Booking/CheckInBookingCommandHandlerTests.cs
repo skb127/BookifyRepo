@@ -48,7 +48,7 @@ public class CheckInBookingCommandHandlerTests
             .ReturnsNull();
 
         // Act
-        Result result = await _handler.Handle(command, default);
+        Result result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -66,7 +66,7 @@ public class CheckInBookingCommandHandlerTests
             .Returns(booking);
 
         // Act
-        Result result = await _handler.Handle(command, default);
+        Result result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -84,7 +84,7 @@ public class CheckInBookingCommandHandlerTests
             .Returns(booking);
 
         // Act
-        Result result = await _handler.Handle(command, default);
+        Result result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

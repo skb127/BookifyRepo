@@ -6,5 +6,7 @@ public interface IPaymentGateway
 
     Task<bool> CancelPaymentIntentAsync(string paymentIntentId, CancellationToken cancellationToken = default);
 
+    Task<bool> CapturePaymentIntentAsync(string paymentIntentId, CancellationToken cancellationToken = default);
+
     Task<RefundResult> CreateRefundAsync(string paymentIntentId, decimal amount, string currency, CancellationToken cancellationToken = default);
 }

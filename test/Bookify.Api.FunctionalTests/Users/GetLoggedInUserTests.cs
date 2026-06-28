@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using Bookify.Api.FunctionalTests.Infrastructure;
 using FluentAssertions;
@@ -26,7 +26,8 @@ public class GetLoggedInUserTests : BaseFunctionalTest
     public async Task Get_ShouldReturnUserInfo_WhenAccessTokenIsOK()
     {
         // Arrange
-        string accessToken = await GetAccessToken(UserData.RegisterTestUserRequest3.Email, UserData.RegisterTestUserRequest3.Password);
+        string accessToken = await GetAccessToken(UserData.RegisterTestUserRequest3.Email,
+            UserData.RegisterTestUserRequest3.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
@@ -38,5 +39,4 @@ public class GetLoggedInUserTests : BaseFunctionalTest
         user.Should().NotBeNull();
         user.StatusCode.Should().Be(HttpStatusCode.OK);
     }
-
 }
