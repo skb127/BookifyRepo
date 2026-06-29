@@ -15,6 +15,7 @@ using Quartz;
 using Testcontainers.Keycloak;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
+using DotNet.Testcontainers.Builders;
 
 namespace Bookify.Api.FunctionalTests.Infrastructure;
 
@@ -36,6 +37,7 @@ public class FunctionalTestWebAppFactory : WebApplicationFactory<Program>, IAsyn
             new FileInfo(".files/bookify-realm-export.json"),
             new FileInfo("/opt/keycloak/data/import/realm.json"))
         .WithCommand("--import-realm")
+        .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(r => r.ForPath("/realms/bookify").ForPort(8080)))
         .Build();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -80,6 +82,8 @@ public class FunctionalTestWebAppFactory : WebApplicationFactory<Program>, IAsyn
                 options.AdminUrl = new Uri($"{keycloakAddress}admin/realms/bookify/");
                 options.TokenUrl = new Uri($"{keycloakAddress}realms/bookify/protocol/openid-connect/token");
                 options.OidcBaseUrl = new Uri($"{keycloakAddress}realms/bookify/protocol/openid-connect/");
+                // Override BaseUrl to prevent container hostname resolution issues in test environment
+                options.BaseUrl = new Uri(keycloakAddress);
             });
 
             services.Configure<AuthenticationOptions>(options =>
@@ -128,11 +132,13 @@ public class FunctionalTestWebAppFactory : WebApplicationFactory<Program>, IAsyn
         HttpClient httpClient = CreateClient();
         httpClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
 
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest)
-            .ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest2)
-            .ConfigureAwait(false);
-        await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest3)
-            .ConfigureAwait(false);
+        var response1 = await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest).ConfigureAwait(false);
+        response1.EnsureSuccessStatusCode();
+
+        var response2 = await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest2).ConfigureAwait(false);
+        response2.EnsureSuccessStatusCode();
+
+        var response3 = await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest3).ConfigureAwait(false);
+        response3.EnsureSuccessStatusCode();
     }
 }

@@ -1,4 +1,5 @@
 using Bookify.Application.Abstractions.Payments;
+using Microsoft.Extensions.Logging;
 using Stripe;
 using Stripe.Checkout;
 
@@ -7,8 +8,13 @@ namespace Bookify.Infrastructure.Payments;
 internal sealed class StripePaymentService : IPaymentGateway
 {
     private readonly IStripeClient _stripeClient;
+    private readonly ILogger<StripePaymentService> _logger;
 
-    public StripePaymentService(IStripeClient stripeClient) => _stripeClient = stripeClient;
+    public StripePaymentService(IStripeClient stripeClient, ILogger<StripePaymentService> logger)
+    {
+        _stripeClient = stripeClient;
+        _logger = logger;
+    }
 
     public async Task<CreateCheckoutSessionResult> CreateCheckoutSessionAsync(
         CreateCheckoutSessionRequest request,
@@ -68,8 +74,29 @@ internal sealed class StripePaymentService : IPaymentGateway
                 await service.CancelAsync(paymentIntentId, cancellationToken: cancellationToken);
             return paymentIntent.Status == "canceled";
         }
-        catch (StripeException)
+        catch (StripeException ex)
         {
+            _logger.LogError(ex, "Stripe error cancelling payment intent {PaymentIntentId}.", paymentIntentId);
+            return false;
+        }
+    }
+
+    public async Task<bool> CapturePaymentIntentAsync(
+        string paymentIntentId,
+        CancellationToken cancellationToken = default)
+    {
+        var service = new PaymentIntentService(_stripeClient);
+
+        try
+        {
+            var options = new PaymentIntentCaptureOptions();
+            PaymentIntent paymentIntent =
+                await service.CaptureAsync(paymentIntentId, options, cancellationToken: cancellationToken);
+            return paymentIntent.Status == "succeeded";
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex, "Stripe error capturing payment intent {PaymentIntentId}.", paymentIntentId);
             return false;
         }
     }
@@ -92,14 +119,22 @@ internal sealed class StripePaymentService : IPaymentGateway
             }
         };
 
-        Refund refund = await service.CreateAsync(options, cancellationToken: cancellationToken);
+        try
+        {
+            Refund refund = await service.CreateAsync(options, cancellationToken: cancellationToken);
 
-        decimal refundedAmount = refund.Amount / 100m;
+            decimal refundedAmount = refund.Amount / 100m;
 
-        return new RefundResult(
-            refund.Id,
-            refund.Status,
-            refundedAmount
-        );
+            return new RefundResult(
+                refund.Id,
+                refund.Status,
+                refundedAmount
+            );
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex, "Stripe error creating refund for payment intent {PaymentIntentId}.", paymentIntentId);
+            throw new InvalidOperationException($"Stripe refund creation failed for payment intent {paymentIntentId}.", ex);
+        }
     }
 }

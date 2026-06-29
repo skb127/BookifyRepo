@@ -1,6 +1,7 @@
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings.Events;
+using Bookify.Domain.CancellationPolicies;
 using Bookify.Domain.Shared;
 
 namespace Bookify.Domain.Bookings;
@@ -151,6 +152,11 @@ public sealed class Booking : Entity
         ConfirmedOnUtc = utcNow;
         ExpiresAt = null;
 
+        if (PaymentStatus == PaymentStatus.Authorized)
+        {
+            PaymentStatus = PaymentStatus.Paid;
+        }
+
         RaiseDomainEvent(new BookingConfirmedDomainEvent(Id));
 
         return Result.Success();
@@ -197,11 +203,17 @@ public sealed class Booking : Entity
         return Result.Success();
     }
 
-    public Result Cancel(DateTime utcNow, BookingReason? reason = null)
+    public Result<PenaltyResult> Cancel(
+        DateTime utcNow,
+        CancellationPolicy? policy,
+        CancellationPolicyEngine? policyEngine,
+        bool cancelledByHost,
+        BookingReason? reason = null)
     {
-        if (Status != BookingStatus.Reserved && Status != BookingStatus.Confirmed)
+        if (Status != BookingStatus.Reserved && Status != BookingStatus.Confirmed &&
+            Status != BookingStatus.PendingPayment || cancelledByHost && Status == BookingStatus.PendingPayment)
         {
-            return Result.Failure(BookingErrors.NotConfirmed);
+            return Result.Failure<PenaltyResult>(BookingErrors.NotCancellable);
         }
 
         if (Status == BookingStatus.Confirmed)
@@ -210,8 +222,22 @@ public sealed class Booking : Entity
 
             if (currentDate > Duration.Start)
             {
-                return Result.Failure(BookingErrors.AlreadyStarted);
+                return Result.Failure<PenaltyResult>(BookingErrors.AlreadyStarted);
             }
+        }
+
+        var penaltyResult = new PenaltyResult(0m, 0m, 0m, TotalPrice.Currency.Code, false);
+
+        switch (PaymentStatus)
+        {
+            case PaymentStatus.Paid when policy is null || policyEngine is null:
+                return Result.Failure<PenaltyResult>(BookingErrors.NoPolicyAvailable);
+            case PaymentStatus.Paid:
+                penaltyResult = policyEngine.CalculatePenalty(this, policy, utcNow, cancelledByHost);
+                break;
+            case PaymentStatus.Authorized:
+                PaymentStatus = PaymentStatus.AuthorizationReleased;
+                break;
         }
 
         Status = BookingStatus.Cancelled;
@@ -223,14 +249,14 @@ public sealed class Booking : Entity
             _reasons.Add(reason);
         }
 
-        if (PaymentStatus == PaymentStatus.Authorized)
-        {
-            PaymentStatus = PaymentStatus.AuthorizationReleased;
-        }
+        RaiseDomainEvent(new BookingCancelledDomainEvent(
+            Id,
+            penaltyResult.RefundAmount > 0 ? penaltyResult.RefundAmount : null,
+            cancelledByHost,
+            penaltyResult.Currency,
+            penaltyResult.HostPenaltyAmount));
 
-        RaiseDomainEvent(new BookingCancelledDomainEvent(Id));
-
-        return Result.Success();
+        return Result.Success(penaltyResult);
     }
 
     public Result CheckIn(DateTime utcNow)
@@ -339,7 +365,7 @@ public sealed class Booking : Entity
 
     public void MarkCompletionNotified(DateTime utcNow) =>
         CompletedNotificationSentAt = utcNow;
-    
-    public void SetExpiresAt(DateTime? expiresAt) => 
+
+    public void SetExpiresAt(DateTime? expiresAt) =>
         ExpiresAt = expiresAt;
 }

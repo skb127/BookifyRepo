@@ -4,12 +4,14 @@ using Bookify.Application.Abstractions.Email.Models;
 using Bookify.Application.Bookings.CompleteBooking;
 using Bookify.Application.Options;
 using Bookify.Domain.Abstractions;
+using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Bookings.Events;
+using Bookify.Domain.Shared;
 using Bookify.Domain.Users;
+using FluentAssertions;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
-using FluentAssertions;
 
 namespace Bookify.Application.UnitTests.Booking.Events;
 
@@ -61,6 +63,38 @@ public class BookingCompletedDomainEventHandlerTests
         return User.Create(firstName, lastName, email, dateOfBirth);
     }
 
+    private static Apartment CreateApartment() =>
+        new(
+            Guid.CreateVersion7(),
+            Guid.NewGuid(),
+            new Name("Luxury Apartment"),
+            new Description("Luxury Apartment Description"),
+            new Address("Country", "State", "ZipCode", "City", "Street"),
+            new Money(200.00m, Currency.Usd),
+            Money.Zero(Currency.Usd),
+            [],
+            DateTime.UtcNow,
+            false);
+
+    private static Bookify.Domain.Bookings.Booking CreateBooking(Guid userId)
+    {
+        var apartment = CreateApartment();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var duration = DateRange.Create(today.AddDays(10), today.AddDays(15));
+        var booking = Bookify.Domain.Bookings.Booking.Reserve(
+            apartment,
+            userId,
+            duration,
+            DateTime.UtcNow,
+            new PricingService());
+
+        booking.AuthorizePayment("session-id", "intent-id");
+        booking.Confirm(DateTime.UtcNow);
+        booking.Complete(DateTime.UtcNow);
+
+        return booking;
+    }
+
     [Fact]
     public async Task Handle_ShouldNotSendEmail_WhenBookingNotFound()
     {
@@ -71,7 +105,7 @@ public class BookingCompletedDomainEventHandlerTests
             .ReturnsNull();
 
         // Act
-        await _handler.Handle(domainEvent, default);
+        await _handler.Handle(domainEvent, CancellationToken.None);
 
         // Assert
         await _emailTemplateServiceMock.DidNotReceiveWithAnyArgs().GenerateEmailBodyAsync(default!, default!);
@@ -83,10 +117,8 @@ public class BookingCompletedDomainEventHandlerTests
     public async Task Handle_ShouldNotSendEmail_WhenUserNotFound()
     {
         // Arrange
-        var domainEvent = new BookingCompletedDomainEvent(Guid.NewGuid());
-
-        var booking = (Domain.Bookings.Booking)Activator.CreateInstance(typeof(Domain.Bookings.Booking), true)!;
-        typeof(Domain.Bookings.Booking).GetProperty("UserId")!.SetValue(booking, Guid.NewGuid());
+        var booking = CreateBooking(Guid.NewGuid());
+        var domainEvent = new BookingCompletedDomainEvent(booking.Id);
 
         _bookingRepositoryMock.GetByIdAsync(domainEvent.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
@@ -95,7 +127,7 @@ public class BookingCompletedDomainEventHandlerTests
             .ReturnsNull();
 
         // Act
-        await _handler.Handle(domainEvent, default);
+        await _handler.Handle(domainEvent, CancellationToken.None);
 
         // Assert
         await _emailTemplateServiceMock.DidNotReceiveWithAnyArgs().GenerateEmailBodyAsync(default!, default!);
@@ -107,13 +139,9 @@ public class BookingCompletedDomainEventHandlerTests
     public async Task Handle_ShouldSendEmailAndMarkAsNotified_WhenValid()
     {
         // Arrange
-        var domainEvent = new BookingCompletedDomainEvent(Guid.CreateVersion7());
-
         var user = CreateUser();
-
-        var booking = (Domain.Bookings.Booking)Activator.CreateInstance(typeof(Domain.Bookings.Booking), true)!;
-        typeof(Domain.Bookings.Booking).GetProperty("UserId")!.SetValue(booking, user.Id);
-        typeof(Domain.Bookings.Booking).GetProperty("Id")!.SetValue(booking, domainEvent.BookingId);
+        var booking = CreateBooking(user.Id);
+        var domainEvent = new BookingCompletedDomainEvent(booking.Id);
 
         _bookingRepositoryMock.GetByIdAsync(domainEvent.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
@@ -130,7 +158,7 @@ public class BookingCompletedDomainEventHandlerTests
             .Returns(expectedEmailBody);
 
         // Act
-        await _handler.Handle(domainEvent, default);
+        await _handler.Handle(domainEvent, CancellationToken.None);
 
         // Assert
         await _emailTemplateServiceMock.Received(1).GenerateEmailBodyAsync(

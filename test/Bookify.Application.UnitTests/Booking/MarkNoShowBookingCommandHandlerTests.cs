@@ -35,7 +35,8 @@ public class MarkNoShowBookingCommandHandlerTests
     {
         var booking = (Domain.Bookings.Booking)Activator.CreateInstance(typeof(Domain.Bookings.Booking), true)!;
         typeof(Domain.Bookings.Booking).GetProperty(nameof(Domain.Bookings.Booking.Status))!.SetValue(booking, status);
-        typeof(Domain.Bookings.Booking).GetProperty(nameof(Domain.Bookings.Booking.Duration))!.SetValue(booking, duration);
+        typeof(Domain.Bookings.Booking).GetProperty(nameof(Domain.Bookings.Booking.Duration))!.SetValue(booking,
+            duration);
         return booking;
     }
 
@@ -49,7 +50,7 @@ public class MarkNoShowBookingCommandHandlerTests
             .ReturnsNull();
 
         // Act
-        Result result = await _handler.Handle(command, default);
+        Result result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -61,14 +62,15 @@ public class MarkNoShowBookingCommandHandlerTests
     {
         // Arrange
         var command = new MarkNoShowBookingCommand(Guid.NewGuid());
-        var duration = DateRange.Create(DateOnly.FromDateTime(UtcNow).AddDays(-1), DateOnly.FromDateTime(UtcNow).AddDays(2));
+        var duration = DateRange.Create(DateOnly.FromDateTime(UtcNow).AddDays(-1),
+            DateOnly.FromDateTime(UtcNow).AddDays(2));
         var booking = CreateBooking(BookingStatus.Reserved, duration);
 
         _bookingRepositoryMock.GetByIdAsync(command.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
 
         // Act
-        Result result = await _handler.Handle(command, default);
+        Result result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -88,7 +90,7 @@ public class MarkNoShowBookingCommandHandlerTests
             .Returns(booking);
 
         // Act
-        Result result = await _handler.Handle(command, default);
+        Result result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -101,14 +103,15 @@ public class MarkNoShowBookingCommandHandlerTests
         // Arrange
         var command = new MarkNoShowBookingCommand(Guid.NewGuid());
         // Start date is yesterday, which satisfies: DateOnly.FromDateTime(utcNow) > Duration.Start
-        var duration = DateRange.Create(DateOnly.FromDateTime(UtcNow).AddDays(-1), DateOnly.FromDateTime(UtcNow).AddDays(2));
+        var duration = DateRange.Create(DateOnly.FromDateTime(UtcNow).AddDays(-1),
+            DateOnly.FromDateTime(UtcNow).AddDays(2));
         var booking = CreateBooking(BookingStatus.Confirmed, duration);
 
         _bookingRepositoryMock.GetByIdAsync(command.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
 
         // Act
-        Result result = await _handler.Handle(command, default);
+        Result result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

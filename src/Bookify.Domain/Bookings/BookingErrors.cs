@@ -55,4 +55,12 @@ public static class BookingErrors
     public static Error NotExpirable { get; } = new(
         "Booking.NotExpirable",
         "The booking cannot be expired in its current status");
+
+    public static Error NoPolicyAvailable { get; } = new(
+        "Booking.NoPolicyAvailable",
+        "No cancellation policy is available");
+
+    public static Error NotCancellable { get; } = new(
+        "Booking.NotCancellable",
+        "The booking cannot be cancelled in its current status");
 }

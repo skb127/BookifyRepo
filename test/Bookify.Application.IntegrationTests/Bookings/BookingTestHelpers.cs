@@ -97,7 +97,7 @@ internal static class BookingTestHelpers
 
         // Transition the booking from PendingPayment to Reserved
         var confirmCommand = new Bookify.Application.Payments.ConfirmPayment.ConfirmPaymentCommand(
-            bookingId, "session_123", "intent_123", IsInstantBooking: false);
+            bookingId, $"session_{bookingId}", $"intent_{bookingId}", IsInstantBooking: false);
         var confirmResult = await test.Sender.Send(confirmCommand).ConfigureAwait(false);
         if (confirmResult.IsFailure)
         {
@@ -141,7 +141,7 @@ internal static class BookingTestHelpers
 
         // Transition Booking 2 from PendingPayment to Reserved before confirming
         var confirmCommand = new Bookify.Application.Payments.ConfirmPayment.ConfirmPaymentCommand(
-            bookingId2, "session_456", "intent_456", IsInstantBooking: false);
+            bookingId2, $"session_{bookingId2}", $"intent_{bookingId2}", IsInstantBooking: false);
         var confirmResult = await test.Sender.Send(confirmCommand).ConfigureAwait(false);
         if (confirmResult.IsFailure)
         {
@@ -213,7 +213,7 @@ internal static class BookingTestHelpers
 
         // Transition the booking from PendingPayment to Reserved
         var confirmCommand = new Bookify.Application.Payments.ConfirmPayment.ConfirmPaymentCommand(
-            bookingId, "session_789", "intent_789", IsInstantBooking: false);
+            bookingId, $"session_{bookingId}", $"intent_{bookingId}", IsInstantBooking: false);
         var confirmResult = await test.Sender.Send(confirmCommand).ConfigureAwait(false);
         if (confirmResult.IsFailure)
         {
@@ -277,7 +277,8 @@ internal static class BookingTestHelpers
         test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme, ownerToken);
 
-        var aptData = ApartmentData.ValidCreateApartmentRequest;
+        var aptData = ApartmentData.CreateWithUniqueCity();
+
         HttpResponseMessage createApartmentResponse = await test.HttpClient.PostAsJsonAsync(
             "api/v1/apartments", aptData).ConfigureAwait(true);
         createApartmentResponse.EnsureSuccessStatusCode();
@@ -447,31 +448,42 @@ internal static class BookingTestHelpers
         return result;
     }
 
-    // Helper 9: Setup a Booking in Cancelled + Paid state using MediatR CancelBookingCommand
+    // Helper 9: Setup a Booking in Cancelled + Paid state using HTTP cancellation endpoint
     public static async Task<(Guid userId, Guid apartmentId, Guid bookingId, string guestToken, string guestEmail)>
         SetupCancelledPaidBookingAsync(BaseIntegrationTest test, string password = "Password123!")
     {
         var result = await SetupConfirmedPaidBookingAsync(test, password).ConfigureAwait(false);
-        var cancelCommand = new Bookify.Application.Bookings.CancelBooking.CancelBookingCommand(
-            result.bookingId, ReasonType.None, "Test cancellation");
-        var cancelResult = await test.Sender.Send(cancelCommand).ConfigureAwait(false);
-        if (cancelResult.IsFailure)
-        {
-            throw new InvalidOperationException($"Failed to cancel booking: {cancelResult.Error.Name}");
-        }
+        
+        test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme, result.guestToken);
+
+        HttpResponseMessage response = await test.HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{result.bookingId}/cancellation", UriKind.Relative),
+            null).ConfigureAwait(true);
+        
+        response.EnsureSuccessStatusCode();
 
         return result;
     }
 
-    // Helper 10: Setup a Booking in Cancelled + RefundProcessing state using domain method
+    // Helper 10: Setup a Booking in Cancelled + RefundProcessing state by waiting for the background outbox processor
     public static async Task<(Guid userId, Guid apartmentId, Guid bookingId, string guestToken, string guestEmail)>
         SetupRefundProcessingBookingAsync(BaseIntegrationTest test, string password = "Password123!")
     {
         var result = await SetupCancelledPaidBookingAsync(test, password).ConfigureAwait(false);
 
-        Booking? booking = await test.DbContext.Set<Booking>().FindAsync(result.bookingId).ConfigureAwait(false);
-        booking!.InitiateRefund(booking.TotalPrice.Amount, booking.TotalPrice.Currency.Code, "Customer request");
-        await test.DbContext.SaveChangesAsync().ConfigureAwait(false);
+        // Wait for the background Outbox processor to automatically transition the booking to RefundProcessing
+        for (int i = 0; i < 30; i++)
+        {
+            test.DbContext.ChangeTracker.Clear();
+            Booking? booking = await test.DbContext.Set<Booking>().FindAsync(result.bookingId).ConfigureAwait(false);
+            if (booking is not null && booking.PaymentStatus == PaymentStatus.RefundProcessing)
+            {
+                break;
+            }
+
+            await Task.Delay(500).ConfigureAwait(false);
+        }
 
         return result;
     }
@@ -508,5 +520,168 @@ internal static class BookingTestHelpers
             .ReadFromJsonAsync<
                 IReadOnlyList<Bookify.Application.Bookings.GetBookingTransactions.BookingTransactionResponse>>()
             .ConfigureAwait(false))!;
+    }
+
+    // Helper 13: creates an Apartment and 1 Reserved booking for a Guest and returns host email
+    public static async Task<(Guid userId, Guid apartmentId, Guid bookingId, string guestToken, string guestEmail,
+            string hostEmail)>
+        SetupReservedBookingWithHostAsync(BaseIntegrationTest test, string password = "Password123!")
+    {
+        var adminEmail = $"admin_{Guid.CreateVersion7()}@test.com";
+        var guestEmail = $"guest_{Guid.CreateVersion7()}@test.com";
+
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        _ = await test.Sender.Send(registerAdminCommand).ConfigureAwait(false);
+
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        var guestUserId = (await test.Sender.Send(registerGuestCommand).ConfigureAwait(false)).Value;
+
+        await test.PromoteToAdminAsync(adminEmail).ConfigureAwait(false);
+
+        string adminAccessToken = await test.GetAccessToken(adminEmail, password).ConfigureAwait(true);
+        test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme,
+            adminAccessToken);
+
+        var aptData = ApartmentData.ValidCreateApartmentRequest;
+        HttpResponseMessage createApartmentResponse = await test.HttpClient.PostAsJsonAsync(
+            "api/v1/apartments", aptData).ConfigureAwait(true);
+        createApartmentResponse.EnsureSuccessStatusCode();
+
+        Guid apartmentId = await createApartmentResponse.Content.ReadFromJsonAsync<Guid>().ConfigureAwait(true);
+
+        string guestAccessToken = await test.GetAccessToken(guestEmail, password).ConfigureAwait(true);
+        test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme, guestAccessToken);
+
+        var reserveRequest = new ReserveBookingRequest(
+            apartmentId,
+            new DateOnly(2027, 1, 1),
+            new DateOnly(2027, 1, 10))
+        {
+            ApartmentId = apartmentId,
+            StartDate = new DateOnly(2027, 1, 1),
+            EndDate = new DateOnly(2027, 1, 10)
+        };
+
+        HttpResponseMessage reserveResponse =
+            await test.HttpClient.PostAsJsonAsync("api/v1/bookings", reserveRequest).ConfigureAwait(true);
+        reserveResponse.EnsureSuccessStatusCode();
+
+        Guid bookingId = await reserveResponse.Content.ReadFromJsonAsync<Guid>().ConfigureAwait(true);
+
+        var confirmCommand = new Bookify.Application.Payments.ConfirmPayment.ConfirmPaymentCommand(
+            bookingId, $"session_{bookingId}", $"intent_{bookingId}", IsInstantBooking: false);
+        var confirmResult = await test.Sender.Send(confirmCommand).ConfigureAwait(false);
+        if (confirmResult.IsFailure)
+        {
+            throw new InvalidOperationException($"Failed to authorize payment: {confirmResult.Error.Name}");
+        }
+
+        return (guestUserId, apartmentId, bookingId, guestAccessToken, guestEmail, adminEmail);
+    }
+
+    // Helper 14: creates an Apartment and 1 PendingPayment booking for a Guest and returns host email
+    public static async Task<(Guid userId, Guid apartmentId, Guid bookingId, string guestToken, string guestEmail,
+            string hostEmail)>
+        SetupPendingPaymentBookingWithHostAsync(BaseIntegrationTest test, string password = "Password123!")
+    {
+        var adminEmail = $"admin_{Guid.CreateVersion7()}@test.com";
+        var guestEmail = $"guest_{Guid.CreateVersion7()}@test.com";
+
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        _ = await test.Sender.Send(registerAdminCommand).ConfigureAwait(false);
+
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        var guestUserId = (await test.Sender.Send(registerGuestCommand).ConfigureAwait(false)).Value;
+
+        await test.PromoteToAdminAsync(adminEmail).ConfigureAwait(false);
+
+        string adminAccessToken = await test.GetAccessToken(adminEmail, password).ConfigureAwait(true);
+        test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme,
+            adminAccessToken);
+
+        var aptData = ApartmentData.ValidCreateApartmentRequest;
+        HttpResponseMessage createApartmentResponse = await test.HttpClient.PostAsJsonAsync(
+            "api/v1/apartments", aptData).ConfigureAwait(true);
+        createApartmentResponse.EnsureSuccessStatusCode();
+
+        Guid apartmentId = await createApartmentResponse.Content.ReadFromJsonAsync<Guid>().ConfigureAwait(true);
+
+        string guestAccessToken = await test.GetAccessToken(guestEmail, password).ConfigureAwait(true);
+        test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme, guestAccessToken);
+
+        var reserveRequest = new ReserveBookingRequest(
+            apartmentId,
+            new DateOnly(2027, 1, 1),
+            new DateOnly(2027, 1, 10))
+        {
+            ApartmentId = apartmentId,
+            StartDate = new DateOnly(2027, 1, 1),
+            EndDate = new DateOnly(2027, 1, 10)
+        };
+
+        HttpResponseMessage reserveResponse =
+            await test.HttpClient.PostAsJsonAsync("api/v1/bookings", reserveRequest).ConfigureAwait(true);
+        reserveResponse.EnsureSuccessStatusCode();
+
+        Guid bookingId = await reserveResponse.Content.ReadFromJsonAsync<Guid>().ConfigureAwait(true);
+
+        return (guestUserId, apartmentId, bookingId, guestAccessToken, guestEmail, adminEmail);
+    }
+
+    // Helper 15: creates an Apartment and 1 ConfirmedPaid booking for a Guest and returns host email
+    public static async Task<(Guid userId, Guid apartmentId, Guid bookingId, string guestToken, string guestEmail,
+            string hostEmail)>
+        SetupConfirmedPaidBookingWithHostAsync(BaseIntegrationTest test, string password = "Password123!")
+    {
+        var result = await SetupPendingPaymentBookingWithHostAsync(test, password).ConfigureAwait(false);
+        var confirmCommand = new Bookify.Application.Payments.ConfirmPayment.ConfirmPaymentCommand(
+            result.bookingId, $"session_{Guid.NewGuid()}", $"intent_{Guid.NewGuid()}", true);
+        var confirmResult = await test.Sender.Send(confirmCommand).ConfigureAwait(false);
+        if (confirmResult.IsFailure)
+        {
+            throw new InvalidOperationException($"Failed to confirm booking: {confirmResult.Error.Name}");
+        }
+
+        return result;
+    }
+
+    // Helper 16: creates an Apartment and 1 ConfirmedPaid booking for a Guest and returns host email
+    public static async Task<(Guid apartmentId, string guestToken, string guestEmail, string hostEmail)>
+        SetupApartmentAndGuestWithHostAsync(BaseIntegrationTest test, string password = "Password123!")
+    {
+        // 1. Create an admin to create the apartment
+        var adminEmail = $"admin_{Guid.CreateVersion7()}@test.com";
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        await test.Sender.Send(registerAdminCommand).ConfigureAwait(false);
+        await test.PromoteToAdminAsync(adminEmail).ConfigureAwait(false);
+
+        // 2. Create apartment mapping to Admin context
+        string adminToken = await test.GetAccessToken(adminEmail, password).ConfigureAwait(false);
+        test.HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
+        var aptData = ApartmentData.ValidCreateApartmentRequest;
+        HttpResponseMessage aptResponse =
+            await test.HttpClient.PostAsJsonAsync("api/v1/apartments", aptData).ConfigureAwait(false);
+        aptResponse.EnsureSuccessStatusCode();
+        var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>().ConfigureAwait(false);
+
+        // 3. Create a guest to reserve
+        var guestEmail = $"guest_{Guid.CreateVersion7()}@test.com";
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        await test.Sender.Send(registerGuestCommand).ConfigureAwait(false);
+
+        string guestToken = await test.GetAccessToken(guestEmail, password).ConfigureAwait(false);
+
+        return (apartmentId, guestToken, guestEmail, adminEmail);
     }
 }

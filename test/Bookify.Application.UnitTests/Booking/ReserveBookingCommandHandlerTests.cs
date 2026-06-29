@@ -14,7 +14,7 @@ using NSubstitute.ExceptionExtensions;
 
 namespace Bookify.Application.UnitTests.Booking;
 
-public class ReserveBookingTests
+public class ReserveBookingCommandHandlerTests
 {
     private static readonly DateTime UtcNow = DateTime.UtcNow;
     private static readonly ReserveBookingCommand Command = new(
@@ -32,7 +32,7 @@ public class ReserveBookingTests
     private readonly IDateTimeProvider _dateTimeProviderMock;
     private readonly IUserContext _userContextMock;
 
-    public ReserveBookingTests()
+    public ReserveBookingCommandHandlerTests()
     {
         _userRepositoryMock = Substitute.For<IUserRepository>();
         _apartmentRepositoryMock = Substitute.For<IApartmentRepository>();
