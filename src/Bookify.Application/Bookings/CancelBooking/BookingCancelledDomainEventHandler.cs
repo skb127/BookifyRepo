@@ -80,7 +80,9 @@ internal sealed class BookingCancelledDomainEventHandler : INotificationHandler<
             Transaction? transaction = await _transactionRepository.GetByBookingIdAsync(booking.Id, cancellationToken);
             if (transaction is null)
             {
-                _logger.LogError("Transaction not found for cancelled booking {BookingId} with AuthorizationReleased payment status.", booking.Id);
+                _logger.LogError(
+                    "Transaction not found for cancelled booking {BookingId} with AuthorizationReleased payment status.",
+                    booking.Id);
                 throw new InvalidOperationException($"Transaction not found for cancelled booking {booking.Id}");
             }
 
@@ -95,16 +97,19 @@ internal sealed class BookingCancelledDomainEventHandler : INotificationHandler<
 
                     if (canceled)
                     {
-                        transaction.UpdateStatus("canceled", transaction.StripePaymentIntentId, _dateTimeProvider.UtcNow);
+                        transaction.UpdateStatus("canceled", transaction.StripePaymentIntentId,
+                            _dateTimeProvider.UtcNow);
                         await _unitOfWork.SaveChangesAsync(cancellationToken);
-                        _logger.LogInformation("Successfully cancelled payment intent {PaymentIntentId} for booking {BookingId}.",
+                        _logger.LogInformation(
+                            "Successfully cancelled payment intent {PaymentIntentId} for booking {BookingId}.",
                             transaction.StripePaymentIntentId, booking.Id);
                     }
                     else
                     {
                         _logger.LogError("Failed to cancel payment intent {PaymentIntentId} for booking {BookingId}.",
                             transaction.StripePaymentIntentId, booking.Id);
-                        throw new InvalidOperationException($"Failed to release payment intent authorization {transaction.StripePaymentIntentId} for booking {booking.Id}");
+                        throw new InvalidOperationException(
+                            $"Failed to release payment intent authorization {transaction.StripePaymentIntentId} for booking {booking.Id}");
                     }
                 }
                 else
@@ -120,7 +125,8 @@ internal sealed class BookingCancelledDomainEventHandler : INotificationHandler<
             Transaction? transaction = await _transactionRepository.GetByBookingIdAsync(booking.Id, cancellationToken);
             if (transaction is null)
             {
-                _logger.LogError("Transaction not found for cancelled paid booking {BookingId} to initiate refund.", booking.Id);
+                _logger.LogError("Transaction not found for cancelled paid booking {BookingId} to initiate refund.",
+                    booking.Id);
                 throw new InvalidOperationException($"Transaction not found for cancelled paid booking {booking.Id}");
             }
 
@@ -181,6 +187,15 @@ internal sealed class BookingCancelledDomainEventHandler : INotificationHandler<
                 : "BookingCancelled.html";
             string subject = notification.CancelledByHost ? "Booking Cancelled by Host" : "Booking Cancelled";
 
+            decimal refundAmount = booking.PaymentStatus == PaymentStatus.RefundProcessing
+                ? notification.RefundAmount ?? 0
+                : 0;
+            decimal guestPenaltyAmount = booking.PaymentStatus == PaymentStatus.RefundProcessing
+                ? Math.Max(0m, booking.TotalPrice.Amount - refundAmount)
+                : 0;
+            bool showCancellationDetails = guestPenaltyAmount > 0;
+            bool wasPaid = booking.PaymentStatus == PaymentStatus.RefundProcessing;
+
             var guestModel = new
             {
                 FirstName = guest.FirstName.Value,
@@ -188,6 +203,10 @@ internal sealed class BookingCancelledDomainEventHandler : INotificationHandler<
                 BookingDates = $"{booking.Duration.Start:dd/MM/yyyy} - {booking.Duration.End:dd/MM/yyyy}",
                 TotalPrice = booking.TotalPrice.Amount,
                 Currency = booking.TotalPrice.Currency.Code,
+                RefundAmount = refundAmount,
+                CancellationFee = Math.Round(guestPenaltyAmount, 2),
+                ShowCancellationDetails = showCancellationDetails,
+                WasPaid = wasPaid,
                 HomeUrl = homeUri.AbsoluteUri
             };
 

@@ -5,7 +5,7 @@ using Bookify.Domain.Users;
 using Bookify.Domain.UnitTests.Apartments;
 using FluentAssertions;
 
-namespace Bookify.Domain.UnitTests.Bookings;
+namespace Bookify.Domain.UnitTests.CancellationPolicies;
 
 public class CancellationPolicyEngineTests
 {

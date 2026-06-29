@@ -11,6 +11,8 @@ using Bookify.Application.Bookings.MarkNoShowBooking;
 using Bookify.Application.Bookings.RejectBooking;
 using Bookify.Application.Bookings.ReserveBooking;
 using Bookify.Application.Bookings.GetBookingTransactions;
+using Bookify.Application.Bookings.GetCancellationPreview;
+using Bookify.Application.Bookings.GetPriceEstimate;
 using Bookify.Application.Common;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
@@ -20,6 +22,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Bookify.Api.Filters.Idempotency;
+using Bookify.Domain.Apartments;
 
 namespace Bookify.Api.Controllers.Bookings;
 
@@ -148,7 +151,8 @@ public sealed class BookingsController : ControllerBase
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> CancelBooking(
         Guid id,
-        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] BookingReasonRequest? request,
+        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)]
+        BookingReasonRequest? request,
         CancellationToken cancellationToken)
     {
         var command = new CancelBookingCommand(id, request?.Type, request?.Description);
@@ -164,7 +168,7 @@ public sealed class BookingsController : ControllerBase
                     detail: result.Error.Name,
                     title: result.Error.Code);
             }
-            
+
             if (result.Error == BookingErrors.Unauthorized)
             {
                 return Problem(
@@ -186,7 +190,8 @@ public sealed class BookingsController : ControllerBase
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> RejectBooking(
         Guid id,
-        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] BookingReasonRequest? request,
+        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)]
+        BookingReasonRequest? request,
         CancellationToken cancellationToken)
     {
         var command = new RejectBookingCommand(id, request?.Type, request?.Description);
@@ -345,17 +350,53 @@ public sealed class BookingsController : ControllerBase
         [FromQuery] DateOnly endDate,
         CancellationToken cancellationToken = default)
     {
-        var query = new Application.Bookings.GetPriceEstimate.GetPriceEstimateQuery(
+        var query = new GetPriceEstimateQuery(
             apartmentId, startDate, endDate);
 
-        Result<Application.Bookings.GetPriceEstimate.PriceEstimateResponse> result = await _sender.Send(query, cancellationToken);
+        Result<PriceEstimateResponse> result = await _sender.Send(query, cancellationToken);
 
         if (result.IsFailure)
         {
-            if (result.Error == Domain.Apartments.ApartmentErrors.NotFound)
+            if (result.Error == ApartmentErrors.NotFound)
             {
                 return Problem(
                     statusCode: StatusCodes.Status404NotFound,
+                    detail: result.Error.Name,
+                    title: result.Error.Code);
+            }
+
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok(result.Value);
+    }
+
+    [HttpGet("{id:guid}/cancellation-preview")]
+    public async Task<IActionResult> GetCancellationPreview(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetCancellationPreviewQuery(id);
+
+        Result<CancellationPreviewResponse> result = await _sender.Send(query, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            if (result.Error == BookingErrors.NotFound)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    detail: result.Error.Name,
+                    title: result.Error.Code);
+            }
+
+            if (result.Error == BookingErrors.Unauthorized)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status403Forbidden,
                     detail: result.Error.Name,
                     title: result.Error.Code);
             }

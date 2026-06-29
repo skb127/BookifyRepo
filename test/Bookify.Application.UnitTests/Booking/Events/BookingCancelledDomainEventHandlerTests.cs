@@ -178,7 +178,60 @@ public class BookingCancelledDomainEventHandlerTests
 
         _emailTemplateServiceMock.GenerateEmailBodyAsync(
                 "BookingCancelled.html",
-                Arg.Any<object>(),
+                Arg.Is<object>(m =>
+                    m.GetType().GetProperty("FirstName")!.GetValue(m)!.ToString() == user.FirstName.Value &&
+                    m.GetType().GetProperty("ApartmentName")!.GetValue(m)!.ToString() == apartment.Name.Value &&
+                    !(bool)m.GetType().GetProperty("ShowCancellationDetails")!.GetValue(m)! &&
+                    !(bool)m.GetType().GetProperty("WasPaid")!.GetValue(m)!),
+                Arg.Any<CancellationToken>())
+            .Returns(expectedEmailBody);
+
+        // Act
+        await _handler.Handle(domainEvent, CancellationToken.None);
+
+        // Assert
+        await _emailServiceMock.Received(1).SendAsync(
+            Arg.Is<EmailMessage>(m =>
+                m.To == user.Email.Value &&
+                m.Subject == "Booking Cancelled" &&
+                m.Body == expectedEmailBody),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldSendEmailToGuestWithDetails_WhenRefundProcessingAndPenaltyApplied()
+    {
+        // Arrange
+        var user = CreateUser();
+        var booking = CreateBooking(user.Id, PaymentStatus.RefundProcessing);
+        // Set refund amount to 800.00m (total is 1000.00m, penalty is 200.00m)
+        var domainEvent = new BookingCancelledDomainEvent(booking.Id, RefundAmount: 800.00m, Currency: "USD");
+        var apartment = CreateApartment();
+        var transaction = CreateTransaction(booking.Id, "pi_test_intent");
+
+        _bookingRepositoryMock.GetByIdAsync(domainEvent.BookingId, Arg.Any<CancellationToken>())
+            .Returns(booking);
+
+        _transactionRepositoryMock.GetByBookingIdAsync(booking.Id, Arg.Any<CancellationToken>())
+            .Returns(transaction);
+
+        _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns(user);
+
+        _apartmentRepositoryMock.GetByIdAsync(booking.ApartmentId, Arg.Any<CancellationToken>())
+            .Returns(apartment);
+
+        string expectedEmailBody = "<html>Email Content</html>";
+
+        _emailTemplateServiceMock.GenerateEmailBodyAsync(
+                "BookingCancelled.html",
+                Arg.Is<object>(m =>
+                    m.GetType().GetProperty("FirstName")!.GetValue(m)!.ToString() == user.FirstName.Value &&
+                    m.GetType().GetProperty("ApartmentName")!.GetValue(m)!.ToString() == apartment.Name.Value &&
+                    (decimal)m.GetType().GetProperty("RefundAmount")!.GetValue(m)! == 800.00m &&
+                    (decimal)m.GetType().GetProperty("CancellationFee")!.GetValue(m)! == 200.00m &&
+                    (bool)m.GetType().GetProperty("ShowCancellationDetails")!.GetValue(m)! &&
+                    (bool)m.GetType().GetProperty("WasPaid")!.GetValue(m)!),
                 Arg.Any<CancellationToken>())
             .Returns(expectedEmailBody);
 

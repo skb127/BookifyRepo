@@ -129,6 +129,21 @@ public class CancelBookingTests : BaseIntegrationTest
         // Verify Email was Sent to host
         EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
         hostCancellationEmail.Subject.Should().Be("Booking Cancelled by Guest");
+
+        // Verify Stripe refund was initiated: 950.0m USD total, early guest penalty is 10% (95.0m), refund is 90% (855.0m)
+        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r => r.PaymentIntentId == $"intent_{bookingId}" && r.Amount == 855.0m && r.Currency == "USD");
+
+        // Verify host balances
+        await using var connection = DbContext.Database.GetDbConnection();
+        var guestPenalty = await connection.QuerySingleOrDefaultAsync<decimal>(
+            "SELECT amount FROM host_balances WHERE booking_id = @BookingId AND reason = 'guest_penalty'",
+            new { BookingId = bookingId });
+        guestPenalty.Should().Be(95.0m);
+
+        var hostCompensationCount = await connection.QuerySingleAsync<int>(
+            "SELECT COUNT(1) FROM host_balances WHERE booking_id = @BookingId AND reason = 'host_compensation'",
+            new { BookingId = bookingId });
+        hostCompensationCount.Should().Be(0);
     }
 
     [Fact]
@@ -224,6 +239,13 @@ public class CancelBookingTests : BaseIntegrationTest
 
         // Verify Stripe cancellation was initiated
         _mockPaymentGateway.CancelledPaymentIntents.Should().Contain($"intent_{bookingId}");
+
+        // Verify no host balances are recorded (since it was unpaid/authorized only)
+        await using var connection = DbContext.Database.GetDbConnection();
+        var hostBalanceCount = await connection.QuerySingleAsync<int>(
+            "SELECT COUNT(1) FROM host_balances WHERE booking_id = @BookingId",
+            new { BookingId = bookingId });
+        hostBalanceCount.Should().Be(0);
     }
 
     [Fact]
@@ -270,8 +292,25 @@ public class CancelBookingTests : BaseIntegrationTest
         EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
         hostCancellationEmail.Subject.Should().Be("Booking Cancelled by Guest");
 
-        // Verify Stripe refund was initiated
-        _mockPaymentGateway.RefundRequests.Should().NotBeEmpty();
+        // Verify Stripe refund was initiated: 950.0m USD total, early guest penalty is 10% (95.0m), refund is 90% (855.0m)
+        string adminAccessToken = await GetAccessToken(hostEmail, "Password123!");
+        var transactions = await BookingTestHelpers.GetBookingTransactionsViaApiAsync(this, bookingId, adminAccessToken);
+        var stripePaymentIntentId = transactions.Count > 0 ? transactions[0].StripePaymentIntentId : null;
+
+        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r => r.PaymentIntentId == stripePaymentIntentId && r.Amount == 855.0m && r.Currency == "USD");
+
+        await using var connection = DbContext.Database.GetDbConnection();
+
+        // Verify host balances
+        var guestPenalty = await connection.QuerySingleOrDefaultAsync<decimal>(
+            "SELECT amount FROM host_balances WHERE booking_id = @BookingId AND reason = 'guest_penalty'",
+            new { BookingId = bookingId });
+        guestPenalty.Should().Be(95.0m);
+
+        var hostCompensationCount = await connection.QuerySingleAsync<int>(
+            "SELECT COUNT(1) FROM host_balances WHERE booking_id = @BookingId AND reason = 'host_compensation'",
+            new { BookingId = bookingId });
+        hostCompensationCount.Should().Be(0);
     }
 
     [Fact]
@@ -330,8 +369,17 @@ public class CancelBookingTests : BaseIntegrationTest
         EmailMessage hostEmailMsg = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled - Penalty Applied", since: since);
         hostEmailMsg.Subject.Should().Be("Booking Cancelled - Penalty Applied");
 
-        // Verify Stripe refund was initiated
-        _mockPaymentGateway.RefundRequests.Should().NotBeEmpty();
+        // Verify Stripe refund was initiated: 950.0m USD total, host cancels early so guest is fully refunded (950.0m)
+        var transactions = await BookingTestHelpers.GetBookingTransactionsViaApiAsync(this, bookingId, hostAccessToken);
+        var stripePaymentIntentId = transactions.Count > 0 ? transactions[0].StripePaymentIntentId : null;
+
+        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r => r.PaymentIntentId == stripePaymentIntentId && r.Amount == 950.0m && r.Currency == "USD");
+
+        // Verify guest penalty is 0
+        var guestPenalty = await connection.QuerySingleOrDefaultAsync<decimal>(
+            "SELECT amount FROM host_balances WHERE booking_id = @BookingId AND reason = 'guest_penalty'",
+            new { BookingId = bookingId });
+        guestPenalty.Should().Be(0);
     }
 
     [Fact]
@@ -407,8 +455,14 @@ public class CancelBookingTests : BaseIntegrationTest
         EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled - Penalty Applied", since: since);
         hostCancellationEmail.Subject.Should().Be("Booking Cancelled - Penalty Applied");
 
-        // Verify Stripe refund was initiated
-        _mockPaymentGateway.RefundRequests.Should().NotBeEmpty();
+        // Verify Stripe refund was initiated: guest gets 100% refund of 450.0m USD
+        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r => r.PaymentIntentId == $"intent_{bookingId}" && r.Amount == 450.0m && r.Currency == "USD");
+
+        // Verify guest penalty is 0
+        var guestPenalty = await connection.QuerySingleOrDefaultAsync<decimal>(
+            "SELECT amount FROM host_balances WHERE booking_id = @BookingId AND reason = 'guest_penalty'",
+            new { BookingId = bookingId });
+        guestPenalty.Should().Be(0);
     }
 
     [Fact]
@@ -513,8 +567,14 @@ public class CancelBookingTests : BaseIntegrationTest
         EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
         hostCancellationEmail.Subject.Should().Be("Booking Cancelled by Guest");
 
-        // Verify Stripe refund was initiated
-        _mockPaymentGateway.RefundRequests.Should().NotBeEmpty();
+        // Verify Stripe refund was initiated: guest gets 50% refund (225.0m)
+        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r => r.PaymentIntentId == $"intent_{bookingId}" && r.Amount == 225.0m && r.Currency == "USD");
+
+        // Verify host penalty/compensation is 0
+        var hostCompensationCount = await connection.QuerySingleAsync<int>(
+            "SELECT COUNT(1) FROM host_balances WHERE booking_id = @BookingId AND reason = 'host_compensation'",
+            new { BookingId = bookingId });
+        hostCompensationCount.Should().Be(0);
     }
 
     [Fact]
