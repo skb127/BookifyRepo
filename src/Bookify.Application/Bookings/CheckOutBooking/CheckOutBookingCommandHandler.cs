@@ -38,7 +38,7 @@ internal sealed class CheckOutBookingCommandHandler : ICommandHandler<CheckOutBo
             reason = BookingReason.Create(request.ReasonType.Value, request.ReasonDescription, _dateTimeProvider.UtcNow);
         }
 
-        Result result = booking.CheckOut(_dateTimeProvider.UtcNow, reason);
+        Result result = booking.CheckOut(_dateTimeProvider.UtcNow, reason, request.GuestCheckOutDate);
 
         if (result.IsFailure)
         {

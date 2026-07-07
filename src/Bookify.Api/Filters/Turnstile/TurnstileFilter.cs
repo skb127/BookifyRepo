@@ -9,16 +9,23 @@ namespace Bookify.Api.Filters.Turnstile;
 internal sealed class TurnstileFilter : IAsyncActionFilter
 {
     private readonly ITurnstileValidator _turnstileValidator;
-    
-    public TurnstileFilter(ITurnstileValidator turnstileValidator) =>
+    private readonly ILogger<TurnstileFilter> _logger;
+
+    public TurnstileFilter(
+        ITurnstileValidator turnstileValidator,
+        ILogger<TurnstileFilter> logger)
+    {
         _turnstileValidator = turnstileValidator;
-    
+        _logger = logger;
+    }
+
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         // 1. Check if the X-Turnstile-Token header is present
         if (!context.HttpContext.Request.Headers.TryGetValue("X-Turnstile-Token", out StringValues tokenValues))
         {
-            context.Result = new BadRequestObjectResult("Missing Turnstile token");
+            _logger.LogWarning("Turnstile validation failed: Missing Turnstile token");
+            context.Result = CreateProblemResult("Missing Turnstile token");
             return;
         }
 
@@ -26,18 +33,36 @@ internal sealed class TurnstileFilter : IAsyncActionFilter
         string? token = tokenValues.FirstOrDefault();
         if (string.IsNullOrWhiteSpace(token))
         {
-            context.Result = new BadRequestObjectResult("Empty Turnstile token");
+            _logger.LogWarning("Turnstile validation failed: Empty Turnstile token");
+            context.Result = CreateProblemResult("Empty Turnstile token");
             return;
         }
-        
+
         Result result = await _turnstileValidator.Validate(token, context.HttpContext.RequestAborted);
 
         if (result.IsFailure)
         {
-            context.Result = new BadRequestObjectResult("Invalid Turnstile token");
+            _logger.LogWarning("Turnstile validation failed: Invalid Turnstile token. Error: {Error}", result.Error);
+            context.Result = CreateProblemResult("Invalid Turnstile token");
             return;
         }
-        
+
         await next();
+    }
+
+    private static ObjectResult CreateProblemResult(string detail)
+    {
+        var problemDetails = new ProblemDetails
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Type = "TurnstileError",
+            Title = "Turnstile validation failed",
+            Detail = detail
+        };
+
+        return new ObjectResult(problemDetails)
+        {
+            StatusCode = StatusCodes.Status400BadRequest
+        };
     }
 }

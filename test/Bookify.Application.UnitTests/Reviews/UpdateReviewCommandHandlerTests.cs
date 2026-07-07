@@ -13,7 +13,7 @@ namespace Bookify.Application.UnitTests.Reviews;
 
 public class UpdateReviewCommandHandlerTests
 {
-    private static readonly DateTime UtcNow = DateTime.UtcNow;
+    private static readonly DateTime UtcNow = new (2025, 1, 5, 0, 0, 0, DateTimeKind.Utc);
 
     private readonly UpdateReviewCommandHandler _handler;
 

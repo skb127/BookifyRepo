@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace Bookify.Api.UnitTests.Filters;
@@ -19,7 +20,7 @@ public class TurnstileFilterTests
     public TurnstileFilterTests()
     {
         _turnstileValidatorMock = Substitute.For<ITurnstileValidator>();
-        _filter = new TurnstileFilter(_turnstileValidatorMock);
+        _filter = new TurnstileFilter(_turnstileValidatorMock, NullLogger<TurnstileFilter>.Instance);
     }
 
     [Fact]
@@ -38,9 +39,11 @@ public class TurnstileFilterTests
 
         // Assert
         nextCalled.Should().BeFalse();
-        context.Result.Should().BeOfType<BadRequestObjectResult>()
-            .Which.Value.Should().Be("Missing Turnstile token");
-        
+        var objectResult = context.Result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        var problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
+        problemDetails.Detail.Should().Be("Missing Turnstile token");
+
         await _turnstileValidatorMock.DidNotReceiveWithAnyArgs()
             .Validate(default!, default);
     }
@@ -61,9 +64,11 @@ public class TurnstileFilterTests
 
         // Assert
         nextCalled.Should().BeFalse();
-        context.Result.Should().BeOfType<BadRequestObjectResult>()
-            .Which.Value.Should().Be("Empty Turnstile token");
-            
+        var objectResult = context.Result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        var problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
+        problemDetails.Detail.Should().Be("Empty Turnstile token");
+
         await _turnstileValidatorMock.DidNotReceiveWithAnyArgs()
             .Validate(default!, default);
     }
@@ -88,8 +93,10 @@ public class TurnstileFilterTests
 
         // Assert
         nextCalled.Should().BeFalse();
-        context.Result.Should().BeOfType<BadRequestObjectResult>()
-            .Which.Value.Should().Be("Invalid Turnstile token");
+        var objectResult = context.Result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        var problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
+        problemDetails.Detail.Should().Be("Invalid Turnstile token");
     }
 
     [Fact]

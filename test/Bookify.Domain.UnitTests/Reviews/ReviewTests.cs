@@ -18,7 +18,8 @@ public class ReviewTests : BaseTest
     public void Create_ShouldReturnFailure_WhenBookingIsNotCompleted()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -43,7 +44,8 @@ public class ReviewTests : BaseTest
     public void Create_ShouldReturnSuccess_WhenBookingIsCompleted()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -53,8 +55,10 @@ public class ReviewTests : BaseTest
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(utcNow);
-        booking.CheckIn(utcNow);
-        booking.Complete(utcNow); // Status is now Completed
+        DateTime checkInDate = new(2025, 12, 1, 12, 0, 0, DateTimeKind.Utc);
+        DateTime completeDate = new(2025, 12, 15, 12, 0, 0, DateTimeKind.Utc);
+        booking.CheckIn(checkInDate);
+        booking.Complete(completeDate); // Status is now Completed
 
         var rating = Rating.Create(5).Value;
         var comment = new Comment("Great place");
@@ -73,7 +77,8 @@ public class ReviewTests : BaseTest
     public void Update_ShouldReturnFailure_WhenBookingDoesNotMatch()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -83,8 +88,10 @@ public class ReviewTests : BaseTest
         var bookingOriginal = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         bookingOriginal.AuthorizePayment("session-id", "intent-id");
         bookingOriginal.Confirm(utcNow);
-        bookingOriginal.CheckIn(utcNow);
-        bookingOriginal.Complete(utcNow);
+        DateTime checkInDateOriginal = new(2025, 12, 1, 12, 0, 0, DateTimeKind.Utc);
+        DateTime completeDateOriginal = new(2025, 12, 15, 12, 0, 0, DateTimeKind.Utc);
+        bookingOriginal.CheckIn(checkInDateOriginal);
+        bookingOriginal.Complete(completeDateOriginal);
 
         var bookingOther = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
 
@@ -107,7 +114,8 @@ public class ReviewTests : BaseTest
     public void Update_ShouldReturnFailure_WhenBookingIsNotCompleted()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -118,8 +126,10 @@ public class ReviewTests : BaseTest
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(utcNow);
-        booking.CheckIn(utcNow);
-        booking.Complete(utcNow);
+        DateTime checkInDate = new(2025, 12, 1, 12, 0, 0, DateTimeKind.Utc);
+        DateTime completeDate = new(2025, 12, 15, 12, 0, 0, DateTimeKind.Utc);
+        booking.CheckIn(checkInDate);
+        booking.Complete(completeDate);
         var review = Review.Create(booking, Rating.Create(5).Value, new Comment("Great"), utcNow).Value;
 
         // Create a new booking that is NOT completed
@@ -139,7 +149,8 @@ public class ReviewTests : BaseTest
     public void Update_ShouldReturnFailure_WhenEditTimeIsExpired()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -149,8 +160,10 @@ public class ReviewTests : BaseTest
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(utcNow);
-        booking.CheckIn(utcNow);
-        booking.Complete(utcNow);
+        DateTime checkInDate = new(2025, 12, 1, 12, 0, 0, DateTimeKind.Utc);
+        DateTime completeDate = new(2025, 12, 15, 12, 0, 0, DateTimeKind.Utc);
+        booking.CheckIn(checkInDate);
+        booking.Complete(completeDate);
         var review = Review.Create(booking, Rating.Create(5).Value, new Comment("Great"), utcNow).Value;
 
         DateTime expiredDate = booking.CompletedOnUtc!.Value.AddDays(7).AddSeconds(1);
@@ -167,7 +180,8 @@ public class ReviewTests : BaseTest
     public void Update_ShouldReturnSuccess_WhenValid()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -177,13 +191,15 @@ public class ReviewTests : BaseTest
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(utcNow);
-        booking.CheckIn(utcNow);
-        booking.Complete(utcNow);
+        DateTime checkInDate = new(2025, 12, 1, 12, 0, 0, DateTimeKind.Utc);
+        DateTime completeDate = new(2025, 12, 15, 12, 0, 0, DateTimeKind.Utc);
+        booking.CheckIn(checkInDate);
+        booking.Complete(completeDate);
         var review = Review.Create(booking, Rating.Create(5).Value, new Comment("Great"), utcNow).Value;
 
         var newRating = Rating.Create(4).Value;
         var newComment = new Comment("Decent place");
-        DateTime editDate = utcNow.AddDays(2); // Valid (within 7 days)
+        DateTime editDate = completeDate.AddDays(2); // Valid (within 7 days)
 
         // Act
         var result = review.Update(newRating, newComment, editDate, booking);
@@ -204,7 +220,8 @@ public class ReviewTests : BaseTest
     public void Delete_ShouldSetDeletedOnUtc_WhenCalled()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -214,8 +231,10 @@ public class ReviewTests : BaseTest
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(utcNow);
-        booking.CheckIn(utcNow);
-        booking.Complete(utcNow);
+        DateTime checkInDate = new(2025, 12, 1, 12, 0, 0, DateTimeKind.Utc);
+        DateTime completeDate = new(2025, 12, 15, 12, 0, 0, DateTimeKind.Utc);
+        booking.CheckIn(checkInDate);
+        booking.Complete(completeDate);
         var review = Review.Create(booking, Rating.Create(5).Value, new Comment("Great"), utcNow).Value;
 
         DateTime deleteDate = utcNow.AddDays(1);

@@ -15,7 +15,10 @@ internal static class ApartmentData
             Money.Zero(),
             [],
             DateTime.UtcNow,
-            false);
+            false,
+            null,
+            1,
+            3);
 
     public static Apartment CreateWithInstantBooking() =>
         new(Guid.CreateVersion7(),
@@ -27,5 +30,8 @@ internal static class ApartmentData
             Money.Zero(),
             [],
             DateTime.UtcNow,
-            true);
+            true,
+            null,
+            1,
+            3);
 }

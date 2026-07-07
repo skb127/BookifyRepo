@@ -1,3 +1,4 @@
+#pragma warning disable S125
 using Microsoft.Extensions.Options;
 using Quartz;
 
@@ -15,9 +16,9 @@ internal sealed class CompleteBookingsJobSetup : IConfigureOptions<QuartzOptions
         const string jobName = nameof(CompleteBookingsJob);
 
         options
-            .AddJob<CompleteBookingsJob>(configure => configure.WithIdentity(jobName))
-            .AddTrigger(configure => configure
-                .ForJob(jobName)
-                .WithCronSchedule(_options.CronExpression));
+            .AddJob<CompleteBookingsJob>(configure => configure.WithIdentity(jobName).StoreDurably());
+            //.AddTrigger(configure => configure
+            //    .ForJob(jobName)
+            //    .WithCronSchedule(_options.CronExpression));
     }
 }

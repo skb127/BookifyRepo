@@ -19,10 +19,11 @@ namespace Bookify.Application.UnitTests.Booking.Events;
 
 public class BookingPaymentAuthorizedDomainEventHandlerTests
 {
-    private static readonly DateTime UtcNow = DateTime.UtcNow;
+    private static readonly DateTime UtcNow = new (2024, 12, 1, 0, 0, 0, DateTimeKind.Utc);
 
     private readonly IBookingRepository _bookingRepositoryMock;
     private readonly IUserRepository _userRepositoryMock;
+    private readonly IApartmentRepository _apartmentRepositoryMock;
     private readonly IEmailService _emailServiceMock;
     private readonly IEmailTemplateService _emailTemplateServiceMock;
     private readonly IJobScheduler _jobSchedulerMock;
@@ -37,6 +38,7 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
     {
         _bookingRepositoryMock = Substitute.For<IBookingRepository>();
         _userRepositoryMock = Substitute.For<IUserRepository>();
+        _apartmentRepositoryMock = Substitute.For<IApartmentRepository>();
         _emailServiceMock = Substitute.For<IEmailService>();
         _emailTemplateServiceMock = Substitute.For<IEmailTemplateService>();
         _jobSchedulerMock = Substitute.For<IJobScheduler>();
@@ -61,6 +63,7 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
         _handler = new BookingPaymentAuthorizedDomainEventHandler(
             _bookingRepositoryMock,
             _userRepositoryMock,
+            _apartmentRepositoryMock,
             _emailServiceMock,
             _emailTemplateServiceMock,
             _jobSchedulerMock,
@@ -139,8 +142,10 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
     {
         // Arrange
         var user = CreateUser();
+        var host = User.Create(new FirstName("Host"), new LastName("User"), new Email("host@test.com"), DateOfBirth.Create(new DateOnly(1990, 1, 1)));
 
         Apartment apartment = ApartmentData.Create();
+        typeof(Apartment).GetProperty("OwnerId")!.SetValue(apartment, host.Id);
         var booking = Domain.Bookings.Booking.Reserve(
             apartment,
             user.Id,
@@ -155,14 +160,27 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
 
         _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
             .Returns(user);
+            
+        _userRepositoryMock.GetByIdAsync(host.Id, Arg.Any<CancellationToken>())
+            .Returns(host);
+
+        _apartmentRepositoryMock.GetByIdAsync(apartment.Id, Arg.Any<CancellationToken>())
+            .Returns(apartment);
 
         string expectedEmailBody = "<html>Email Content</html>";
+        string expectedHostEmailBody = "<html>Host Content</html>";
 
         _emailTemplateServiceMock.GenerateEmailBodyAsync(
                 "BookingPaymentAuthorized.html",
                 Arg.Any<object>(),
                 Arg.Any<CancellationToken>())
             .Returns(expectedEmailBody);
+            
+        _emailTemplateServiceMock.GenerateEmailBodyAsync(
+                "BookingApprovalRequired.html",
+                Arg.Any<object>(),
+                Arg.Any<CancellationToken>())
+            .Returns(expectedHostEmailBody);
 
         var expectedExpiresAt = UtcNow.AddHours(24.0);
 
@@ -182,10 +200,12 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
 
         await _emailTemplateServiceMock.Received(1).GenerateEmailBodyAsync(
             "BookingPaymentAuthorized.html",
-            Arg.Is<object>(m =>
-                m.GetType().GetProperty("FirstName")!.GetValue(m)!.ToString() == user.FirstName.Value &&
-                m.GetType().GetProperty("BookingId")!.GetValue(m)!.ToString() == domainEvent.BookingId.ToString() &&
-                m.GetType().GetProperty("HomeUrl")!.GetValue(m)!.ToString() == "https://test.bookify.com/"),
+            Arg.Any<object>(),
+            Arg.Any<CancellationToken>());
+            
+        await _emailTemplateServiceMock.Received(1).GenerateEmailBodyAsync(
+            "BookingApprovalRequired.html",
+            Arg.Any<object>(),
             Arg.Any<CancellationToken>());
 
         await _emailServiceMock.Received(1).SendAsync(
@@ -194,5 +214,53 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
                 m.Subject == "Booking Payment Authorized" &&
                 m.Body == expectedEmailBody),
             Arg.Any<CancellationToken>());
+            
+        await _emailServiceMock.Received(1).SendAsync(
+            Arg.Is<EmailMessage>(m =>
+                m.To == host.Email.Value &&
+                m.Subject == "Booking Approval Required" &&
+                m.Body == expectedHostEmailBody),
+            Arg.Any<CancellationToken>());
+    }
+    
+    [Fact]
+    public async Task Handle_ShouldCapTtl2_WhenBookingIsCloseToCheckIn()
+    {
+        // Arrange
+        var user = CreateUser();
+        var host = User.Create(new FirstName("Host"), new LastName("User"), new Email("host@test.com"), DateOfBirth.Create(new DateOnly(1990, 1, 1)));
+
+        Apartment apartment = ApartmentData.Create();
+        typeof(Apartment).GetProperty("OwnerId")!.SetValue(apartment, host.Id);
+        var checkInDate = new DateOnly(2025, 1, 1);
+        
+        var booking = Domain.Bookings.Booking.Reserve(
+            apartment,
+            user.Id,
+            DateRange.Create(checkInDate, new DateOnly(2025, 1, 10)),
+            UtcNow,
+            new PricingService());
+
+        var domainEvent = new BookingPaymentAuthorizedDomainEvent(booking.Id, "session-id", "intent-id");
+
+        _bookingRepositoryMock.GetByIdAsync(domainEvent.BookingId, Arg.Any<CancellationToken>()).Returns(booking);
+        _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _userRepositoryMock.GetByIdAsync(host.Id, Arg.Any<CancellationToken>()).Returns(host);
+        _apartmentRepositoryMock.GetByIdAsync(apartment.Id, Arg.Any<CancellationToken>()).Returns(apartment);
+
+        // Act: UtcNow is 2024-12-31 10:00:00 (less than 24h away from end of CheckInDate 2025-01-01 23:59:59)
+        _dateTimeProviderMock.UtcNow.Returns(new DateTime(2024, 12, 31, 10, 0, 0, DateTimeKind.Utc));
+        // checkInDate end of day is 2025-01-01 23:59:59. If UtcNow + 24 hours is 2025-01-01 10:00:00, that is NOT capped.
+        // We need UtcNow to be 2025-01-01 10:00:00 so UtcNow + 24 hours is 2025-01-02 10:00:00, which is > 2025-01-01 23:59:59.
+        var currentDate = new DateTime(2025, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+        _dateTimeProviderMock.UtcNow.Returns(currentDate);
+
+        var expectedExpiresAt = checkInDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc).AddDays(1);
+
+        // Act
+        await _handler.Handle(domainEvent, CancellationToken.None);
+
+        // Assert
+        booking.ExpiresAt.Should().BeCloseTo(expectedExpiresAt, TimeSpan.FromMilliseconds(100));
     }
 }

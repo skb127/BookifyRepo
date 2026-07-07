@@ -107,7 +107,7 @@ public class CreateApartmentTests : BaseIntegrationTest
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
 
-        var request = ApartmentData.ValidCreateApartmentRequest;
+        var request = ApartmentData.ValidCreateApartmentRequest with { MinimumNights = 4, CheckInCutOffHours = 8 };
 
         // Act
         HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/apartments", request);
@@ -130,6 +130,8 @@ public class CreateApartmentTests : BaseIntegrationTest
         apartmentResponse.Description.Should().Be(request.Description);
         apartmentResponse.Price.Amount.Should().Be(request.Price.Amount);
         apartmentResponse.Price.Currency.Should().Be(request.Price.Currency);
+        apartmentResponse.MinimumNights.Should().Be(request.MinimumNights);
+        apartmentResponse.CheckInCutOffHours.Should().Be(request.CheckInCutOffHours);
     }
 
     [Fact]

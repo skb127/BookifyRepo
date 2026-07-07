@@ -94,7 +94,10 @@ internal sealed class GetCancellationPreviewQueryHandler : IQueryHandler<GetCanc
                 cancelledByHost);
         }
 
-        CancellationPolicy? policy = await _cancellationPolicyRepository.GetDefaultAsync(cancellationToken);
+        CancellationPolicy? policy = apartment.CancellationPolicyId.HasValue
+            ? await _cancellationPolicyRepository.GetByIdAsync(apartment.CancellationPolicyId.Value, cancellationToken)
+            : await _cancellationPolicyRepository.GetDefaultAsync(cancellationToken);
+            
         if (policy is null)
         {
             return Result.Failure<CancellationPreviewResponse>(BookingErrors.NoPolicyAvailable);

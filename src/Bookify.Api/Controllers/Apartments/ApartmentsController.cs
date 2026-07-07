@@ -105,6 +105,9 @@ public sealed class ApartmentsController : ControllerBase
             request.CleaningFee.Amount,
             request.CleaningFee.Currency,
             request.Amenities,
+            request.CancellationPolicyId,
+            request.MinimumNights,
+            request.CheckInCutOffHours,
             request.InstantBooking);
 
         Result<Guid> result = await _sender.Send(command, cancellationToken);
@@ -142,6 +145,9 @@ public sealed class ApartmentsController : ControllerBase
             request.CleaningFee.Amount,
             request.CleaningFee.Currency,
             request.Amenities,
+            request.CancellationPolicyId,
+            request.MinimumNights,
+            request.CheckInCutOffHours,
             request.InstantBooking);
 
         Result result = await _sender.Send(command, cancellationToken);

@@ -13,7 +13,7 @@ namespace Bookify.Application.UnitTests.Apartments;
 public class UpdateApartmentTests
 {
     private static readonly DateTime UtcNow = DateTime.UtcNow;
-    
+
     private static readonly UpdateApartmentCommand Command = new(
         Guid.NewGuid(),
         "Updated Name",
@@ -28,7 +28,9 @@ public class UpdateApartmentTests
         35.0m,
         Currency.Eur.Code,
         [1, 2, 5],
-        false);
+        null,
+        3,
+        6);
 
     private readonly UpdateApartmentCommandHandler _handler;
 
@@ -41,7 +43,7 @@ public class UpdateApartmentTests
     {
         _apartmentRepositoryMock = Substitute.For<IApartmentRepository>();
         _unitOfWorkMock = Substitute.For<IUnitOfWork>();
-        
+
         _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
         _dateTimeProviderMock.UtcNow.Returns(UtcNow);
 
@@ -125,6 +127,8 @@ public class UpdateApartmentTests
         apartment.Price.Amount.Should().Be(Command.PriceAmount);
         apartment.Price.Currency.Code.Should().Be(Command.PriceCurrency);
         apartment.CleaningFee.Amount.Should().Be(Command.CleaningFeeAmount);
+        apartment.MinimumNights.Should().Be(Command.MinimumNights);
+        apartment.CheckInCutOffHours.Should().Be(Command.CheckInCutOffHours);
     }
 
     [Fact]

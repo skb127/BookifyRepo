@@ -5,6 +5,7 @@ using Bookify.Application.IntegrationTests.Apartments;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Domain.Bookings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 
@@ -240,6 +241,13 @@ internal static class BookingTestHelpers
             throw new InvalidOperationException($"Failed to confirm booking: {confirmResult.Error.Name}");
         }
 
+        // Update Duration in database so that it starts yesterday and ends in 5 days
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var dbBooking = await test.DbContext.Set<Booking>().FirstAsync(b => b.Id == bookingId).ConfigureAwait(false);
+        typeof(Booking).GetProperty(nameof(Booking.Duration))!.SetValue(dbBooking,
+            DateRange.Create(today.AddDays(-1), today.AddDays(5)));
+        await test.DbContext.SaveChangesAsync().ConfigureAwait(false);
+
         // Check in booking (to transition from Confirmed to InProgress)
         var checkInCommand = new Bookify.Application.Bookings.CheckInBooking.CheckInBookingCommand(bookingId);
         var checkInResult = await test.Sender.Send(checkInCommand).ConfigureAwait(false);
@@ -344,6 +352,14 @@ internal static class BookingTestHelpers
             {
                 throw new InvalidOperationException($"Failed to confirm booking: {confirmBookingResult.Error.Name}");
             }
+
+            // Update Duration in database so that it starts yesterday and ends in 5 days
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var dbBooking = await test.DbContext.Set<Booking>().FirstAsync(b => b.Id == bookingId)
+                .ConfigureAwait(false);
+            typeof(Booking).GetProperty(nameof(Booking.Duration))!.SetValue(dbBooking,
+                DateRange.Create(today.AddDays(-1), today.AddDays(5)));
+            await test.DbContext.SaveChangesAsync().ConfigureAwait(false);
 
             // Check in booking (to transition from Confirmed to InProgress)
             var checkInCommand = new Bookify.Application.Bookings.CheckInBooking.CheckInBookingCommand(bookingId);
@@ -453,14 +469,14 @@ internal static class BookingTestHelpers
         SetupCancelledPaidBookingAsync(BaseIntegrationTest test, string password = "Password123!")
     {
         var result = await SetupConfirmedPaidBookingAsync(test, password).ConfigureAwait(false);
-        
+
         test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme, result.guestToken);
 
         HttpResponseMessage response = await test.HttpClient.PutAsync(
             new Uri($"api/v1/bookings/{result.bookingId}/cancellation", UriKind.Relative),
             null).ConfigureAwait(true);
-        
+
         response.EnsureSuccessStatusCode();
 
         return result;

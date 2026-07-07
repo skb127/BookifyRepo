@@ -54,7 +54,21 @@ internal static class SeedDataExtensions
             CreatedOnUtc = new DateTime(2026, 6, 13, 0, 0, 0, DateTimeKind.Utc)
         };
 
+        var strictPolicy = new
+        {
+            Id = new Guid("c0000000-0000-0000-0000-000000000002"),
+            Name = "Strict Cancellation Policy",
+            EarlyGuestPenaltyRate = 0.50m,
+            LateGuestPenaltyRate = 1.00m,
+            EarlyHostPenaltyRate = 0.50m,
+            LateHostPenaltyRate = 1.00m,
+            ThresholdHours = 72,
+            IsDefault = false,
+            CreatedOnUtc = new DateTime(2026, 6, 13, 0, 0, 0, DateTimeKind.Utc)
+        };
+
         connection.Execute(insertDefaultCancellationPolicySql, defaultPolicy);
+        connection.Execute(insertDefaultCancellationPolicySql, strictPolicy);
 
         var faker = new Faker();
 
@@ -77,14 +91,17 @@ internal static class SeedDataExtensions
                 CleaningFeeAmount = faker.Random.Decimal(25, 200),
                 CleaningFeeCurrency = "USD",
                 Amenities = new List<int> { (int)Amenity.Parking, (int)Amenity.MountainView },
-                LastBookedOn = DateTime.MinValue
+                LastBookedOn = DateTime.MinValue,
+                CancellationPolicyId = faker.Random.Bool() ? strictPolicy.Id : defaultPolicy.Id,
+                MinimumNights = faker.Random.Int(1, 5),
+                CheckInCutOffHours = faker.Random.Int(0, 24)
             });
         }
 
         const string sql = """
             INSERT INTO public.apartments
-            (id, owner_id, "name", description, address_country, address_state, address_zip_code, address_city, address_street, price_amount, price_currency, cleaning_fee_amount, cleaning_fee_currency, amenities, last_booked_on_utc)
-            VALUES(@Id, @OwnerId, @Name, @Description, @Country, @State, @ZipCode, @City, @Street, @PriceAmount, @PriceCurrency, @CleaningFeeAmount, @CleaningFeeCurrency, @Amenities, @LastBookedOn);
+            (id, owner_id, "name", description, address_country, address_state, address_zip_code, address_city, address_street, price_amount, price_currency, cleaning_fee_amount, cleaning_fee_currency, amenities, last_booked_on_utc, cancellation_policy_id, minimum_nights, check_in_cut_off_hours)
+            VALUES(@Id, @OwnerId, @Name, @Description, @Country, @State, @ZipCode, @City, @Street, @PriceAmount, @PriceCurrency, @CleaningFeeAmount, @CleaningFeeCurrency, @Amenities, @LastBookedOn, @CancellationPolicyId, @MinimumNights, @CheckInCutOffHours);
             """;
 
         connection.Execute(sql, apartments);

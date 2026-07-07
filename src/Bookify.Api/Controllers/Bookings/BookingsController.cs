@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Bookify.Application.Bookings.CancelBooking;
 using Bookify.Application.Bookings.CheckInBooking;
 using Bookify.Application.Bookings.CheckOutBooking;
+using Bookify.Application.Bookings.CloseStay;
 using Bookify.Application.Bookings.CompleteBooking;
 using Bookify.Application.Bookings.ConfirmBooking;
 using Bookify.Application.Bookings.GetBooking;
@@ -23,6 +24,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Bookify.Api.Filters.Idempotency;
 using Bookify.Domain.Apartments;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bookify.Api.Controllers.Bookings;
 
@@ -151,7 +153,7 @@ public sealed class BookingsController : ControllerBase
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> CancelBooking(
         Guid id,
-        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)]
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)]
         BookingReasonRequest? request,
         CancellationToken cancellationToken)
     {
@@ -190,7 +192,7 @@ public sealed class BookingsController : ControllerBase
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> RejectBooking(
         Guid id,
-        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)]
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)]
         BookingReasonRequest? request,
         CancellationToken cancellationToken)
     {
@@ -259,9 +261,11 @@ public sealed class BookingsController : ControllerBase
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> CheckInBooking(
         Guid id,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)]
+        CheckInBookingRequest? request,
         CancellationToken cancellationToken)
     {
-        var command = new CheckInBookingCommand(id);
+        var command = new CheckInBookingCommand(id, request?.GuestCheckInDate);
 
         Result result = await _sender.Send(command, cancellationToken);
 
@@ -288,10 +292,42 @@ public sealed class BookingsController : ControllerBase
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> CheckOutBooking(
         Guid id,
-        [FromBody] BookingReasonRequest request,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)]
+        CheckOutBookingRequest? request,
         CancellationToken cancellationToken)
     {
-        var command = new CheckOutBookingCommand(id, request.Type, request.Description);
+        var command = new CheckOutBookingCommand(id, request?.Type, request?.Description, request?.GuestCheckOutDate);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            if (result.Error == BookingErrors.NotFound)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    detail: result.Error.Name,
+                    title: result.Error.Code);
+            }
+
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return NoContent();
+    }
+
+    [HasPermission(Permissions.BookingsWrite)]
+    [HttpPut("{id:guid}/close-stay")]
+    [EnableRateLimiting("write-operations")]
+    public async Task<IActionResult> CloseStay(
+        Guid id,
+        [FromBody] CloseStayRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new CloseStayCommand(id, request.CheckInDate ?? default, request.CheckOutDate ?? default);
 
         Result result = await _sender.Send(command, cancellationToken);
 

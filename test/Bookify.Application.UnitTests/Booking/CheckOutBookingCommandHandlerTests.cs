@@ -10,7 +10,7 @@ namespace Bookify.Application.UnitTests.Booking;
 
 public class CheckOutBookingCommandHandlerTests
 {
-    private static readonly DateTime UtcNow = DateTime.UtcNow;
+    private static readonly DateTime UtcNow = new (2025, 1, 5, 0, 0, 0, DateTimeKind.Utc);
 
     private readonly IDateTimeProvider _dateTimeProviderMock;
     private readonly IBookingRepository _bookingRepositoryMock;
@@ -35,6 +35,7 @@ public class CheckOutBookingCommandHandlerTests
     {
         var booking = (Domain.Bookings.Booking)Activator.CreateInstance(typeof(Domain.Bookings.Booking), true)!;
         typeof(Domain.Bookings.Booking).GetProperty(nameof(Domain.Bookings.Booking.Status))!.SetValue(booking, status);
+        typeof(Domain.Bookings.Booking).GetProperty(nameof(Domain.Bookings.Booking.Duration))!.SetValue(booking, DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)));
         return booking;
     }
 
@@ -114,6 +115,29 @@ public class CheckOutBookingCommandHandlerTests
         booking.Reasons.Should().HaveCount(1);
         booking.Reasons[0].Type.Should().Be(ReasonType.EarlyDeparture);
         booking.Reasons[0].Description.Should().Be("Had to leave early due to family emergency");
+        await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldUpdateDurationEnd_WhenGuestCheckOutDateIsProvided()
+    {
+        // Arrange
+        var newCheckOutDate = new DateOnly(2025, 1, 8);
+        var command = new CheckOutBookingCommand(Guid.NewGuid(), null, null, newCheckOutDate);
+        var booking = CreateBooking(BookingStatus.InProgress);
+
+        _bookingRepositoryMock.GetByIdAsync(command.BookingId, Arg.Any<CancellationToken>())
+            .Returns(booking);
+        _dateTimeProviderMock.UtcNow.Returns(new DateTime(2025, 1, 9, 0, 0, 0, DateTimeKind.Utc));
+
+        // Act
+        Result result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        booking.Duration.End.Should().Be(newCheckOutDate);
+        booking.Status.Should().Be(BookingStatus.Completed);
+        booking.CompletedOnUtc.Should().Be(newCheckOutDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
         await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

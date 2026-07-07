@@ -28,7 +28,9 @@ public class CreateApartmentTests
         50.0m,
         Currency.Eur.Code,
         [1, 2, 3],
-        false);
+        null,
+        3,
+        6);
 
     private readonly CreateApartmentCommandHandler _handler; // SUT
 
@@ -67,7 +69,9 @@ public class CreateApartmentTests
 
         _apartmentRepositoryMock.Received(1).Add(Arg.Is<Apartment>(a =>
             a.Name.Value == Command.Name &&
-            a.OwnerId == _userContextMock.UserId));
+            a.OwnerId == _userContextMock.UserId &&
+            a.MinimumNights == Command.MinimumNights &&
+            a.CheckInCutOffHours == Command.CheckInCutOffHours));
         await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

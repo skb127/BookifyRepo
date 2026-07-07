@@ -74,4 +74,24 @@ public class UpdateApartmentCommandValidatorTests
         // Act & Assert
         _validator.TestValidate(command).ShouldHaveValidationErrorFor(c => c.PriceCurrency);
     }
+
+    [Fact]
+    public void Validate_ShouldHaveError_WhenMinimumNightsIsZeroOrNegative()
+    {
+        // Arrange
+        UpdateApartmentCommand command = ValidCommand with { MinimumNights = 0 };
+
+        // Act & Assert
+        _validator.TestValidate(command).ShouldHaveValidationErrorFor(c => c.MinimumNights);
+    }
+
+    [Fact]
+    public void Validate_ShouldHaveError_WhenCheckInCutOffHoursIsInvalid()
+    {
+        // Arrange
+        UpdateApartmentCommand command = ValidCommand with { CheckInCutOffHours = -1 };
+
+        // Act & Assert
+        _validator.TestValidate(command).ShouldHaveValidationErrorFor(c => c.CheckInCutOffHours);
+    }
 }

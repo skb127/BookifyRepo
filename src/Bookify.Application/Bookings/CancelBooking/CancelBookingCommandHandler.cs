@@ -115,7 +115,10 @@ internal sealed class CancelBookingCommandHandler : ICommandHandler<CancelBookin
         }
 
         // 3. Booking is paid (Confirmed) - apply cancellation policy and record penalties
-        CancellationPolicy? policy = await _cancellationPolicyRepository.GetDefaultAsync(cancellationToken);
+        CancellationPolicy? policy = apartment.CancellationPolicyId.HasValue
+            ? await _cancellationPolicyRepository.GetByIdAsync(apartment.CancellationPolicyId.Value, cancellationToken)
+            : await _cancellationPolicyRepository.GetDefaultAsync(cancellationToken);
+            
         if (policy is null)
         {
             return Result.Failure(BookingErrors.NoPolicyAvailable);

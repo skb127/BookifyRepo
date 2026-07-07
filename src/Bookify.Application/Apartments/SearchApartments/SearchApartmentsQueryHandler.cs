@@ -127,6 +127,8 @@ internal sealed class
                 a.address_zip_code AS ZipCode,
                 a.address_city AS City,
                 a.address_street AS Street,
+                a.minimum_nights AS MinimumNights,
+                a.check_in_cut_off_hours AS CheckInCutOffHours,
                 COALESCE(r.AverageRating, 0.0) AS AverageRating
             FROM apartments AS a
             LEFT JOIN (
@@ -164,7 +166,9 @@ internal sealed class
                 Street = a.Street
             },
             IsAvailable = a.IsAvailable,
-            AverageRating = a.AverageRating
+            AverageRating = a.AverageRating,
+            MinimumNights = a.MinimumNights,
+            CheckInCutOffHours = a.CheckInCutOffHours
         }).ToList();
 
         return new PagedResponse<ApartmentResponse>
@@ -194,6 +198,8 @@ internal sealed class
         public string ZipCode { get; init; } = default!;
         public string City { get; init; } = default!;
         public string Street { get; init; } = default!;
+        public int MinimumNights { get; init; }
+        public int CheckInCutOffHours { get; init; }
     }
 #pragma warning restore S1144, S3459 // Unused private types or members - Properties are set by Dapper via reflection
 }

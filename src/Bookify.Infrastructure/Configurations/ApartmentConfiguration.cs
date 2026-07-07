@@ -1,6 +1,7 @@
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Shared;
 using Bookify.Domain.Users;
+using Bookify.Domain.CancellationPolicies;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -22,11 +23,20 @@ internal sealed class ApartmentConfiguration : IEntityTypeConfiguration<Apartmen
             .HasForeignKey(apartment => apartment.OwnerId)
             .OnDelete(DeleteBehavior.Restrict); // Prevent deleting a User if they still own Apartments
 
-        builder.OwnsOne(apartment => apartment.Address); // The value object is going to be mapped into a set of columns in the same table as the owning entity, in this case the Address columns are going to be in the apartments table
+        builder.HasOne<CancellationPolicy>()
+            .WithMany()
+            .HasForeignKey(apartment => apartment.CancellationPolicyId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.OwnsOne(apartment =>
+            apartment.Address); // The value object is going to be mapped into a set of columns in the same table as the owning entity, in this case the Address columns are going to be in the apartments table
 
         builder.Property(apartment => apartment.Name)
             .HasMaxLength(200)
-            .HasConversion(name => name.Value, value => new Name(value)); // Converting the Name value object to its underlying string value for storage in the database and vice versa
+            .HasConversion(name => name.Value,
+                value => new Name(
+                    value)); // Converting the Name value object to its underlying string value for storage in the database and vice versa
 
         builder.Property(apartment => apartment.Description)
             .HasMaxLength(2000)
@@ -35,7 +45,8 @@ internal sealed class ApartmentConfiguration : IEntityTypeConfiguration<Apartmen
         builder.OwnsOne(apartment => apartment.Price, priceBuilder => priceBuilder.Property(money => money.Currency)
             .HasConversion(currency => currency.Code, code => Currency.FromCode(code)));
 
-        builder.OwnsOne(apartment => apartment.CleaningFee, priceBuilder => priceBuilder.Property(money => money.Currency)
+        builder.OwnsOne(apartment => apartment.CleaningFee, priceBuilder => priceBuilder
+            .Property(money => money.Currency)
             .HasConversion(currency => currency.Code, code => Currency.FromCode(code)));
 
         builder.Property(apartment => apartment.Amenities)
@@ -46,6 +57,14 @@ internal sealed class ApartmentConfiguration : IEntityTypeConfiguration<Apartmen
 
         builder.Property(apartment => apartment.InstantBooking)
             .HasDefaultValue(false)
+            .IsRequired();
+
+        builder.Property(apartment => apartment.MinimumNights)
+            .HasDefaultValue(1)
+            .IsRequired();
+
+        builder.Property(apartment => apartment.CheckInCutOffHours)
+            .HasDefaultValue(3)
             .IsRequired();
 
         builder.Property<uint>("Version").IsRowVersion(); // Shadow property for optimistic concurrency control

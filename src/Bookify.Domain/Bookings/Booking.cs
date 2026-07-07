@@ -259,30 +259,68 @@ public sealed class Booking : Entity
         return Result.Success(penaltyResult);
     }
 
-    public Result CheckIn(DateTime utcNow)
+    public Result CheckIn(DateTime utcNow, DateOnly? guestCheckInDate = null)
     {
         if (Status != BookingStatus.Confirmed)
         {
             return Result.Failure(BookingErrors.NotConfirmed);
         }
 
+        var today = DateOnly.FromDateTime(utcNow);
+
+        if (today < Duration.Start)
+        {
+            return Result.Failure(BookingErrors.CheckInTooEarly);
+        }
+
+        if (today > Duration.End)
+        {
+            return Result.Failure(BookingErrors.StayNotYetEnded); // Using StayNotYetEnded here to signify the stay is already over
+        }
+
+        if (guestCheckInDate.HasValue && (guestCheckInDate.Value > today || guestCheckInDate.Value < Duration.Start))
+        {
+            return Result.Failure(BookingErrors.InvalidCheckInDate);
+        }
+
         Status = BookingStatus.InProgress;
-        CheckedInOnUtc = utcNow;
+        
+        if (guestCheckInDate.HasValue)
+        {
+            Duration = DateRange.Create(guestCheckInDate.Value, Duration.End);
+        }
+
+        CheckedInOnUtc = guestCheckInDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) 
+                         ?? utcNow;
 
         RaiseDomainEvent(new BookingCheckedInDomainEvent(Id));
 
         return Result.Success();
     }
 
-    public Result CheckOut(DateTime utcNow, BookingReason? reason = null)
+    public Result CheckOut(DateTime utcNow, BookingReason? reason = null, DateOnly? guestCheckOutDate = null)
     {
         if (Status != BookingStatus.InProgress)
         {
             return Result.Failure(BookingErrors.NotInProgress);
         }
 
+        var today = DateOnly.FromDateTime(utcNow);
+
+        if (guestCheckOutDate.HasValue && (guestCheckOutDate.Value > today || guestCheckOutDate.Value < Duration.Start))
+        {
+            return Result.Failure(BookingErrors.InvalidCheckOutDate);
+        }
+
         Status = BookingStatus.Completed;
-        CompletedOnUtc = utcNow;
+        
+        if (guestCheckOutDate.HasValue)
+        {
+            Duration = DateRange.Create(Duration.Start, guestCheckOutDate.Value);
+        }
+
+        CompletedOnUtc = guestCheckOutDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)
+                         ?? utcNow;
 
         if (reason is not null)
         {
@@ -290,6 +328,39 @@ public sealed class Booking : Entity
         }
 
         RaiseDomainEvent(new BookingCheckedOutDomainEvent(Id));
+
+        return Result.Success();
+    }
+
+    public Result CloseStay(DateTime utcNow, DateOnly checkInDate, DateOnly checkOutDate)
+    {
+        if (Status != BookingStatus.Confirmed)
+        {
+            return Result.Failure(BookingErrors.NotConfirmed);
+        }
+
+        var today = DateOnly.FromDateTime(utcNow);
+
+        if (today <= Duration.End)
+        {
+            return Result.Failure(BookingErrors.StayNotYetEnded);
+        }
+
+        if (checkInDate < Duration.Start || checkInDate > today)
+        {
+            return Result.Failure(BookingErrors.InvalidCheckInDate);
+        }
+
+        if (checkOutDate < checkInDate || checkOutDate > today)
+        {
+            return Result.Failure(BookingErrors.InvalidCheckOutDate);
+        }
+
+        Status = BookingStatus.Completed;
+        CheckedInOnUtc = checkInDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        CompletedOnUtc = checkOutDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+        RaiseDomainEvent(new BookingClosedStayDomainEvent(Id));
 
         return Result.Success();
     }

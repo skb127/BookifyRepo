@@ -100,6 +100,9 @@ public class UpdateApartmentTests : BaseIntegrationTest
             validRequest.Price,
             validRequest.CleaningFee,
             validRequest.Amenities,
+            validRequest.CancellationPolicyId,
+            validRequest.MinimumNights,
+            validRequest.CheckInCutOffHours,
             validRequest.InstantBooking);
 
         // Act
@@ -131,7 +134,7 @@ public class UpdateApartmentTests : BaseIntegrationTest
         Uri locationUri = createResponse.Headers.Location!;
 
         // 2. Prepare update request
-        var updateRequest = ApartmentData.ValidUpdateApartmentRequest;
+        var updateRequest = ApartmentData.ValidUpdateApartmentRequest with { MinimumNights = 3, CheckInCutOffHours = 6 };
 
         // Act: Update the created apartment
         HttpResponseMessage updateResponse = await HttpClient.PutAsJsonAsync(locationUri, updateRequest);
@@ -152,6 +155,8 @@ public class UpdateApartmentTests : BaseIntegrationTest
         apartmentResponse.CleaningFee.Amount.Should().Be(updateRequest.CleaningFee.Amount);
         apartmentResponse.CleaningFee.Currency.Should().Be(updateRequest.CleaningFee.Currency);
         apartmentResponse.Address.City.Should().Be(updateRequest.Address.City);
+        apartmentResponse.MinimumNights.Should().Be(updateRequest.MinimumNights);
+        apartmentResponse.CheckInCutOffHours.Should().Be(updateRequest.CheckInCutOffHours);
     }
 
     [Fact]
@@ -183,6 +188,9 @@ public class UpdateApartmentTests : BaseIntegrationTest
             createRequest.Price,
             createRequest.CleaningFee,
             createRequest.Amenities,
+            createRequest.CancellationPolicyId,
+            createRequest.MinimumNights,
+            createRequest.CheckInCutOffHours,
             true);
 
         // Act: Update the created apartment

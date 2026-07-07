@@ -30,5 +30,8 @@ internal sealed class CreateApartmentCommandValidator : AbstractValidator<Create
             .MustBeValidCurrency();
 
         RuleFor(c => c.Amenities).NotNull();
+
+        RuleFor(c => c.MinimumNights).GreaterThan(0);
+        RuleFor(c => c.CheckInCutOffHours).InclusiveBetween(0, 48);
     }
 }
