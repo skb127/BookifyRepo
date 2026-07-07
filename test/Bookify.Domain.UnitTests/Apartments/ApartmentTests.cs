@@ -69,7 +69,7 @@ public class ApartmentTests : BaseTest
         var newAmenities = new List<Amenity> { Amenity.Gym, Amenity.Spa };
 
         // Act
-        apartment.Update(newName, newDescription, newAddress, newPrice, newCleaningFee, newAmenities, DateTime.UtcNow, false);
+        apartment.Update(newName, newDescription, newAddress, newPrice, newCleaningFee, newAmenities, DateTime.UtcNow, false, null, 2, 5);
 
         // Assert
         apartment.Name.Should().Be(newName);
@@ -97,7 +97,7 @@ public class ApartmentTests : BaseTest
         var newAmenities = new List<Amenity> { Amenity.Gym };
 
         // Act
-        apartment.Update(newName, newDescription, newAddress, newPrice, newCleaningFee, newAmenities, DateTime.UtcNow, true);
+        apartment.Update(newName, newDescription, newAddress, newPrice, newCleaningFee, newAmenities, DateTime.UtcNow, true, null, 2, 5);
 
         // Assert
         apartment.InstantBooking.Should().BeTrue();
@@ -120,7 +120,10 @@ public class ApartmentTests : BaseTest
             Money.Zero(),
             [],
             DateTime.UtcNow,
-            false);
+            false,
+            null,
+            1,
+            3);
 
         // Assert
         apartment.Amenities.Should().BeEmpty();

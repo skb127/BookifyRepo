@@ -18,6 +18,9 @@ public sealed record CreateApartmentRequest(
     MoneyRequest Price,
     MoneyRequest CleaningFee,
     IReadOnlyList<int> Amenities,
+    Guid? CancellationPolicyId = null,
+    int MinimumNights = 1,
+    int CheckInCutOffHours = 3,
     bool InstantBooking = false);
 
 public sealed record UpdateApartmentRequest(
@@ -27,4 +30,7 @@ public sealed record UpdateApartmentRequest(
     MoneyRequest Price,
     MoneyRequest CleaningFee,
     IReadOnlyList<int> Amenities,
+    Guid? CancellationPolicyId = null,
+    int MinimumNights = 1,
+    int CheckInCutOffHours = 3,
     bool InstantBooking = false);

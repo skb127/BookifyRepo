@@ -16,4 +16,7 @@ public record UpdateApartmentCommand(
     decimal CleaningFeeAmount,
     string CleaningFeeCurrency,
     IReadOnlyList<int> Amenities,
+    Guid? CancellationPolicyId = null,
+    int MinimumNights = 1,
+    int CheckInCutOffHours = 3,
     bool InstantBooking = false) : ICommand;

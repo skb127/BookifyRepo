@@ -1,23 +1,22 @@
 using Bookify.Application.Abstractions.Clock;
-using Bookify.Application.Bookings.CheckInBooking;
+using Bookify.Application.Bookings.CloseStay;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
 using FluentAssertions;
 using NSubstitute;
-using NSubstitute.ReturnsExtensions;
 
 namespace Bookify.Application.UnitTests.Booking;
 
-public class CheckInBookingCommandHandlerTests
+public class CloseStayCommandHandlerTests
 {
     private static readonly DateTime UtcNow = new(2025, 1, 5, 0, 0, 0, DateTimeKind.Utc);
 
     private readonly IDateTimeProvider _dateTimeProviderMock;
     private readonly IBookingRepository _bookingRepositoryMock;
     private readonly IUnitOfWork _unitOfWorkMock;
-    private readonly CheckInBookingCommandHandler _handler;
+    private readonly CloseStayCommandHandler _handler;
 
-    public CheckInBookingCommandHandlerTests()
+    public CloseStayCommandHandlerTests()
     {
         _bookingRepositoryMock = Substitute.For<IBookingRepository>();
         _unitOfWorkMock = Substitute.For<IUnitOfWork>();
@@ -25,18 +24,17 @@ public class CheckInBookingCommandHandlerTests
         _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
         _dateTimeProviderMock.UtcNow.Returns(UtcNow);
 
-        _handler = new CheckInBookingCommandHandler(
+        _handler = new CloseStayCommandHandler(
             _dateTimeProviderMock,
             _bookingRepositoryMock,
             _unitOfWorkMock);
     }
 
-    private static Domain.Bookings.Booking CreateBooking(BookingStatus status)
+    private static Domain.Bookings.Booking CreateBooking(BookingStatus status, DateOnly start, DateOnly end)
     {
         var booking = (Domain.Bookings.Booking)Activator.CreateInstance(typeof(Domain.Bookings.Booking), true)!;
         typeof(Domain.Bookings.Booking).GetProperty(nameof(Domain.Bookings.Booking.Status))!.SetValue(booking, status);
-        typeof(Domain.Bookings.Booking).GetProperty(nameof(Domain.Bookings.Booking.Duration))!.SetValue(booking,
-            DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)));
+        typeof(Domain.Bookings.Booking).GetProperty(nameof(Domain.Bookings.Booking.Duration))!.SetValue(booking, DateRange.Create(start, end));
         return booking;
     }
 
@@ -44,10 +42,10 @@ public class CheckInBookingCommandHandlerTests
     public async Task Handle_ShouldReturnFailure_WhenBookingNotFound()
     {
         // Arrange
-        var command = new CheckInBookingCommand(Guid.NewGuid());
+        var command = new CloseStayCommand(Guid.NewGuid(), new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10));
 
         _bookingRepositoryMock.GetByIdAsync(command.BookingId, Arg.Any<CancellationToken>())
-            .ReturnsNull();
+            .Returns((Domain.Bookings.Booking?)null);
 
         // Act
         Result result = await _handler.Handle(command, CancellationToken.None);
@@ -58,11 +56,12 @@ public class CheckInBookingCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ShouldReturnFailure_WhenBookingIsNotConfirmed()
+    public async Task Handle_ShouldReturnFailure_WhenCloseStayFails()
     {
         // Arrange
-        var command = new CheckInBookingCommand(Guid.NewGuid());
-        var booking = CreateBooking(BookingStatus.Reserved);
+        // Booking is in Reserved status (not Confirmed), so CloseStay will fail
+        var booking = CreateBooking(BookingStatus.Reserved, new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 4));
+        var command = new CloseStayCommand(Guid.NewGuid(), new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 4));
 
         _bookingRepositoryMock.GetByIdAsync(command.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
@@ -73,14 +72,16 @@ public class CheckInBookingCommandHandlerTests
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(BookingErrors.NotConfirmed);
+        await _unitOfWorkMock.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_ShouldSucceed_WhenValid()
+    public async Task Handle_ShouldReturnSuccess_WhenCloseStaySucceeds()
     {
         // Arrange
-        var command = new CheckInBookingCommand(Guid.NewGuid());
-        var booking = CreateBooking(BookingStatus.Confirmed);
+        // UtcNow is 2025-01-05. Booking is Confirmed and ends on 2025-01-04 (past).
+        var booking = CreateBooking(BookingStatus.Confirmed, new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 4));
+        var command = new CloseStayCommand(Guid.NewGuid(), new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 4));
 
         _bookingRepositoryMock.GetByIdAsync(command.BookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
@@ -90,30 +91,7 @@ public class CheckInBookingCommandHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        booking.Status.Should().Be(BookingStatus.InProgress);
-        booking.CheckedInOnUtc.Should().Be(UtcNow);
-        await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task Handle_ShouldUpdateDurationStart_WhenGuestCheckInDateIsProvided()
-    {
-        // Arrange
-        var newCheckInDate = new DateOnly(2025, 1, 2);
-        var command = new CheckInBookingCommand(Guid.NewGuid(), newCheckInDate);
-        var booking = CreateBooking(BookingStatus.Confirmed);
-
-        _bookingRepositoryMock.GetByIdAsync(command.BookingId, Arg.Any<CancellationToken>())
-            .Returns(booking);
-
-        // Act
-        Result result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        booking.Duration.Start.Should().Be(newCheckInDate);
-        booking.Status.Should().Be(BookingStatus.InProgress);
-        booking.CheckedInOnUtc.Should().Be(newCheckInDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+        booking.Status.Should().Be(BookingStatus.Completed);
         await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

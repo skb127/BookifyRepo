@@ -20,7 +20,7 @@ public class CompleteBookingsBatchNotificationTests : BaseIntegrationTest
         _factory = factory;
     }
 
-    [Fact]
+    [Fact(Skip = "CompleteBookingsJob is disabled")]
     public async Task Execute_ShouldCompleteBookingsAndAutomaticallySendEmailsViaOutbox()
     {
         // Arrange

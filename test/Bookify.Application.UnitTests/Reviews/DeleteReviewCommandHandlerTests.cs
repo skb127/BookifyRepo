@@ -15,7 +15,7 @@ namespace Bookify.Application.UnitTests.Reviews;
 
 public class DeleteReviewCommandHandlerTests
 {
-    private static readonly DateTime UtcNow = DateTime.UtcNow;
+    private static readonly DateTime UtcNow = new(2025, 1, 5, 0, 0, 0, DateTimeKind.Utc);
 
     private readonly DeleteReviewCommandHandler _handler;
 
@@ -71,7 +71,8 @@ public class DeleteReviewCommandHandlerTests
         string callerIdentityId = "auth0|caller123";
 
         Domain.Apartments.Apartment apartment = ApartmentData.Create();
-        var booking = Domain.Bookings.Booking.Reserve(apartment, callerId, DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)), UtcNow, new PricingService());
+        var booking = Domain.Bookings.Booking.Reserve(apartment, callerId,
+            DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)), UtcNow, new PricingService());
         booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(UtcNow);
         booking.CheckIn(UtcNow);
@@ -95,7 +96,7 @@ public class DeleteReviewCommandHandlerTests
             Id = callerId,
             Roles = [Role.Registered]
         };
-        
+
         _authorizationServiceMock
             .GetRolesForUserAsync(callerIdentityId)
             .Returns(rolesResponse);
@@ -116,7 +117,8 @@ public class DeleteReviewCommandHandlerTests
         var userId = Guid.CreateVersion7();
 
         Domain.Apartments.Apartment apartment = ApartmentData.Create();
-        var booking = Domain.Bookings.Booking.Reserve(apartment, userId, DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)), UtcNow, new PricingService());
+        var booking = Domain.Bookings.Booking.Reserve(apartment, userId,
+            DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)), UtcNow, new PricingService());
         booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(UtcNow);
         booking.CheckIn(UtcNow);
@@ -156,7 +158,8 @@ public class DeleteReviewCommandHandlerTests
         string callerIdentityId = "auth0|admin123";
 
         Domain.Apartments.Apartment apartment = ApartmentData.Create();
-        var booking = Domain.Bookings.Booking.Reserve(apartment, reviewAuthorId, DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)), UtcNow, new PricingService());
+        var booking = Domain.Bookings.Booking.Reserve(apartment, reviewAuthorId,
+            DateRange.Create(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 10)), UtcNow, new PricingService());
         booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(UtcNow);
         booking.CheckIn(UtcNow);
@@ -179,7 +182,7 @@ public class DeleteReviewCommandHandlerTests
             Id = callerId,
             Roles = [Role.Registered, Role.Admin]
         };
-        
+
         _authorizationServiceMock
             .GetRolesForUserAsync(callerIdentityId)
             .Returns(rolesResponse);

@@ -3,15 +3,15 @@ using Bookify.Application.Abstractions.Messaging;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
 
-namespace Bookify.Application.Bookings.CheckInBooking;
+namespace Bookify.Application.Bookings.CloseStay;
 
-internal sealed class CheckInBookingCommandHandler : ICommandHandler<CheckInBookingCommand>
+internal sealed class CloseStayCommandHandler : ICommandHandler<CloseStayCommand>
 {
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IBookingRepository _bookingRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public CheckInBookingCommandHandler(
+    public CloseStayCommandHandler(
         IDateTimeProvider dateTimeProvider,
         IBookingRepository bookingRepository,
         IUnitOfWork unitOfWork)
@@ -21,9 +21,7 @@ internal sealed class CheckInBookingCommandHandler : ICommandHandler<CheckInBook
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result> Handle(
-        CheckInBookingCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(CloseStayCommand request, CancellationToken cancellationToken)
     {
         Booking? booking = await _bookingRepository.GetByIdAsync(request.BookingId, cancellationToken);
 
@@ -32,7 +30,7 @@ internal sealed class CheckInBookingCommandHandler : ICommandHandler<CheckInBook
             return Result.Failure(BookingErrors.NotFound);
         }
 
-        Result result = booking.CheckIn(_dateTimeProvider.UtcNow, request.GuestCheckInDate);
+        Result result = booking.CloseStay(_dateTimeProvider.UtcNow, request.CheckInDate, request.CheckOutDate);
 
         if (result.IsFailure)
         {

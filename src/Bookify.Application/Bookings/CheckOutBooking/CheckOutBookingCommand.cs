@@ -6,4 +6,5 @@ namespace Bookify.Application.Bookings.CheckOutBooking;
 public sealed record CheckOutBookingCommand(
     Guid BookingId,
     ReasonType? ReasonType = null,
-    string? ReasonDescription = null) : ICommand;
+    string? ReasonDescription = null,
+    DateOnly? GuestCheckOutDate = null) : ICommand;

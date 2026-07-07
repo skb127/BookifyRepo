@@ -85,7 +85,10 @@ public class BookingCancelledDomainEventHandlerTests
             Money.Zero(Currency.Usd),
             [],
             DateTime.UtcNow,
-            false);
+            false,
+            null,
+            1,
+            0);
 
     private static Transaction CreateTransaction(Guid bookingId, string? paymentIntentId) =>
         Transaction.Create(

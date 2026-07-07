@@ -54,7 +54,10 @@ internal sealed class CreateApartmentCommandHandler : ICommandHandler<CreateApar
                 cleaningFee,
                 amenities,
                 _dateTimeProvider.UtcNow,
-                request.InstantBooking);
+                request.InstantBooking,
+                request.CancellationPolicyId,
+                request.MinimumNights,
+                request.CheckInCutOffHours);
 
             _apartmentRepository.Add(apartment);
 

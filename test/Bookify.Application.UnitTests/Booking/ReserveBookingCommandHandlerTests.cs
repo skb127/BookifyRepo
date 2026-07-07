@@ -7,6 +7,7 @@ using Bookify.Application.UnitTests.Users;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
+using Bookify.Domain.Shared;
 using Bookify.Domain.Users;
 using FluentAssertions;
 using NSubstitute;
@@ -16,7 +17,7 @@ namespace Bookify.Application.UnitTests.Booking;
 
 public class ReserveBookingCommandHandlerTests
 {
-    private static readonly DateTime UtcNow = DateTime.UtcNow;
+    private static readonly DateTime UtcNow = new (2025, 12, 25, 0, 0, 0, DateTimeKind.Utc);
     private static readonly ReserveBookingCommand Command = new(
         Guid.CreateVersion7(),
         new DateOnly(2026, 1, 1),
@@ -267,5 +268,48 @@ public class ReserveBookingCommandHandlerTests
         _bookingRepositoryMock
             .Received(1)
             .Add(Arg.Is<Domain.Bookings.Booking>(b => b.Id == result.Value && b.Status == BookingStatus.PendingPayment));
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnFailure_WhenDurationIsLessThanMinimumNights()
+    {
+        // Arrange
+        var apartment = new Apartment(Guid.CreateVersion7(), Guid.NewGuid(), new Name("Apartment 1"), new Description("Apartment 1 description"), new Address("Country", "State", "ZipCode", "City", "Street"), new Money(50.0m, Currency.Usd), Money.Zero(), [], DateTime.UtcNow, false, null, 10, 3);
+        
+        var user = UserData.Create();
+        _userContextMock.UserId.Returns(user.Id);
+        _userRepositoryMock.GetByIdAsync(_userContextMock.UserId, Arg.Any<CancellationToken>()).Returns(user);
+
+        _apartmentRepositoryMock.GetByIdAsync(Command.ApartmentId, Arg.Any<CancellationToken>()).Returns(apartment);
+
+        // Act 
+        Result<Guid> result = await _handler.Handle(Command, CancellationToken.None);
+
+        // Assert
+        result.Error.Should().Be(BookingErrors.BelowMinimumNights);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnFailure_WhenCheckInIsBeforeCutOff()
+    {
+        // Arrange
+        // Apartment requires 48 hours cut-off
+        var apartment = new Apartment(Guid.CreateVersion7(), Guid.NewGuid(), new Name("Apartment 1"), new Description("Apartment 1 description"), new Address("Country", "State", "ZipCode", "City", "Street"), new Money(50.0m, Currency.Usd), Money.Zero(), [], DateTime.UtcNow, false, null, 1, 48);
+
+        // Command wants to check in on 2026-01-01
+        // UtcNow is 2025-12-31 00:00:00 (which is only 24 hours before 2026-01-01)
+        _dateTimeProviderMock.UtcNow.Returns(new DateTime(2025, 12, 31, 12, 0, 0, DateTimeKind.Utc));
+
+        var user = UserData.Create();
+        _userContextMock.UserId.Returns(user.Id);
+        _userRepositoryMock.GetByIdAsync(_userContextMock.UserId, Arg.Any<CancellationToken>()).Returns(user);
+
+        _apartmentRepositoryMock.GetByIdAsync(Command.ApartmentId, Arg.Any<CancellationToken>()).Returns(apartment);
+
+        // Act 
+        Result<Guid> result = await _handler.Handle(Command, CancellationToken.None);
+
+        // Assert
+        result.Error.Should().Be(BookingErrors.CheckInTooSoon);
     }
 }

@@ -585,7 +585,7 @@ public class CancelBookingTests : BaseIntegrationTest
         var (apartmentId, guestToken) = await BookingTestHelpers.SetupApartmentAndGuestAsync(this, password);
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var startDate = today.AddDays(-2);
+        var startDate = today.AddDays(1); // Future booking to pass reserve validations
         var endDate = today.AddDays(5);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -606,6 +606,11 @@ public class CancelBookingTests : BaseIntegrationTest
         reserveResponse.EnsureSuccessStatusCode();
 
         Guid bookingId = await reserveResponse.Content.ReadFromJsonAsync<Guid>();
+
+        // Shift the booking dates to the past in the database so it has already started
+        var dbBooking = await DbContext.Set<Booking>().FirstAsync(b => b.Id == bookingId);
+        typeof(Booking).GetProperty(nameof(Booking.Duration))!.SetValue(dbBooking, DateRange.Create(today.AddDays(-2), today.AddDays(5)));
+        await DbContext.SaveChangesAsync();
 
         // Confirm payment (which marks as Paid and Confirmed for instant booking)
         var confirmPaymentCommand = new Bookify.Application.Payments.ConfirmPayment.ConfirmPaymentCommand(

@@ -255,7 +255,7 @@ public class BookingTests : BaseTest
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
         booking.AuthorizePayment("session-id", "intent-id");
         booking.Confirm(utcNow);
-        booking.CheckIn(utcNow);
+        booking.CheckIn(new DateTime(2025, 12, 1, 12, 0, 0, DateTimeKind.Utc));
 
         DateTime completionDate = new(2025, 12, 16, 12, 0, 0, DateTimeKind.Utc);
 
@@ -399,7 +399,7 @@ public class BookingTests : BaseTest
         var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
 
         // Act
-        Result result = booking.CheckIn(utcNow);
+        Result result = booking.CheckIn(new DateTime(2025, 12, 1, 12, 0, 0, DateTimeKind.Utc));
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -423,12 +423,13 @@ public class BookingTests : BaseTest
         booking.Confirm(utcNow);
 
         // Act
-        Result result = booking.CheckIn(utcNow);
+        DateTime checkInDate = new DateTime(2025, 12, 1, 12, 0, 0, DateTimeKind.Utc);
+        Result result = booking.CheckIn(checkInDate);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
         booking.Status.Should().Be(BookingStatus.InProgress);
-        booking.CheckedInOnUtc.Should().Be(utcNow);
+        booking.CheckedInOnUtc.Should().Be(checkInDate);
 
         BookingCheckedInDomainEvent domainEvent = AssertDomainEventWasPublished<BookingCheckedInDomainEvent>(booking);
         domainEvent.BookingId.Should().Be(booking.Id);
@@ -834,5 +835,281 @@ public class BookingTests : BaseTest
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(BookingErrors.RefundNotEligible);
+    }
+
+    [Fact]
+    public void CheckIn_ShouldReturnFailure_WhenGuestCheckInDateIsAfterUtcNow()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 12, 5, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
+        booking.Confirm(utcNow);
+
+        // Act - Guest check-in date is in the future (after today/utcNow)
+        DateOnly invalidCheckInDate = new(2025, 12, 6);
+        Result result = booking.CheckIn(utcNow, invalidCheckInDate);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.InvalidCheckInDate);
+    }
+
+    [Fact]
+    public void CheckIn_ShouldReturnFailure_WhenGuestCheckInDateIsBeforeStartDate()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 2), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 12, 5, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
+        booking.Confirm(utcNow);
+
+        // Act - Guest check-in date is before the booking duration start date
+        DateOnly invalidCheckInDate = new(2025, 12, 1);
+        Result result = booking.CheckIn(utcNow, invalidCheckInDate);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.InvalidCheckInDate);
+    }
+
+    [Fact]
+    public void CheckOut_ShouldReturnFailure_WhenStatusIsNotInProgress()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 12, 5, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+
+        // Act
+        Result result = booking.CheckOut(utcNow);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.NotInProgress);
+    }
+
+    [Fact]
+    public void CheckOut_ShouldReturnFailure_WhenGuestCheckOutDateIsAfterUtcNow()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 12, 5, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
+        booking.Confirm(utcNow);
+        booking.CheckIn(utcNow);
+
+        // Act - Guest check-out date is in the future (after today/utcNow)
+        DateOnly invalidCheckOutDate = new(2025, 12, 6);
+        Result result = booking.CheckOut(utcNow, guestCheckOutDate: invalidCheckOutDate);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.InvalidCheckOutDate);
+    }
+
+    [Fact]
+    public void CheckOut_ShouldReturnFailure_WhenGuestCheckOutDateIsBeforeStartDate()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 2), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 12, 5, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
+        booking.Confirm(utcNow);
+        booking.CheckIn(utcNow);
+
+        // Act - Guest check-out date is before the duration start date (or check-in start date)
+        DateOnly invalidCheckOutDate = new(2025, 12, 1);
+        Result result = booking.CheckOut(utcNow, guestCheckOutDate: invalidCheckOutDate);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.InvalidCheckOutDate);
+    }
+
+    [Fact]
+    public void CheckOut_ShouldSucceed_WhenStatusIsInProgress()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 12, 5, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
+        booking.Confirm(utcNow);
+        booking.CheckIn(utcNow);
+
+        // Act
+        Result result = booking.CheckOut(utcNow);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        booking.Status.Should().Be(BookingStatus.Completed);
+        booking.CompletedOnUtc.Should().Be(utcNow);
+
+        BookingCheckedOutDomainEvent domainEvent = AssertDomainEventWasPublished<BookingCheckedOutDomainEvent>(booking);
+        domainEvent.BookingId.Should().Be(booking.Id);
+    }
+
+    [Fact]
+    public void CloseStay_ShouldReturnFailure_WhenStatusIsNotConfirmed()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 12, 20, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+
+        // Act - booking is only Reserved, not Confirmed
+        Result result = booking.CloseStay(utcNow, new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.NotConfirmed);
+    }
+
+    [Fact]
+    public void CloseStay_ShouldReturnFailure_WhenStayNotYetEnded()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 12, 10, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
+        booking.Confirm(utcNow);
+
+        // Act - today is 2025-12-10, booking ends on 2025-12-15 (stay has not yet ended)
+        Result result = booking.CloseStay(utcNow, new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.StayNotYetEnded);
+    }
+
+    [Fact]
+    public void CloseStay_ShouldReturnFailure_WhenCheckInDateIsInvalid()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 2), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 12, 20, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
+        booking.Confirm(utcNow);
+
+        // Act - check-in date (2025-12-01) is before Duration.Start (2025-12-02)
+        Result result = booking.CloseStay(utcNow, new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.InvalidCheckInDate);
+    }
+
+    [Fact]
+    public void CloseStay_ShouldReturnFailure_WhenCheckOutDateIsInvalid()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 12, 20, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
+        booking.Confirm(utcNow);
+
+        // Act - check-out date (2025-11-30) is before check-in date (2025-12-01)
+        Result result = booking.CloseStay(utcNow, new DateOnly(2025, 12, 1), new DateOnly(2025, 11, 30));
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(BookingErrors.InvalidCheckOutDate);
+    }
+
+    [Fact]
+    public void CloseStay_ShouldSucceed_WhenValid()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 12, 20, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
+        booking.Confirm(utcNow);
+
+        // Act
+        Result result = booking.CloseStay(utcNow, new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        booking.Status.Should().Be(BookingStatus.Completed);
+        booking.CheckedInOnUtc.Should().Be(new DateTime(2025, 12, 1, 0, 0, 0, DateTimeKind.Utc));
+        booking.CompletedOnUtc.Should().Be(new DateTime(2025, 12, 15, 0, 0, 0, DateTimeKind.Utc));
+
+        BookingClosedStayDomainEvent domainEvent = AssertDomainEventWasPublished<BookingClosedStayDomainEvent>(booking);
+        domainEvent.BookingId.Should().Be(booking.Id);
     }
 }

@@ -14,5 +14,7 @@ public sealed class ApartmentResponse
     public IReadOnlyList<int> Amenities { get; init; } = [];
     public DateTime? LastBookedOnUtc { get; init; }
     public bool InstantBooking { get; init; }
+    public int MinimumNights { get; init; }
+    public int CheckInCutOffHours { get; init; }
 }
 

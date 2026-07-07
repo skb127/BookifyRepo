@@ -159,4 +159,263 @@ public class ReserveBookingTests : BaseIntegrationTest
         bookingResponse.UserId.Should().Be(guestUserId);
         bookingResponse.Status.Should().Be((int)Domain.Bookings.BookingStatus.PendingPayment);
     }
+
+    [Fact]
+    public async Task ReserveBooking_ShouldReturn400_WhenMinimumNightsNotMet()
+    {
+        // Arrange
+        var adminEmail = $"admin_{Guid.NewGuid()}@test.com";
+        var password = "Password123!";
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        await Sender.Send(registerAdminCommand);
+        await PromoteToAdminAsync(adminEmail);
+
+        string adminToken = await GetAccessToken(adminEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
+
+        // MinimumNights = 3 for this apartment
+        var aptData = ApartmentData.ValidCreateApartmentRequest with { MinimumNights = 3 };
+        HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
+        aptResponse.EnsureSuccessStatusCode();
+        var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        await Sender.Send(registerGuestCommand);
+
+        string guestToken = await GetAccessToken(guestEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        // Try to book for 2 nights (2028-01-01 to 2028-01-03), but minimum is 3
+        var request = new ReserveBookingRequest(
+            apartmentId,
+            new DateOnly(2028, 1, 1),
+            new DateOnly(2028, 1, 3))
+        {
+            ApartmentId = apartmentId,
+            StartDate = new DateOnly(2028, 1, 1),
+            EndDate = new DateOnly(2028, 1, 3)
+        };
+
+        // Act
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/bookings", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+        problemDetails.Should().NotBeNull();
+        problemDetails.Detail.Should().Be(Domain.Bookings.BookingErrors.BelowMinimumNights.Name);
+    }
+
+    [Fact]
+    public async Task ReserveBooking_ShouldReturn400_WhenCheckInCutOffNotMet()
+    {
+        // Arrange
+        var adminEmail = $"admin_{Guid.NewGuid()}@test.com";
+        var password = "Password123!";
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        await Sender.Send(registerAdminCommand);
+        await PromoteToAdminAsync(adminEmail);
+
+        string adminToken = await GetAccessToken(adminEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
+
+        // CheckInCutOffHours = 48 for this apartment.
+        var aptData = ApartmentData.ValidCreateApartmentRequest;
+        aptData = aptData with { CheckInCutOffHours = 48 };
+        HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
+        aptResponse.EnsureSuccessStatusCode();
+        var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        await Sender.Send(registerGuestCommand);
+
+        string guestToken = await GetAccessToken(guestEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        // We try to book starting tomorrow. Since CutOff is 48 hours (2 days), tomorrow is invalid.
+        var today = DateTime.UtcNow;
+        var tomorrow = DateOnly.FromDateTime(today.AddDays(1));
+        var endDate = tomorrow.AddDays(4); // meets the 3 days min nights
+
+        var request = new ReserveBookingRequest(
+            apartmentId,
+            tomorrow,
+            endDate)
+        {
+            ApartmentId = apartmentId,
+            StartDate = tomorrow,
+            EndDate = endDate
+        };
+
+        // Act
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/bookings", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+        problemDetails.Should().NotBeNull();
+        problemDetails.Detail.Should().Be(Domain.Bookings.BookingErrors.CheckInTooSoon.Name);
+    }
+
+    [Fact]
+    public async Task ReserveBooking_ShouldReturn201_WhenBookingStartsTodayAndBeforeCutoff()
+    {
+        // Arrange
+        var adminEmail = $"admin_{Guid.NewGuid()}@test.com";
+        var password = "Password123!";
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        await Sender.Send(registerAdminCommand);
+        await PromoteToAdminAsync(adminEmail);
+
+        string adminToken = await GetAccessToken(adminEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
+
+        var now = DateTime.UtcNow;
+        var today = DateOnly.FromDateTime(now);
+        var hoursRemaining = 24 - now.Hour;
+        
+        // Cut-off must be before the remaining hours so that utcNow < cutOffLimit
+        var cutOffHours = Math.Max(0, hoursRemaining - 2);
+
+        var aptData = ApartmentData.ValidCreateApartmentRequest with { CheckInCutOffHours = cutOffHours };
+        HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
+        aptResponse.EnsureSuccessStatusCode();
+        var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        await Sender.Send(registerGuestCommand);
+
+        string guestToken = await GetAccessToken(guestEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        var endDate = today.AddDays(3); // meets the 1 days min nights (or 3, we reserve 3 to be safe)
+        var request = new ReserveBookingRequest(apartmentId, today, endDate)
+        {
+            ApartmentId = apartmentId,
+            StartDate = today,
+            EndDate = endDate
+        };
+
+        // Act
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/bookings", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task ReserveBooking_ShouldReturn400_WhenBookingStartsTodayAndAfterCutoff()
+    {
+        // Arrange
+        var adminEmail = $"admin_{Guid.NewGuid()}@test.com";
+        var password = "Password123!";
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        await Sender.Send(registerAdminCommand);
+        await PromoteToAdminAsync(adminEmail);
+
+        string adminToken = await GetAccessToken(adminEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
+
+        var now = DateTime.UtcNow;
+        var today = DateOnly.FromDateTime(now);
+        var hoursRemaining = 24 - now.Hour;
+        
+        // Cut-off must be after the remaining hours so that utcNow > cutOffLimit
+        var cutOffHours = Math.Min(48, hoursRemaining + 2);
+
+        var aptData = ApartmentData.ValidCreateApartmentRequest with { CheckInCutOffHours = cutOffHours };
+        HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
+        aptResponse.EnsureSuccessStatusCode();
+        var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        await Sender.Send(registerGuestCommand);
+
+        string guestToken = await GetAccessToken(guestEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        var endDate = today.AddDays(3);
+        var request = new ReserveBookingRequest(apartmentId, today, endDate)
+        {
+            ApartmentId = apartmentId,
+            StartDate = today,
+            EndDate = endDate
+        };
+
+        // Act
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/bookings", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+        problemDetails.Should().NotBeNull();
+        problemDetails.Detail.Should().Be(Domain.Bookings.BookingErrors.CheckInTooSoon.Name);
+    }
+
+    [Fact]
+    public async Task ReserveBooking_ShouldReturn201_WhenBookingStartsTomorrowAndBeforeCutoff()
+    {
+        // Arrange
+        var adminEmail = $"admin_{Guid.NewGuid()}@test.com";
+        var password = "Password123!";
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        await Sender.Send(registerAdminCommand);
+        await PromoteToAdminAsync(adminEmail);
+
+        string adminToken = await GetAccessToken(adminEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
+
+        var tomorrow = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+
+        // Using default CheckInCutOffHours = 3. Tomorrow reservation is always way before tomorrow's cutoff if booked today.
+        var aptData = ApartmentData.ValidCreateApartmentRequest with { CheckInCutOffHours = 3 };
+        HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
+        aptResponse.EnsureSuccessStatusCode();
+        var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        await Sender.Send(registerGuestCommand);
+
+        string guestToken = await GetAccessToken(guestEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        var endDate = tomorrow.AddDays(3);
+        var request = new ReserveBookingRequest(apartmentId, tomorrow, endDate)
+        {
+            ApartmentId = apartmentId,
+            StartDate = tomorrow,
+            EndDate = endDate
+        };
+
+        // Act
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/bookings", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
 }

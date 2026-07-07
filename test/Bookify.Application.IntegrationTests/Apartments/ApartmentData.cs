@@ -38,6 +38,9 @@ public static class ApartmentData
         new MoneyRequest(100.0m, "USD"),
         new MoneyRequest(50.0m, "USD"),
         [],
+        null,
+        1,
+        3,
         true);
 
     public static readonly UpdateApartmentRequest ValidUpdateApartmentRequest = new(

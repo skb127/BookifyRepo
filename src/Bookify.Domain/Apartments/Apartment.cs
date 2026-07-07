@@ -18,7 +18,10 @@ public sealed class Apartment : Entity
         Money cleaningFee,
         IReadOnlyCollection<Amenity> amenities,
         DateTime createdOnUtc,
-        bool instantBooking)
+        bool instantBooking,
+        Guid? cancellationPolicyId,
+        int minimumNights,
+        int checkInCutOffHours)
         : base(id)
     {
         OwnerId = ownerId;
@@ -30,6 +33,9 @@ public sealed class Apartment : Entity
         _amenities = new List<Amenity>(amenities ?? []);
         CreatedOnUtc = createdOnUtc;
         InstantBooking = instantBooking;
+        CancellationPolicyId = cancellationPolicyId;
+        MinimumNights = minimumNights;
+        CheckInCutOffHours = checkInCutOffHours;
     }
 
     /// <summary>
@@ -52,6 +58,9 @@ public sealed class Apartment : Entity
     public DateTime? EditedOnUtc { get; private set; }
     public DateTime? DeletedAt { get; private set; }
     public bool InstantBooking { get; private set; }
+    public Guid? CancellationPolicyId { get; private set; }
+    public int MinimumNights { get; private set; } = 1;
+    public int CheckInCutOffHours { get; private set; } = 3;
     public IReadOnlyList<Amenity> Amenities
     {
         get => _amenities.AsReadOnly();
@@ -69,7 +78,10 @@ public sealed class Apartment : Entity
         Money cleaningFee,
         IReadOnlyCollection<Amenity> amenities,
         DateTime utcNow,
-        bool instantBooking = false)
+        bool instantBooking = false,
+        Guid? cancellationPolicyId = null,
+        int minimumNights = 1,
+        int checkInCutOffHours = 3)
     {
         var apartment = new Apartment(
             Guid.CreateVersion7(),
@@ -81,7 +93,10 @@ public sealed class Apartment : Entity
             cleaningFee,
             amenities,
             utcNow,
-            instantBooking);
+            instantBooking,
+            cancellationPolicyId,
+            minimumNights,
+            checkInCutOffHours);
 
         return apartment;
     }
@@ -94,7 +109,10 @@ public sealed class Apartment : Entity
         Money cleaningFee,
         IReadOnlyCollection<Amenity> amenities,
         DateTime utcNow,
-        bool instantBooking)
+        bool instantBooking,
+        Guid? cancellationPolicyId,
+        int minimumNights,
+        int checkInCutOffHours)
     {
         Name = name;
         Description = description;
@@ -103,6 +121,9 @@ public sealed class Apartment : Entity
         CleaningFee = cleaningFee;
         EditedOnUtc = utcNow;
         InstantBooking = instantBooking;
+        CancellationPolicyId = cancellationPolicyId;
+        MinimumNights = minimumNights;
+        CheckInCutOffHours = checkInCutOffHours;
 
         _amenities = new List<Amenity>(amenities ?? []);
 

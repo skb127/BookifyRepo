@@ -15,5 +15,8 @@ internal static class ApartmentData
             cleaningFee ?? Money.Zero(),
             amenities?.ToList() ?? [],
             DateTime.UtcNow,
-            instantBooking);
+            instantBooking,
+            null,
+            1,
+            3);
 }

@@ -21,4 +21,8 @@ public sealed class ApartmentResponse
     public double AverageRating { get; init; }
 
     public AddressResponse Address { get; set; } = null!;
+
+    public int MinimumNights { get; init; }
+
+    public int CheckInCutOffHours { get; init; }
 }

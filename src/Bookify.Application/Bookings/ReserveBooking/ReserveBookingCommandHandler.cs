@@ -55,6 +55,23 @@ internal sealed class ReserveBookingCommandHandler : ICommandHandler<ReserveBook
 
         var duration = DateRange.Create(request.StartDate, request.EndDate);
 
+        if (duration.LengthInDays < apartment.MinimumNights)
+        {
+            return Result.Failure<Guid>(BookingErrors.BelowMinimumNights);
+        }
+
+        if (!apartment.InstantBooking)
+        {
+            DateTime utcNow = _dateTimeProvider.UtcNow;
+            DateTime checkInDayEnd = duration.Start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc).AddDays(1);
+            DateTime cutOffLimit = checkInDayEnd.AddHours(-apartment.CheckInCutOffHours);
+
+            if (utcNow > cutOffLimit)
+            {
+                return Result.Failure<Guid>(BookingErrors.CheckInTooSoon);
+            }
+        }
+
         if (await _bookingRepository.IsOverlappingAsync(apartment, duration, cancellationToken))
         {
             return Result.Failure<Guid>(BookingErrors.Overlap);

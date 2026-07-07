@@ -81,7 +81,10 @@ public class BookingRejectedDomainEventHandlerTests
             Money.Zero(Currency.Usd),
             [],
             DateTime.UtcNow,
-            false);
+            false,
+            null,
+            1,
+            0);
 
     private static Bookify.Domain.Bookings.Booking CreateBooking(Guid userId, bool rejectPayment = false)
     {

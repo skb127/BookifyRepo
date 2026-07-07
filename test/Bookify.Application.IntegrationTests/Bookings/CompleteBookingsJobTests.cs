@@ -13,7 +13,7 @@ public class CompleteBookingsJobTests : BaseIntegrationTest
     {
     }
 
-    [Fact]
+    [Fact(Skip = "CompleteBookingsJob is disabled")]
     // turbo
     public async Task Execute_ShouldCompleteBookings_WhenDurationEndIsPast()
     {

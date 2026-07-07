@@ -63,4 +63,28 @@ public static class BookingErrors
     public static Error NotCancellable { get; } = new(
         "Booking.NotCancellable",
         "The booking cannot be cancelled in its current status");
+
+    public static Error BelowMinimumNights { get; } = new(
+        "Booking.BelowMinimumNights",
+        "The booking duration is below the minimum nights required for this apartment");
+
+    public static Error CheckInTooSoon { get; } = new(
+        "Booking.CheckInTooSoon",
+        "The check-in date is too soon, breaking the cut-off hours rule");
+
+    public static Error CheckInTooEarly { get; } = new(
+        "Booking.CheckInTooEarly",
+        "The check-in date is earlier than the booking start date");
+
+    public static Error StayNotYetEnded { get; } = new(
+        "Booking.StayNotYetEnded",
+        "The stay has not yet ended");
+
+    public static Error InvalidCheckInDate { get; } = new(
+        "Booking.InvalidCheckInDate",
+        "The provided check-in date is invalid for this booking");
+
+    public static Error InvalidCheckOutDate { get; } = new(
+        "Booking.InvalidCheckOutDate",
+        "The provided check-out date is invalid for this booking");
 }
