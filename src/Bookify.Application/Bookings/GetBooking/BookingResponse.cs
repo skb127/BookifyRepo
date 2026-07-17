@@ -1,6 +1,6 @@
 namespace Bookify.Application.Bookings.GetBooking;
 
-public sealed class BookingResponse
+public sealed record BookingResponse
 {
     public Guid Id { get; init; }
 
@@ -33,4 +33,6 @@ public sealed class BookingResponse
     public DateOnly DurationEnd { get; init; }
 
     public DateTime CreatedOnUtc { get; init; }
+
+    public IReadOnlyList<BookingTaxResponse> Taxes { get; init; } = [];
 }

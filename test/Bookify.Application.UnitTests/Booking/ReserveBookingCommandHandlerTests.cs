@@ -32,6 +32,7 @@ public class ReserveBookingCommandHandlerTests
     private readonly PricingService _pricingService;
     private readonly IDateTimeProvider _dateTimeProviderMock;
     private readonly IUserContext _userContextMock;
+    private readonly ITaxSnapshotService _taxSnapshotServiceMock;
 
     public ReserveBookingCommandHandlerTests()
     {
@@ -41,9 +42,14 @@ public class ReserveBookingCommandHandlerTests
         _unitOfWorkMock = Substitute.For<IUnitOfWork>();
         _pricingService = Substitute.For<PricingService>();
         _userContextMock = Substitute.For<IUserContext>();
+        _taxSnapshotServiceMock = Substitute.For<ITaxSnapshotService>();
 
         _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
         _dateTimeProviderMock.UtcNow.Returns(UtcNow);
+
+        _taxSnapshotServiceMock
+            .CalculateAndSnapshotAsync(Arg.Any<Domain.Bookings.Booking>(), Arg.Any<Apartment>(), Arg.Any<CancellationToken>())
+            .Returns(new List<BookingTax>().AsReadOnly());
 
         _handler = new ReserveBookingCommandHandler(_userRepositoryMock,
             _apartmentRepositoryMock,
@@ -51,7 +57,8 @@ public class ReserveBookingCommandHandlerTests
             _unitOfWorkMock,
             _pricingService,
             _dateTimeProviderMock,
-            _userContextMock);
+            _userContextMock,
+            _taxSnapshotServiceMock);
     }
 
     [Fact]

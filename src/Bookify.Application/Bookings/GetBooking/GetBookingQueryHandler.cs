@@ -42,15 +42,24 @@ internal sealed class GetBookingQueryHandler : IQueryHandler<GetBookingQuery, Bo
                 duration_end AS DurationEnd,
                 created_on_utc AS CreatedOnUtc
             FROM bookings
-            WHERE id = @BookingId
+            WHERE id = @BookingId;
+
+            SELECT
+                tax_rule_name AS TaxRuleName,
+                calculated_amount_amount AS CalculatedAmount,
+                calculated_amount_currency AS Currency
+            FROM booking_taxes
+            WHERE booking_id = @BookingId;
             """;
 
-        BookingResponse? booking = await connection.QueryFirstOrDefaultAsync<BookingResponse>(
+        using SqlMapper.GridReader multi = await connection.QueryMultipleAsync(
             sql,
             new
             {
                 request.BookingId
             });
+
+        BookingResponse? booking = await multi.ReadFirstOrDefaultAsync<BookingResponse>();
 
         // Resource-based authorization check, maybe move to a generic pipeline/solution later in the future
         if (booking is null || booking.UserId != _userContext.UserId)
@@ -58,6 +67,8 @@ internal sealed class GetBookingQueryHandler : IQueryHandler<GetBookingQuery, Bo
             return Result.Failure<BookingResponse>(BookingErrors.NotFound);
         }
 
-        return booking;
+        IEnumerable<BookingTaxResponse> taxes = await multi.ReadAsync<BookingTaxResponse>();
+
+        return booking with { Taxes = [.. taxes] };
     }
 }

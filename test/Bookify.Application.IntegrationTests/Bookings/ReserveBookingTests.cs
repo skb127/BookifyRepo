@@ -1,12 +1,15 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Bookify.Api.Controllers.Apartments;
 using Bookify.Api.Controllers.Bookings;
 using Bookify.Application.Bookings.GetBooking;
 using Bookify.Application.IntegrationTests.Apartments;
 using Bookify.Application.IntegrationTests.Infrastructure;
+using Bookify.Domain.Bookings;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 
@@ -76,7 +79,7 @@ public class ReserveBookingTests : BaseIntegrationTest
         var bookingResponse = await getResponse.Content.ReadFromJsonAsync<BookingResponse>();
         bookingResponse.Should().NotBeNull();
         bookingResponse.UserId.Should().Be(guestUserId);
-        bookingResponse.Status.Should().Be((int)Domain.Bookings.BookingStatus.PendingPayment);
+        bookingResponse.Status.Should().Be((int)BookingStatus.PendingPayment);
     }
 
     [Fact]
@@ -157,7 +160,7 @@ public class ReserveBookingTests : BaseIntegrationTest
         var bookingResponse = await getResponse.Content.ReadFromJsonAsync<BookingResponse>();
         bookingResponse.Should().NotBeNull();
         bookingResponse.UserId.Should().Be(guestUserId);
-        bookingResponse.Status.Should().Be((int)Domain.Bookings.BookingStatus.PendingPayment);
+        bookingResponse.Status.Should().Be((int)BookingStatus.PendingPayment);
     }
 
     [Fact]
@@ -208,7 +211,7 @@ public class ReserveBookingTests : BaseIntegrationTest
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
         problemDetails.Should().NotBeNull();
-        problemDetails.Detail.Should().Be(Domain.Bookings.BookingErrors.BelowMinimumNights.Name);
+        problemDetails.Detail.Should().Be(BookingErrors.BelowMinimumNights.Name);
     }
 
     [Fact]
@@ -264,7 +267,7 @@ public class ReserveBookingTests : BaseIntegrationTest
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
         problemDetails.Should().NotBeNull();
-        problemDetails.Detail.Should().Be(Domain.Bookings.BookingErrors.CheckInTooSoon.Name);
+        problemDetails.Detail.Should().Be(BookingErrors.CheckInTooSoon.Name);
     }
 
     [Fact]
@@ -285,7 +288,7 @@ public class ReserveBookingTests : BaseIntegrationTest
         var now = DateTime.UtcNow;
         var today = DateOnly.FromDateTime(now);
         var hoursRemaining = 24 - now.Hour;
-        
+
         // Cut-off must be before the remaining hours so that utcNow < cutOffLimit
         var cutOffHours = Math.Max(0, hoursRemaining - 2);
 
@@ -336,7 +339,7 @@ public class ReserveBookingTests : BaseIntegrationTest
         var now = DateTime.UtcNow;
         var today = DateOnly.FromDateTime(now);
         var hoursRemaining = 24 - now.Hour;
-        
+
         // Cut-off must be after the remaining hours so that utcNow > cutOffLimit
         var cutOffHours = Math.Min(48, hoursRemaining + 2);
 
@@ -369,7 +372,7 @@ public class ReserveBookingTests : BaseIntegrationTest
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
         problemDetails.Should().NotBeNull();
-        problemDetails.Detail.Should().Be(Domain.Bookings.BookingErrors.CheckInTooSoon.Name);
+        problemDetails.Detail.Should().Be(BookingErrors.CheckInTooSoon.Name);
     }
 
     [Fact]
@@ -417,5 +420,192 @@ public class ReserveBookingTests : BaseIntegrationTest
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task ReserveBooking_WithActiveTaxRules_CreatesOneSnapshotPerRule()
+    {
+        // Arrange
+        var adminEmail = $"admin_{Guid.NewGuid()}@test.com";
+        var password = "Password123!";
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        await Sender.Send(registerAdminCommand);
+        await PromoteToAdminAsync(adminEmail);
+
+        string adminToken = await GetAccessToken(adminEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
+
+        var tomorrow = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+        var aptData = ApartmentData.ValidCreateApartmentRequest with
+        {
+            CheckInCutOffHours = 3,
+            Address = new AddressRequest("US", "State", "ZipCode", "City", "Street")
+        };
+        HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
+        aptResponse.EnsureSuccessStatusCode();
+        var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        await Sender.Send(registerGuestCommand);
+
+        string guestToken = await GetAccessToken(guestEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        var endDate = tomorrow.AddDays(3); // 3 nights
+        var request = new ReserveBookingRequest(apartmentId, tomorrow, endDate)
+        {
+            ApartmentId = apartmentId,
+            StartDate = tomorrow,
+            EndDate = endDate
+        };
+
+        // Act
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/bookings", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var bookingId = await response.Content.ReadFromJsonAsync<Guid>();
+
+        // Verify with DbContext
+        Booking? booking = await DbContext.Set<Booking>()
+            .Include(b => b.Taxes)
+            .FirstOrDefaultAsync(b => b.Id == bookingId);
+
+        booking.Should().NotBeNull();
+        booking.Taxes.Should().HaveCount(2); // Standard Tax 10% + Tourist Tax 5/night
+    }
+
+    [Fact]
+    public async Task ReserveBooking_WithMultipleTaxRules_SnapshotAmountsAreCorrect()
+    {
+        // Arrange
+        var adminEmail = $"admin_{Guid.NewGuid()}@test.com";
+        var password = "Password123!";
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        await Sender.Send(registerAdminCommand);
+        await PromoteToAdminAsync(adminEmail);
+
+        string adminToken = await GetAccessToken(adminEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
+
+        var tomorrow = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+        var aptData = ApartmentData.ValidCreateApartmentRequest with
+        {
+            CheckInCutOffHours = 3,
+            Address = new AddressRequest("US", "State", "ZipCode", "City", "Street")
+        }; // Price = 100 USD
+        HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
+        aptResponse.EnsureSuccessStatusCode();
+        var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        await Sender.Send(registerGuestCommand);
+
+        string guestToken = await GetAccessToken(guestEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        var endDate = tomorrow.AddDays(3); // 3 nights => Total price base = 3 nights * 100 USD = 300 USD
+        var request = new ReserveBookingRequest(apartmentId, tomorrow, endDate)
+        {
+            ApartmentId = apartmentId,
+            StartDate = tomorrow,
+            EndDate = endDate
+        };
+
+        // Act
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/bookings", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var bookingId = await response.Content.ReadFromJsonAsync<Guid>();
+
+        // Verify DTO fields from GET endpoint also
+        HttpResponseMessage getResponse =
+            await HttpClient.GetAsync(new Uri($"api/v1/bookings/{bookingId}", UriKind.Relative));
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        BookingResponse? bookingDto = await getResponse.Content.ReadFromJsonAsync<BookingResponse>();
+        bookingDto.Should().NotBeNull();
+        bookingDto.Taxes.Should().HaveCount(2);
+
+        // Standard Tax 10%: 10% of 350 USD (300 USD base + 50 USD cleaning fee) = 35 USD
+        BookingTaxResponse percentageTax =
+            bookingDto.Taxes.Should().ContainSingle(t => t.TaxRuleName == "Standard Tax 10%").Subject;
+        percentageTax.CalculatedAmount.Should().Be(35.00m);
+        percentageTax.Currency.Should().Be("USD");
+
+        // Tourist Tax 5/night: €5 * 3 nights = 15 USD
+        BookingTaxResponse fixedTax = bookingDto.Taxes.Should()
+            .ContainSingle(t => t.TaxRuleName == "Tourist Tax 5/night").Subject;
+        fixedTax.CalculatedAmount.Should().Be(15.00m);
+        fixedTax.Currency.Should().Be("USD");
+    }
+
+    [Fact]
+    public async Task ReserveBooking_ForUnknownCountry_SucceedsWithNoTaxes()
+    {
+        // Arrange
+        var adminEmail = $"admin_{Guid.NewGuid()}@test.com";
+        var password = "Password123!";
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        await Sender.Send(registerAdminCommand);
+        await PromoteToAdminAsync(adminEmail);
+
+        string adminToken = await GetAccessToken(adminEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
+
+        var tomorrow = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+        // Use Country Code that has no active tax rules seeded: "Spain"
+        var aptData = ApartmentData.ValidCreateApartmentRequest with
+        {
+            CheckInCutOffHours = 3,
+            Address = new AddressRequest("Spain", "Madrid", "28001", "Madrid", "Gran Vía 12")
+        };
+        HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
+        aptResponse.EnsureSuccessStatusCode();
+        var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        await Sender.Send(registerGuestCommand);
+
+        string guestToken = await GetAccessToken(guestEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        var endDate = tomorrow.AddDays(3);
+        var request = new ReserveBookingRequest(apartmentId, tomorrow, endDate)
+        {
+            ApartmentId = apartmentId,
+            StartDate = tomorrow,
+            EndDate = endDate
+        };
+
+        // Act
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/bookings", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var bookingId = await response.Content.ReadFromJsonAsync<Guid>();
+
+        // Verify with DbContext that taxes is empty
+        Booking? booking = await DbContext.Set<Booking>()
+            .Include(b => b.Taxes)
+            .FirstOrDefaultAsync(b => b.Id == bookingId);
+
+        booking.Should().NotBeNull();
+        booking.Taxes.Should().BeEmpty();
     }
 }

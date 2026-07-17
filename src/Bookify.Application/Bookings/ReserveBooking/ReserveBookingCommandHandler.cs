@@ -18,6 +18,7 @@ internal sealed class ReserveBookingCommandHandler : ICommandHandler<ReserveBook
     private readonly PricingService _pricingService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUserContext _userContext;
+    private readonly ITaxSnapshotService _taxSnapshotService;
 
     public ReserveBookingCommandHandler(
         IUserRepository userRepository,
@@ -26,7 +27,8 @@ internal sealed class ReserveBookingCommandHandler : ICommandHandler<ReserveBook
         IUnitOfWork unitOfWork,
         PricingService pricingService,
         IDateTimeProvider dateTimeProvider,
-        IUserContext userContext)
+        IUserContext userContext,
+        ITaxSnapshotService taxSnapshotService)
     {
         _userRepository = userRepository;
         _apartmentRepository = apartmentRepository;
@@ -35,6 +37,7 @@ internal sealed class ReserveBookingCommandHandler : ICommandHandler<ReserveBook
         _pricingService = pricingService;
         _dateTimeProvider = dateTimeProvider;
         _userContext = userContext;
+        _taxSnapshotService = taxSnapshotService;
     }
 
     public async Task<Result<Guid>> Handle(ReserveBookingCommand request, CancellationToken cancellationToken)
@@ -85,6 +88,14 @@ internal sealed class ReserveBookingCommandHandler : ICommandHandler<ReserveBook
                 duration,
                 _dateTimeProvider.UtcNow,
                 _pricingService);
+
+            IReadOnlyList<BookingTax> taxSnapshots =
+                await _taxSnapshotService.CalculateAndSnapshotAsync(booking, apartment, cancellationToken);
+
+            foreach (BookingTax tax in taxSnapshots)
+            {
+                booking.AddTax(tax);
+            }
 
             _bookingRepository.Add(booking);
 
