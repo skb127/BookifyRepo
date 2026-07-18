@@ -3,12 +3,10 @@ using Bookify.Application.Bookings.ReserveBooking;
 using Bookify.Application.UnitTests.Apartments;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
-using Bookify.Domain.Shared;
 using Bookify.Domain.TaxRules;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using Xunit;
 
 namespace Bookify.Application.UnitTests.Booking;
 
@@ -254,5 +252,50 @@ public class TaxSnapshotServiceTests
         // Assert
         result.Should().HaveCount(1);
         result[0].BookingId.Should().Be(booking.Id);
+    }
+
+    [Fact]
+    public async Task CalculateAndSnapshot_WithPerPersonPerNightRule_UsesBookingGuestCount()
+    {
+        // Arrange
+        Apartment apartment = ApartmentData.Create();
+        var booking = Domain.Bookings.Booking.Reserve(
+            apartment,
+            Guid.NewGuid(),
+            DateRange.Create(new DateOnly(2026, 2, 1), new DateOnly(2026, 2, 5)), // 4 nights
+            UtcNow,
+            new PricingService(),
+            guestCount: 3);
+
+        var rule = TaxRule.Create(
+            apartment.Address.Country,
+            null,
+            null,
+            TaxRate.PerPersonPerNight(2.00m), // $2 per person per night
+            "Tourist Tax",
+            new DateOnly(2020, 1, 1),
+            null,
+            UtcNow);
+
+        _taxRuleRepositoryMock
+            .GetActiveRulesForLocationAsync(
+                apartment.Address.Country,
+                apartment.Address.State,
+                apartment.Address.City,
+                DateOnly.FromDateTime(UtcNow),
+                Arg.Any<CancellationToken>())
+            .Returns(new List<TaxRule> { rule });
+
+        // Act
+        IReadOnlyList<BookingTax> result = await _service.CalculateAndSnapshotAsync(
+            booking,
+            apartment,
+            CancellationToken.None);
+
+        // Assert
+        result.Should().HaveCount(1);
+        BookingTax snapshot = result[0];
+        // 4 nights * 3 guests * $2 = $24
+        snapshot.CalculatedAmount.Amount.Should().Be(24.00m);
     }
 }

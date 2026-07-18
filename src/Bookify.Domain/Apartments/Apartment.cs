@@ -21,7 +21,10 @@ public sealed class Apartment : Entity
         bool instantBooking,
         Guid? cancellationPolicyId,
         int minimumNights,
-        int checkInCutOffHours)
+        int checkInCutOffHours,
+        int baseGuests = 1,
+        int maxGuests = 1,
+        Money? extraGuestFee = null)
         : base(id)
     {
         OwnerId = ownerId;
@@ -36,6 +39,9 @@ public sealed class Apartment : Entity
         CancellationPolicyId = cancellationPolicyId;
         MinimumNights = minimumNights;
         CheckInCutOffHours = checkInCutOffHours;
+        BaseGuests = baseGuests;
+        MaxGuests = maxGuests;
+        ExtraGuestFee = extraGuestFee ?? Money.Zero(price.Currency);
     }
 
     /// <summary>
@@ -61,6 +67,9 @@ public sealed class Apartment : Entity
     public Guid? CancellationPolicyId { get; private set; }
     public int MinimumNights { get; private set; } = 1;
     public int CheckInCutOffHours { get; private set; } = 3;
+    public int BaseGuests { get; private set; } = 1;
+    public int MaxGuests { get; private set; } = 1;
+    public Money ExtraGuestFee { get; private set; } = null!;
     public IReadOnlyList<Amenity> Amenities
     {
         get => _amenities.AsReadOnly();
@@ -81,7 +90,10 @@ public sealed class Apartment : Entity
         bool instantBooking = false,
         Guid? cancellationPolicyId = null,
         int minimumNights = 1,
-        int checkInCutOffHours = 3)
+        int checkInCutOffHours = 3,
+        int baseGuests = 1,
+        int maxGuests = 1,
+        Money? extraGuestFee = null)
     {
         var apartment = new Apartment(
             Guid.CreateVersion7(),
@@ -96,7 +108,10 @@ public sealed class Apartment : Entity
             instantBooking,
             cancellationPolicyId,
             minimumNights,
-            checkInCutOffHours);
+            checkInCutOffHours,
+            baseGuests,
+            maxGuests,
+            extraGuestFee);
 
         return apartment;
     }
@@ -112,8 +127,13 @@ public sealed class Apartment : Entity
         bool instantBooking,
         Guid? cancellationPolicyId,
         int minimumNights,
-        int checkInCutOffHours)
+        int checkInCutOffHours,
+        int baseGuests = 1,
+        int maxGuests = 1,
+        Money? extraGuestFee = null)
     {
+        Money resolvedExtraGuestFee = extraGuestFee ?? Money.Zero(price.Currency);
+
         Name = name;
         Description = description;
         Address = address;
@@ -124,6 +144,9 @@ public sealed class Apartment : Entity
         CancellationPolicyId = cancellationPolicyId;
         MinimumNights = minimumNights;
         CheckInCutOffHours = checkInCutOffHours;
+        BaseGuests = baseGuests;
+        MaxGuests = maxGuests;
+        ExtraGuestFee = resolvedExtraGuestFee;
 
         _amenities = new List<Amenity>(amenities ?? []);
 

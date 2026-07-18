@@ -51,7 +51,7 @@ internal sealed class TaxSnapshotService : ITaxSnapshotService
             Money taxAmount = rule.CalculateTaxAmount(
                 booking.TotalPrice,
                 nights,
-                guests: 1); // Note: Hardcoded to 1 guest; will be updated when GuestCount is introduced in a future phase.
+                booking.GuestCount);
 
             return BookingTax.CreateSnapshot(
                 Guid.CreateVersion7(),

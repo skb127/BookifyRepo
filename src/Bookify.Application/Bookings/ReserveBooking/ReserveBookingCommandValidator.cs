@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 
 namespace Bookify.Application.Bookings.ReserveBooking;
 
@@ -9,5 +9,7 @@ internal sealed class ReserveBookingCommandValidator : AbstractValidator<Reserve
         RuleFor(c => c.ApartmentId).NotEmpty();
 
         RuleFor(c => c.StartDate).LessThan(c => c.EndDate);
+
+        RuleFor(c => c.GuestCount).GreaterThanOrEqualTo(1);
     }
 }

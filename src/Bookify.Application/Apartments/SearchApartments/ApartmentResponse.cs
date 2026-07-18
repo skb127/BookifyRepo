@@ -25,4 +25,10 @@ public sealed class ApartmentResponse
     public int MinimumNights { get; init; }
 
     public int CheckInCutOffHours { get; init; }
+
+    public int BaseGuests { get; init; }
+
+    public int MaxGuests { get; init; }
+
+    public MoneyResponse ExtraGuestFee { get; init; } = null!;
 }

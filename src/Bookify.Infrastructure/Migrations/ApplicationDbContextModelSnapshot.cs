@@ -17,7 +17,7 @@ namespace Bookify.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.15")
+                .HasAnnotation("ProductVersion", "9.0.18")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -33,6 +33,12 @@ namespace Bookify.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("integer[]")
                         .HasColumnName("amenities");
+
+                    b.Property<int>("BaseGuests")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("base_guests");
 
                     b.Property<Guid?>("CancellationPolicyId")
                         .HasColumnType("uuid")
@@ -71,6 +77,12 @@ namespace Bookify.Infrastructure.Migrations
                     b.Property<DateTime?>("LastBookedOnUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_booked_on_utc");
+
+                    b.Property<int>("MaxGuests")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("max_guests");
 
                     b.Property<int>("MinimumNights")
                         .ValueGeneratedOnAdd()
@@ -148,6 +160,12 @@ namespace Bookify.Infrastructure.Migrations
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
+
+                    b.Property<int>("GuestCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("guest_count");
 
                     b.Property<DateTime?>("NoShowAt")
                         .HasColumnType("timestamp with time zone")
@@ -952,7 +970,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("ApartmentId");
 
-                            b1.ToTable("apartments");
+                            b1.ToTable("apartments", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("ApartmentId")
@@ -976,7 +994,33 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("ApartmentId");
 
-                            b1.ToTable("apartments");
+                            b1.ToTable("apartments", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("ApartmentId")
+                                .HasConstraintName("fk_apartments_apartments_id");
+                        });
+
+                    b.OwnsOne("Bookify.Domain.Shared.Money", "ExtraGuestFee", b1 =>
+                        {
+                            b1.Property<Guid>("ApartmentId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<decimal>("Amount")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("numeric")
+                                .HasDefaultValue(0m)
+                                .HasColumnName("extra_guest_fee_amount");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("extra_guest_fee_currency");
+
+                            b1.HasKey("ApartmentId");
+
+                            b1.ToTable("apartments", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("ApartmentId")
@@ -1000,7 +1044,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("ApartmentId");
 
-                            b1.ToTable("apartments");
+                            b1.ToTable("apartments", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("ApartmentId")
@@ -1011,6 +1055,9 @@ namespace Bookify.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("CleaningFee")
+                        .IsRequired();
+
+                    b.Navigation("ExtraGuestFee")
                         .IsRequired();
 
                     b.Navigation("Price")
@@ -1050,7 +1097,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("BookingId");
 
-                            b1.ToTable("bookings");
+                            b1.ToTable("bookings", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("BookingId")
@@ -1074,7 +1121,56 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("BookingId");
 
-                            b1.ToTable("bookings");
+                            b1.ToTable("bookings", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("BookingId")
+                                .HasConstraintName("fk_bookings_bookings_id");
+                        });
+
+                    b.OwnsOne("Bookify.Domain.Bookings.DateRange", "Duration", b1 =>
+                        {
+                            b1.Property<Guid>("BookingId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<DateOnly>("End")
+                                .HasColumnType("date")
+                                .HasColumnName("duration_end");
+
+                            b1.Property<DateOnly>("Start")
+                                .HasColumnType("date")
+                                .HasColumnName("duration_start");
+
+                            b1.HasKey("BookingId");
+
+                            b1.ToTable("bookings", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("BookingId")
+                                .HasConstraintName("fk_bookings_bookings_id");
+                        });
+
+                    b.OwnsOne("Bookify.Domain.Shared.Money", "ExtraGuestCharge", b1 =>
+                        {
+                            b1.Property<Guid>("BookingId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<decimal>("Amount")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("numeric")
+                                .HasDefaultValue(0m)
+                                .HasColumnName("extra_guest_charge_amount");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("extra_guest_charge_currency");
+
+                            b1.HasKey("BookingId");
+
+                            b1.ToTable("bookings", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("BookingId")
@@ -1098,7 +1194,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("BookingId");
 
-                            b1.ToTable("bookings");
+                            b1.ToTable("bookings", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("BookingId")
@@ -1122,30 +1218,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("BookingId");
 
-                            b1.ToTable("bookings");
-
-                            b1.WithOwner()
-                                .HasForeignKey("BookingId")
-                                .HasConstraintName("fk_bookings_bookings_id");
-                        });
-
-                    b.OwnsOne("Bookify.Domain.Bookings.DateRange", "Duration", b1 =>
-                        {
-                            b1.Property<Guid>("BookingId")
-                                .HasColumnType("uuid")
-                                .HasColumnName("id");
-
-                            b1.Property<DateOnly>("End")
-                                .HasColumnType("date")
-                                .HasColumnName("duration_end");
-
-                            b1.Property<DateOnly>("Start")
-                                .HasColumnType("date")
-                                .HasColumnName("duration_start");
-
-                            b1.HasKey("BookingId");
-
-                            b1.ToTable("bookings");
+                            b1.ToTable("bookings", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("BookingId")
@@ -1259,7 +1332,7 @@ namespace Bookify.Infrastructure.Migrations
 
                                     b2.HasKey("BookingTaxId");
 
-                                    b2.ToTable("booking_taxes");
+                                    b2.ToTable("booking_taxes", (string)null);
 
                                     b2.WithOwner()
                                         .HasForeignKey("BookingTaxId")
@@ -1277,6 +1350,9 @@ namespace Bookify.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Duration")
+                        .IsRequired();
+
+                    b.Navigation("ExtraGuestCharge")
                         .IsRequired();
 
                     b.Navigation("PriceForPeriod")
@@ -1334,7 +1410,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("TransactionId");
 
-                            b1.ToTable("transactions");
+                            b1.ToTable("transactions", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("TransactionId")
@@ -1388,7 +1464,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("TaxRuleId");
 
-                            b1.ToTable("tax_rules");
+                            b1.ToTable("tax_rules", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("TaxRuleId")

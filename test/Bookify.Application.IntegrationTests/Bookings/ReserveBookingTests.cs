@@ -608,4 +608,118 @@ public class ReserveBookingTests : BaseIntegrationTest
         booking.Should().NotBeNull();
         booking.Taxes.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task ReserveBooking_ShouldSetGuestCount_WhenProvidedInRequest()
+    {
+        // Arrange
+        // 1. Create an admin to create the apartment
+        var adminEmail = $"admin_{Guid.NewGuid()}@test.com";
+        var password = "Password123!";
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        await Sender.Send(registerAdminCommand);
+        await PromoteToAdminAsync(adminEmail);
+
+        // 2. Create apartment mapping to Admin context
+        string adminToken = await GetAccessToken(adminEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
+        var aptData = ApartmentData.ValidCreateApartmentRequest with
+        {
+            BaseGuests = 2,
+            MaxGuests = 6,
+            ExtraGuestFee = new MoneyRequest(20.0m, "USD")
+        };
+        HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
+        aptResponse.EnsureSuccessStatusCode();
+        var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>();
+
+        // 3. Create a guest to reserve
+        var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        await Sender.Send(registerGuestCommand);
+
+        string guestToken = await GetAccessToken(guestEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        var request = new ReserveBookingRequest(
+            apartmentId,
+            new DateOnly(2028, 1, 1),
+            new DateOnly(2028, 1, 10))
+        {
+            ApartmentId = apartmentId,
+            StartDate = new DateOnly(2028, 1, 1),
+            EndDate = new DateOnly(2028, 1, 10),
+            GuestCount = 3
+        };
+
+        // Act
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/bookings", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var bookingId = await response.Content.ReadFromJsonAsync<Guid>();
+
+        var getResponse = await HttpClient.GetAsync(new Uri($"api/v1/bookings/{bookingId}", UriKind.Relative));
+        getResponse.EnsureSuccessStatusCode();
+        var bookingResponse = await getResponse.Content.ReadFromJsonAsync<BookingResponse>();
+        bookingResponse.Should().NotBeNull();
+        bookingResponse.GuestCount.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task ReserveBooking_ShouldReturn400_WhenGuestCountExceedsMax()
+    {
+        // Arrange
+        // 1. Create an admin to create the apartment
+        var adminEmail = $"admin_{Guid.NewGuid()}@test.com";
+        var password = "Password123!";
+        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
+        await Sender.Send(registerAdminCommand);
+        await PromoteToAdminAsync(adminEmail);
+
+        // 2. Create apartment mapping to Admin context
+        string adminToken = await GetAccessToken(adminEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, adminToken);
+        var aptData = ApartmentData.ValidCreateApartmentRequest with
+        {
+            BaseGuests = 1,
+            MaxGuests = 2
+        };
+        HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
+        aptResponse.EnsureSuccessStatusCode();
+        var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>();
+
+        // 3. Create a guest to reserve
+        var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
+        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        await Sender.Send(registerGuestCommand);
+
+        string guestToken = await GetAccessToken(guestEmail, password);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        var request = new ReserveBookingRequest(
+            apartmentId,
+            new DateOnly(2028, 1, 1),
+            new DateOnly(2028, 1, 10))
+        {
+            ApartmentId = apartmentId,
+            StartDate = new DateOnly(2028, 1, 1),
+            EndDate = new DateOnly(2028, 1, 10),
+            GuestCount = 3
+        };
+
+        // Act
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/bookings", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }

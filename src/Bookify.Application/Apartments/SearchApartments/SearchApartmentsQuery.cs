@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Abstractions.Messaging;
+using Bookify.Application.Abstractions.Messaging;
 using Bookify.Application.Common;
 
 namespace Bookify.Application.Apartments.SearchApartments;
@@ -13,4 +13,5 @@ public record SearchApartmentsQuery(
     string? Currency,
     IReadOnlyList<int>? Amenities,
     int Page,
-    int PageSize) : IQuery<PagedResponse<ApartmentResponse>>, IPagedQuery;
+    int PageSize,
+    int? GuestCount = null) : IQuery<PagedResponse<ApartmentResponse>>, IPagedQuery;

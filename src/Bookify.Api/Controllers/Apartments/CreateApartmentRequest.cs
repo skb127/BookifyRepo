@@ -21,7 +21,10 @@ public sealed record CreateApartmentRequest(
     Guid? CancellationPolicyId = null,
     int MinimumNights = 1,
     int CheckInCutOffHours = 3,
-    bool InstantBooking = false);
+    bool InstantBooking = false,
+    int BaseGuests = 1,
+    int MaxGuests = 1,
+    MoneyRequest? ExtraGuestFee = null);
 
 public sealed record UpdateApartmentRequest(
     string Name,
@@ -33,4 +36,7 @@ public sealed record UpdateApartmentRequest(
     Guid? CancellationPolicyId = null,
     int MinimumNights = 1,
     int CheckInCutOffHours = 3,
-    bool InstantBooking = false);
+    bool InstantBooking = false,
+    int BaseGuests = 1,
+    int MaxGuests = 1,
+    MoneyRequest? ExtraGuestFee = null);

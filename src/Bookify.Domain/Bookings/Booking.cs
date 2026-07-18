@@ -16,9 +16,11 @@ public sealed class Booking : Entity
         Money priceForPeriod,
         Money cleaningFee,
         Money amenitiesUpCharge,
+        Money extraGuestCharge,
         Money totalPrice,
         BookingStatus status,
-        DateTime createdOnUtc)
+        DateTime createdOnUtc,
+        int guestCount)
         : base(id)
     {
         ApartmentId = apartmentId;
@@ -27,9 +29,11 @@ public sealed class Booking : Entity
         PriceForPeriod = priceForPeriod;
         CleaningFee = cleaningFee;
         AmenitiesUpCharge = amenitiesUpCharge;
+        ExtraGuestCharge = extraGuestCharge;
         TotalPrice = totalPrice;
         Status = status;
         CreatedOnUtc = createdOnUtc;
+        GuestCount = guestCount;
     }
 
     /// <summary>
@@ -46,6 +50,7 @@ public sealed class Booking : Entity
     public Money PriceForPeriod { get; private set; } = null!;
     public Money CleaningFee { get; private set; } = null!;
     public Money AmenitiesUpCharge { get; private set; } = null!;
+    public Money ExtraGuestCharge { get; private set; } = null!;
     public Money TotalPrice { get; private set; } = null!;
     public BookingStatus Status { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
@@ -59,6 +64,7 @@ public sealed class Booking : Entity
     public DateTime? CheckedInOnUtc { get; private set; }
     public DateTime? NoShowAt { get; private set; }
     public DateTime? ExpiredOnUtc { get; private set; }
+    public int GuestCount { get; private set; }
 
     private readonly List<BookingReason> _reasons = [];
     public IReadOnlyList<BookingReason> Reasons => _reasons.AsReadOnly();
@@ -74,9 +80,10 @@ public sealed class Booking : Entity
         Guid userId,
         DateRange duration,
         DateTime utcNow,
-        PricingService pricingService)
+        PricingService pricingService,
+        int guestCount = 1)
     {
-        PricingDetails pricingDetails = pricingService.CalculatePrice(apartment, duration);
+        PricingDetails pricingDetails = pricingService.CalculatePrice(apartment, duration, guestCount);
 
         var booking = new Booking(
             Guid.CreateVersion7(),
@@ -86,9 +93,11 @@ public sealed class Booking : Entity
             pricingDetails.PriceForPeriod,
             pricingDetails.CleaningFee,
             pricingDetails.AmenitiesUpCharge,
+            pricingDetails.ExtraGuestCharge,
             pricingDetails.TotalPrice,
             BookingStatus.PendingPayment,
-            utcNow);
+            utcNow,
+            guestCount);
 
         booking.RaiseDomainEvent(new BookingReservedDomainEvent(booking.Id));
 

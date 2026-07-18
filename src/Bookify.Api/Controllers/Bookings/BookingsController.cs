@@ -107,7 +107,8 @@ public sealed class BookingsController : ControllerBase
         var command = new ReserveBookingCommand(
             request.ApartmentId,
             request.StartDate,
-            request.EndDate);
+            request.EndDate,
+            request.GuestCount);
 
         Result<Guid> result = await _sender.Send(command, cancellation);
 
@@ -384,10 +385,11 @@ public sealed class BookingsController : ControllerBase
         [FromQuery] Guid apartmentId,
         [FromQuery] DateOnly startDate,
         [FromQuery] DateOnly endDate,
+        [FromQuery] int guestCount = 1,
         CancellationToken cancellationToken = default)
     {
         var query = new GetPriceEstimateQuery(
-            apartmentId, startDate, endDate);
+            apartmentId, startDate, endDate, guestCount);
 
         Result<PriceEstimateResponse> result = await _sender.Send(query, cancellationToken);
 

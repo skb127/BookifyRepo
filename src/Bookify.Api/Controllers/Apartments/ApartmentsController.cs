@@ -58,6 +58,7 @@ public sealed class ApartmentsController : ControllerBase
         [FromQuery] int[]? amenities,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] int? guestCount = null,
         CancellationToken cancellationToken = default)
     {
         var query = new SearchApartmentsQuery(
@@ -70,7 +71,8 @@ public sealed class ApartmentsController : ControllerBase
             currency,
             amenities,
             page,
-            pageSize);
+            pageSize,
+            guestCount);
 
         Result<PagedResponse<ApartmentResponse>> result = await _sender.Send(query, cancellationToken);
 
@@ -108,7 +110,11 @@ public sealed class ApartmentsController : ControllerBase
             request.CancellationPolicyId,
             request.MinimumNights,
             request.CheckInCutOffHours,
-            request.InstantBooking);
+            request.InstantBooking,
+            request.BaseGuests,
+            request.MaxGuests,
+            request.ExtraGuestFee?.Amount ?? 0m,
+            request.ExtraGuestFee?.Currency ?? request.Price.Currency);
 
         Result<Guid> result = await _sender.Send(command, cancellationToken);
 
@@ -148,7 +154,11 @@ public sealed class ApartmentsController : ControllerBase
             request.CancellationPolicyId,
             request.MinimumNights,
             request.CheckInCutOffHours,
-            request.InstantBooking);
+            request.InstantBooking,
+            request.BaseGuests,
+            request.MaxGuests,
+            request.ExtraGuestFee?.Amount ?? 0m,
+            request.ExtraGuestFee?.Currency ?? request.Price.Currency);
 
         Result result = await _sender.Send(command, cancellationToken);
 

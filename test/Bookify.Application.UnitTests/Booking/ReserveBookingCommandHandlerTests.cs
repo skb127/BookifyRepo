@@ -319,4 +319,44 @@ public class ReserveBookingCommandHandlerTests
         // Assert
         result.Error.Should().Be(BookingErrors.CheckInTooSoon);
     }
+
+    [Fact]
+    public async Task Handle_ShouldReturnFailure_WhenGuestCountExceedsMaxGuests()
+    {
+        // Arrange
+        var apartment = ApartmentData.Create(baseGuests: 1, maxGuests: 2);
+        var user = UserData.Create();
+        _userContextMock.UserId.Returns(user.Id);
+        _userRepositoryMock.GetByIdAsync(_userContextMock.UserId, Arg.Any<CancellationToken>()).Returns(user);
+        _apartmentRepositoryMock.GetByIdAsync(Command.ApartmentId, Arg.Any<CancellationToken>()).Returns(apartment);
+
+        var commandWithManyGuests = Command with { GuestCount = 3 };
+
+        // Act
+        Result<Guid> result = await _handler.Handle(commandWithManyGuests, CancellationToken.None);
+
+        // Assert
+        result.Error.Should().Be(BookingErrors.ExceedsMaxGuests);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldCreateBooking_WithCorrectGuestCount()
+    {
+        // Arrange
+        var apartment = ApartmentData.Create(baseGuests: 1, maxGuests: 4);
+        var user = UserData.Create();
+        _userContextMock.UserId.Returns(user.Id);
+        _userRepositoryMock.GetByIdAsync(_userContextMock.UserId, Arg.Any<CancellationToken>()).Returns(user);
+        _apartmentRepositoryMock.GetByIdAsync(Command.ApartmentId, Arg.Any<CancellationToken>()).Returns(apartment);
+
+
+        var commandWithGuests = Command with { GuestCount = 3 };
+
+        // Act
+        Result<Guid> result = await _handler.Handle(commandWithGuests, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        _bookingRepositoryMock.Received(1).Add(Arg.Is<Domain.Bookings.Booking>(b => b.GuestCount == 3));
+    }
 }

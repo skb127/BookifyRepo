@@ -7,6 +7,8 @@ public sealed record PriceEstimateResponse(
     string CleaningFeeCurrency,
     decimal AmenitiesUpChargeAmount,
     string AmenitiesUpChargeCurrency,
+    decimal ExtraGuestFeeAmount,
+    string ExtraGuestFeeCurrency,
     decimal TotalAmount,
     string TotalCurrency,
     int LengthInDays);

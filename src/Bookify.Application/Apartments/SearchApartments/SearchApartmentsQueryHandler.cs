@@ -101,6 +101,12 @@ internal sealed class
             parameters.Add("Currency", request.Currency);
         }
 
+        if (request.GuestCount.HasValue)
+        {
+            builder.AppendLine(" AND a.max_guests >= @GuestCount");
+            parameters.Add("GuestCount", request.GuestCount.Value);
+        }
+
         if (request.Amenities != null && request.Amenities.Any())
         {
             builder.AppendLine(" AND a.amenities @> @Amenities");
@@ -129,6 +135,10 @@ internal sealed class
                 a.address_street AS Street,
                 a.minimum_nights AS MinimumNights,
                 a.check_in_cut_off_hours AS CheckInCutOffHours,
+                a.base_guests AS BaseGuests,
+                a.max_guests AS MaxGuests,
+                a.extra_guest_fee_amount AS ExtraGuestFeeAmount,
+                a.extra_guest_fee_currency AS ExtraGuestFeeCurrency,
                 COALESCE(r.AverageRating, 0.0) AS AverageRating
             FROM apartments AS a
             LEFT JOIN (
@@ -168,7 +178,10 @@ internal sealed class
             IsAvailable = a.IsAvailable,
             AverageRating = a.AverageRating,
             MinimumNights = a.MinimumNights,
-            CheckInCutOffHours = a.CheckInCutOffHours
+            CheckInCutOffHours = a.CheckInCutOffHours,
+            BaseGuests = a.BaseGuests,
+            MaxGuests = a.MaxGuests,
+            ExtraGuestFee = new MoneyResponse(a.ExtraGuestFeeAmount, a.ExtraGuestFeeCurrency)
         }).ToList();
 
         return new PagedResponse<ApartmentResponse>
@@ -200,6 +213,10 @@ internal sealed class
         public string Street { get; init; } = default!;
         public int MinimumNights { get; init; }
         public int CheckInCutOffHours { get; init; }
+        public int BaseGuests { get; init; }
+        public int MaxGuests { get; init; }
+        public decimal ExtraGuestFeeAmount { get; init; }
+        public string ExtraGuestFeeCurrency { get; init; } = default!;
     }
 #pragma warning restore S1144, S3459 // Unused private types or members - Properties are set by Dapper via reflection
 }

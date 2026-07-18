@@ -30,6 +30,21 @@ internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
             .Property(money => money.Currency)
             .HasConversion(currency => currency.Code, code => Currency.FromCode(code)));
 
+
+
+        builder.OwnsOne(booking => booking.ExtraGuestCharge, extraGuestChargeBuilder =>
+        {
+            extraGuestChargeBuilder.Property(money => money.Amount)
+                .HasDefaultValue(0);
+
+            extraGuestChargeBuilder.Property(money => money.Currency)
+                .HasConversion(currency => currency.Code, code => Currency.FromCode(code));
+        });
+
+        builder.Property(booking => booking.GuestCount)
+            .HasDefaultValue(1)
+            .IsRequired();
+
         builder.OwnsOne(booking => booking.Duration);
 
         // A booking is associated with one apartment, and an apartment can have many bookings

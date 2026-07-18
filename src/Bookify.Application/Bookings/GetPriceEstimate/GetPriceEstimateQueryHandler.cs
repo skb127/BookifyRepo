@@ -29,7 +29,7 @@ internal sealed class GetPriceEstimateQueryHandler : IQueryHandler<GetPriceEstim
 
         var dateRange = DateRange.Create(request.StartDate, request.EndDate);
 
-        PricingDetails pricingDetails = _pricingService.CalculatePrice(apartment, dateRange);
+        PricingDetails pricingDetails = _pricingService.CalculatePrice(apartment, dateRange, request.GuestCount);
 
         return new PriceEstimateResponse(
             pricingDetails.PriceForPeriod.Amount,
@@ -38,6 +38,8 @@ internal sealed class GetPriceEstimateQueryHandler : IQueryHandler<GetPriceEstim
             pricingDetails.CleaningFee.Currency.Code,
             pricingDetails.AmenitiesUpCharge.Amount,
             pricingDetails.AmenitiesUpCharge.Currency.Code,
+            pricingDetails.ExtraGuestCharge.Amount,
+            pricingDetails.ExtraGuestCharge.Currency.Code,
             pricingDetails.TotalPrice.Amount,
             pricingDetails.TotalPrice.Currency.Code,
             dateRange.LengthInDays);

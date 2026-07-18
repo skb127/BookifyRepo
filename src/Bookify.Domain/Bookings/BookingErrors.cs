@@ -87,4 +87,8 @@ public static class BookingErrors
     public static Error InvalidCheckOutDate { get; } = new(
         "Booking.InvalidCheckOutDate",
         "The provided check-out date is invalid for this booking");
+
+    public static Error ExceedsMaxGuests { get; } = new(
+        "Booking.ExceedsMaxGuests",
+        "The guest count exceeds the maximum guests allowed for this apartment");
 }
