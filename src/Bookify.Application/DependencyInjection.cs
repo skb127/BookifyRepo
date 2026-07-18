@@ -1,4 +1,5 @@
-﻿using Bookify.Application.Abstractions.Behaviors;
+using Bookify.Application.Abstractions.Behaviors;
+using Bookify.Application.Bookings.ReserveBooking;
 using Bookify.Domain.Bookings;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +26,8 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly, includeInternalTypes: true);
 
         services.AddTransient<PricingService>();
+
+        services.AddScoped<ITaxSnapshotService, TaxSnapshotService>();
 
         return services;
     }

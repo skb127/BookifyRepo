@@ -105,5 +105,42 @@ internal static class SeedDataExtensions
             """;
 
         connection.Execute(sql, apartments);
+
+        const string insertTaxRulesSql = """
+            INSERT INTO public.tax_rules
+            (id, country_code, region, city, rate_value, rate_type, name, effective_from, effective_to, is_active, created_on_utc)
+            VALUES(@Id, @CountryCode, @Region, @City, @RateValue, @RateType, @Name, @EffectiveFrom, @EffectiveTo, @IsActive, @CreatedOnUtc)
+            ON CONFLICT (id) DO NOTHING;
+            """;
+
+        connection.Execute(insertTaxRulesSql, new
+        {
+            Id = new Guid("a0000000-0000-0000-0000-000000000001"),
+            CountryCode = "US",
+            Region = (string?)null,
+            City = (string?)null,
+            RateValue = 0.10m,
+            RateType = 1,   // TaxType.Percentage = 1
+            Name = "Standard Tax 10%",
+            EffectiveFrom = new DateOnly(2020, 1, 1),
+            EffectiveTo = (DateOnly?)null,
+            IsActive = true,
+            CreatedOnUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+
+        connection.Execute(insertTaxRulesSql, new
+        {
+            Id = new Guid("a0000000-0000-0000-0000-000000000002"),
+            CountryCode = "US",
+            Region = (string?)null,
+            City = (string?)null,
+            RateValue = 5.00m,
+            RateType = 2,   // TaxType.FixedPerNight = 2
+            Name = "Tourist Tax 5/night",
+            EffectiveFrom = new DateOnly(2020, 1, 1),
+            EffectiveTo = (DateOnly?)null,
+            IsActive = true,
+            CreatedOnUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
     }
 }

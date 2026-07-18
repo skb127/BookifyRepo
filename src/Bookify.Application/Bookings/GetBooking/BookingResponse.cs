@@ -1,11 +1,11 @@
 namespace Bookify.Application.Bookings.GetBooking;
 
-public sealed class BookingResponse
+public sealed record BookingResponse
 {
     public Guid Id { get; init; }
 
     public Guid UserId { get; init; }
-    
+
     public Guid ApartmentId { get; init; }
 
     public int Status { get; init; }
@@ -24,6 +24,10 @@ public sealed class BookingResponse
 
     public string AmenitiesUpChargeCurrency { get; init; } = "";
 
+    public decimal ExtraGuestChargeAmount { get; init; }
+
+    public string ExtraGuestChargeCurrency { get; init; } = "";
+
     public decimal TotalPriceAmount { get; init; }
 
     public string TotalPriceCurrency { get; init; } = "";
@@ -33,4 +37,8 @@ public sealed class BookingResponse
     public DateOnly DurationEnd { get; init; }
 
     public DateTime CreatedOnUtc { get; init; }
+
+    public int GuestCount { get; init; }
+
+    public IReadOnlyList<BookingTaxResponse> Taxes { get; init; } = [];
 }

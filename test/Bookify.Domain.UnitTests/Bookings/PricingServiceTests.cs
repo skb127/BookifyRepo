@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Apartments;
+using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Shared;
 using Bookify.Domain.UnitTests.Apartments;
@@ -97,5 +97,58 @@ public class PricingServiceTests
 
         // Assert
         pricingDetails.AmenitiesUpCharge.Should().Be(expectedUpCharge);
+    }
+
+    [Fact]
+    public void CalculatePrice_ShouldNotApplyExtraGuestFee_WhenGuestCountWithinBase()
+    {
+        // Arrange
+        var price = new Money(100.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 4)); // 3 nights
+        var extraGuestFee = new Money(25.0m, Currency.Usd);
+        Apartment apartment = ApartmentData.Create(price, baseGuests: 2, maxGuests: 6, extraGuestFee: extraGuestFee);
+        var pricingService = new PricingService();
+
+        // Act
+        PricingDetails pricingDetails = pricingService.CalculatePrice(apartment, period, guestCount: 2);
+
+        // Assert
+        pricingDetails.ExtraGuestCharge.Should().Be(Money.Zero(Currency.Usd));
+        pricingDetails.TotalPrice.Should().Be(new Money(300.0m, Currency.Usd));
+    }
+
+    [Fact]
+    public void CalculatePrice_ShouldApplyExtraGuestFee_WhenGuestCountExceedsBase()
+    {
+        // Arrange
+        var price = new Money(100.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 4)); // 3 nights
+        var extraGuestFee = new Money(25.0m, Currency.Usd);
+        Apartment apartment = ApartmentData.Create(price, baseGuests: 2, maxGuests: 6, extraGuestFee: extraGuestFee);
+        var pricingService = new PricingService();
+
+        // Act
+        PricingDetails pricingDetails = pricingService.CalculatePrice(apartment, period, guestCount: 4);
+
+        // Assert
+        // 4 guests, base 2 = 2 extra guests. 2 extra guests * 3 nights * $25 = $150
+        pricingDetails.ExtraGuestCharge.Should().Be(new Money(150.0m, Currency.Usd));
+        pricingDetails.TotalPrice.Should().Be(new Money(450.0m, Currency.Usd));
+    }
+
+    [Fact]
+    public void CalculatePrice_ExtraGuestCharge_ShouldBeZero_WhenFeeIsZero()
+    {
+        // Arrange
+        var price = new Money(100.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 4)); // 3 nights
+        Apartment apartment = ApartmentData.Create(price, baseGuests: 2, maxGuests: 6, extraGuestFee: Money.Zero(Currency.Usd));
+        var pricingService = new PricingService();
+
+        // Act
+        PricingDetails pricingDetails = pricingService.CalculatePrice(apartment, period, guestCount: 5);
+
+        // Assert
+        pricingDetails.ExtraGuestCharge.Should().Be(Money.Zero(Currency.Usd));
     }
 }

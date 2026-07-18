@@ -18,4 +18,8 @@ public record CreateApartmentCommand(
     Guid? CancellationPolicyId = null,
     int MinimumNights = 1,
     int CheckInCutOffHours = 3,
-    bool InstantBooking = false) : ICommand<Guid>;
+    bool InstantBooking = false,
+    int BaseGuests = 1,
+    int MaxGuests = 1,
+    decimal ExtraGuestFeeAmount = 0,
+    string ExtraGuestFeeCurrency = "USD") : ICommand<Guid>;

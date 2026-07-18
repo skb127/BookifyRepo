@@ -76,12 +76,32 @@ public sealed class TaxRule : Entity
             _ => throw new InvalidOperationException("Unknown tax type")
         };
 
-        return new Money(amount, totalPrice.Currency);
+        return totalPrice with { Amount = amount };
     }
 
     public void Deactivate(DateTime utcNow)
     {
         IsActive = false;
+        UpdatedOnUtc = utcNow;
+    }
+
+    public void Update(
+        string countryCode,
+        string? region,
+        string? city,
+        TaxRate rate,
+        string name,
+        DateOnly effectiveFrom,
+        DateOnly? effectiveTo,
+        DateTime utcNow)
+    {
+        CountryCode = countryCode;
+        Region = region;
+        City = city;
+        Rate = rate;
+        Name = name;
+        EffectiveFrom = effectiveFrom;
+        EffectiveTo = effectiveTo;
         UpdatedOnUtc = utcNow;
     }
 }

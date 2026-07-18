@@ -89,7 +89,8 @@ internal sealed class GetApartmentBookingsQueryHandler
                 duration_end AS DurationEnd,
                 created_on_utc AS CreatedOnUtc,
                 payment_status AS PaymentStatus,
-                expires_at AS ExpiresAt
+                expires_at AS ExpiresAt,
+                guest_count AS GuestCount
             FROM bookings
             WHERE {where}
             ORDER BY created_on_utc DESC

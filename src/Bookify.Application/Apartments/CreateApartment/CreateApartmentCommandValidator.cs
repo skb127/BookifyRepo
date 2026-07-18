@@ -33,5 +33,15 @@ internal sealed class CreateApartmentCommandValidator : AbstractValidator<Create
 
         RuleFor(c => c.MinimumNights).GreaterThan(0);
         RuleFor(c => c.CheckInCutOffHours).InclusiveBetween(0, 48);
+
+        RuleFor(c => c.BaseGuests).GreaterThanOrEqualTo(1);
+        RuleFor(c => c.MaxGuests).GreaterThanOrEqualTo(c => c.BaseGuests);
+        RuleFor(c => c.ExtraGuestFeeAmount).GreaterThanOrEqualTo(0);
+        RuleFor(c => c.ExtraGuestFeeCurrency)
+            .NotEmpty()
+            .MustBeValidCurrency()
+            .Equal(c => c.PriceCurrency)
+            .WithMessage("Extra guest fee currency must match the price currency.")
+            .When(c => c.ExtraGuestFeeAmount > 0);
     }
 }

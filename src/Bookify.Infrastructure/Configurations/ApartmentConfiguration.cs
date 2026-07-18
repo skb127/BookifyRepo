@@ -67,6 +67,23 @@ internal sealed class ApartmentConfiguration : IEntityTypeConfiguration<Apartmen
             .HasDefaultValue(3)
             .IsRequired();
 
+        builder.Property(apartment => apartment.BaseGuests)
+            .HasDefaultValue(1)
+            .IsRequired();
+
+        builder.Property(apartment => apartment.MaxGuests)
+            .HasDefaultValue(1)
+            .IsRequired();
+
+        builder.OwnsOne(apartment => apartment.ExtraGuestFee, feeBuilder =>
+        {
+            feeBuilder.Property(money => money.Amount)
+                .HasDefaultValue(0);
+
+            feeBuilder.Property(money => money.Currency)
+                .HasConversion(currency => currency.Code, code => Currency.FromCode(code));
+        });
+        
         builder.Property<uint>("Version").IsRowVersion(); // Shadow property for optimistic concurrency control
 
         builder.HasQueryFilter(apartment => apartment.DeletedAt == null);

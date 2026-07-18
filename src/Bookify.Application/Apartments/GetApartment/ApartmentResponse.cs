@@ -16,5 +16,8 @@ public sealed class ApartmentResponse
     public bool InstantBooking { get; init; }
     public int MinimumNights { get; init; }
     public int CheckInCutOffHours { get; init; }
+    public int BaseGuests { get; init; }
+    public int MaxGuests { get; init; }
+    public MoneyResponse ExtraGuestFee { get; set; } = null!;
 }
 

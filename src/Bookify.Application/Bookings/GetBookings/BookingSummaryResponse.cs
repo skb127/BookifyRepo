@@ -23,4 +23,6 @@ public sealed class BookingSummaryResponse
     public int PaymentStatus { get; init; }
 
     public DateTime? ExpiresAt { get; init; }
+
+    public int GuestCount { get; init; }
 }

@@ -36,21 +36,33 @@ internal sealed class GetBookingQueryHandler : IQueryHandler<GetBookingQuery, Bo
                 cleaning_fee_currency AS CleaningFeeCurrency,
                 amenities_up_charge_amount AS AmenitiesUpChargeAmount,
                 amenities_up_charge_currency AS AmenitiesUpChargeCurrency,
+                extra_guest_charge_amount AS ExtraGuestChargeAmount,
+                extra_guest_charge_currency AS ExtraGuestChargeCurrency,
                 total_price_amount AS TotalPriceAmount,
                 total_price_currency AS TotalPriceCurrency,
                 duration_start AS DurationStart,
                 duration_end AS DurationEnd,
-                created_on_utc AS CreatedOnUtc
+                created_on_utc AS CreatedOnUtc,
+                guest_count AS GuestCount
             FROM bookings
-            WHERE id = @BookingId
+            WHERE id = @BookingId;
+
+            SELECT
+                tax_rule_name AS TaxRuleName,
+                calculated_amount_amount AS CalculatedAmount,
+                calculated_amount_currency AS Currency
+            FROM booking_taxes
+            WHERE booking_id = @BookingId;
             """;
 
-        BookingResponse? booking = await connection.QueryFirstOrDefaultAsync<BookingResponse>(
+        using SqlMapper.GridReader multi = await connection.QueryMultipleAsync(
             sql,
             new
             {
                 request.BookingId
             });
+
+        BookingResponse? booking = await multi.ReadFirstOrDefaultAsync<BookingResponse>();
 
         // Resource-based authorization check, maybe move to a generic pipeline/solution later in the future
         if (booking is null || booking.UserId != _userContext.UserId)
@@ -58,6 +70,8 @@ internal sealed class GetBookingQueryHandler : IQueryHandler<GetBookingQuery, Bo
             return Result.Failure<BookingResponse>(BookingErrors.NotFound);
         }
 
-        return booking;
+        IEnumerable<BookingTaxResponse> taxes = await multi.ReadAsync<BookingTaxResponse>();
+
+        return booking with { Taxes = [.. taxes] };
     }
 }

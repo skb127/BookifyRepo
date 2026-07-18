@@ -31,6 +31,9 @@ internal sealed class CreateApartmentCommandHandler : ICommandHandler<CreateApar
         {
             var priceCurrency = Currency.FromCode(request.PriceCurrency);
             var cleaningFeeCurrency = Currency.FromCode(request.CleaningFeeCurrency);
+            Currency extraGuestFeeCurrency = request.ExtraGuestFeeAmount == 0
+                ? priceCurrency
+                : Currency.FromCode(request.ExtraGuestFeeCurrency);
 
             var address = new Address(
                 request.Country,
@@ -41,6 +44,7 @@ internal sealed class CreateApartmentCommandHandler : ICommandHandler<CreateApar
 
             var price = new Money(request.PriceAmount, priceCurrency);
             var cleaningFee = new Money(request.CleaningFeeAmount, cleaningFeeCurrency);
+            var extraGuestFee = new Money(request.ExtraGuestFeeAmount, extraGuestFeeCurrency);
 
             var amenities = request.Amenities
                 .Select(a => (Amenity)a).ToList();
@@ -57,7 +61,10 @@ internal sealed class CreateApartmentCommandHandler : ICommandHandler<CreateApar
                 request.InstantBooking,
                 request.CancellationPolicyId,
                 request.MinimumNights,
-                request.CheckInCutOffHours);
+                request.CheckInCutOffHours,
+                request.BaseGuests,
+                request.MaxGuests,
+                extraGuestFee);
 
             _apartmentRepository.Add(apartment);
 

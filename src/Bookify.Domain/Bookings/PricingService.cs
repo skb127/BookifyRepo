@@ -1,11 +1,11 @@
-﻿using Bookify.Domain.Apartments;
+using Bookify.Domain.Apartments;
 using Bookify.Domain.Shared;
 
 namespace Bookify.Domain.Bookings;
 
 public class PricingService
 {
-    public PricingDetails CalculatePrice(Apartment apartment, DateRange period)
+    public PricingDetails CalculatePrice(Apartment apartment, DateRange period, int guestCount = 1)
     {
         Currency currency = apartment.Price.Currency;
 
@@ -36,6 +36,11 @@ public class PricingService
                 currency);
         }
 
+        int extraGuests = Math.Max(0, guestCount - apartment.BaseGuests);
+        Money extraGuestCharge = extraGuests > 0
+            ? new Money(apartment.ExtraGuestFee.Amount * extraGuests * period.LengthInDays, currency)
+            : Money.Zero(currency);
+
         var totalPrice = Money.Zero(currency);
 
         totalPrice += priceForPeriod;
@@ -46,7 +51,8 @@ public class PricingService
         }
 
         totalPrice += amenitiesUpCharge;
+        totalPrice += extraGuestCharge;
 
-        return new PricingDetails(priceForPeriod, apartment.CleaningFee, amenitiesUpCharge, totalPrice);
+        return new PricingDetails(priceForPeriod, apartment.CleaningFee, amenitiesUpCharge, extraGuestCharge, totalPrice);
     }
 }

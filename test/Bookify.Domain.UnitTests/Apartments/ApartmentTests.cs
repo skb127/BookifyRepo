@@ -163,4 +163,99 @@ public class ApartmentTests : BaseTest
         apartment.Name.Should().Be(originalName);
         apartment.Price.Should().Be(originalPrice);
     }
+
+    [Fact]
+    public void Create_ShouldSetBaseAndMaxGuests_WhenProvided()
+    {
+        // Arrange
+        var ownerId = Guid.NewGuid();
+        var name = new Name("Test Apartment");
+        var description = new Description("Test Description");
+        var address = new Address("Country", "State", "ZipCode", "City", "Street");
+        var price = new Money(100.0m, Currency.Usd);
+        var cleaningFee = new Money(50.0m, Currency.Usd);
+        var amenities = new List<Amenity> { Amenity.WiFi };
+
+        // Act
+        var apartment = Apartment.Create(
+            ownerId,
+            name,
+            description,
+            address,
+            price,
+            cleaningFee,
+            amenities,
+            DateTime.UtcNow,
+            baseGuests: 2,
+            maxGuests: 6);
+
+        // Assert
+        apartment.BaseGuests.Should().Be(2);
+        apartment.MaxGuests.Should().Be(6);
+    }
+
+    [Fact]
+    public void Create_ShouldSetExtraGuestFee_WhenProvided()
+    {
+        // Arrange
+        var ownerId = Guid.NewGuid();
+        var name = new Name("Test Apartment");
+        var description = new Description("Test Description");
+        var address = new Address("Country", "State", "ZipCode", "City", "Street");
+        var price = new Money(100.0m, Currency.Usd);
+        var cleaningFee = new Money(50.0m, Currency.Usd);
+        var amenities = new List<Amenity> { Amenity.WiFi };
+        var extraGuestFee = new Money(25.0m, Currency.Usd);
+
+        // Act
+        var apartment = Apartment.Create(
+            ownerId,
+            name,
+            description,
+            address,
+            price,
+            cleaningFee,
+            amenities,
+            DateTime.UtcNow,
+            extraGuestFee: extraGuestFee);
+
+        // Assert
+        apartment.ExtraGuestFee.Should().Be(extraGuestFee);
+    }
+
+    [Fact]
+    public void Update_ShouldUpdateGuestCapacity_WhenCalled()
+    {
+        // Arrange
+        var apartment = ApartmentData.Create(new Money(100.0m, Currency.Usd));
+        var newName = new Name("Updated Apartment");
+        var newDescription = new Description("Updated Description");
+        var newAddress = new Address("Portugal", "Lisbon", "1000-001", "Lisbon", "Rua Nova 5");
+        var newPrice = new Money(200.0m, Currency.Eur);
+        var newCleaningFee = new Money(40.0m, Currency.Eur);
+        var newAmenities = new List<Amenity> { Amenity.Gym };
+        var extraGuestFee = new Money(15.0m, Currency.Eur);
+
+        // Act
+        apartment.Update(
+            newName,
+            newDescription,
+            newAddress,
+            newPrice,
+            newCleaningFee,
+            newAmenities,
+            DateTime.UtcNow,
+            false,
+            null,
+            2,
+            5,
+            3,
+            8,
+            extraGuestFee);
+
+        // Assert
+        apartment.BaseGuests.Should().Be(3);
+        apartment.MaxGuests.Should().Be(8);
+        apartment.ExtraGuestFee.Should().Be(extraGuestFee);
+    }
 }

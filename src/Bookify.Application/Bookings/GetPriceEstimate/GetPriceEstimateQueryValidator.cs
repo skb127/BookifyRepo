@@ -13,5 +13,7 @@ internal sealed class GetPriceEstimateQueryValidator : AbstractValidator<GetPric
         RuleFor(c => c.EndDate)
             .NotEmpty()
             .GreaterThan(c => c.StartDate);
+
+        RuleFor(c => c.GuestCount).GreaterThanOrEqualTo(1);
     }
 }

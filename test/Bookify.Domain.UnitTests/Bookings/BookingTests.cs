@@ -35,6 +35,42 @@ public class BookingTests : BaseTest
     }
 
     [Fact]
+    public void Reserve_ShouldSetGuestCount_WhenProvided()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price, baseGuests: 2, maxGuests: 6);
+        var pricingService = new PricingService();
+
+        // Act
+        var booking = Booking.Reserve(apartment, user.Id, period, DateTime.UtcNow, pricingService, guestCount: 3);
+
+        // Assert
+        booking.GuestCount.Should().Be(3);
+    }
+
+    [Fact]
+    public void Reserve_ShouldDefaultToOneGuest_WhenNotProvided()
+    {
+        // Arrange
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+
+        // Act
+        var booking = Booking.Reserve(apartment, user.Id, period, DateTime.UtcNow, pricingService);
+
+        // Assert
+        booking.GuestCount.Should().Be(1);
+    }
+
+    [Fact]
     public void Confirm_ShouldRaiseBookingConfirmedDomainEvent()
     {
         // Arrange
