@@ -59,6 +59,8 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
 
     public MockPaymentGateway MockPaymentGateway { get; } = new();
 
+    public MockStripeCustomerService MockStripeCustomerService { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -115,6 +117,9 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
 
             services.RemoveAll<IPaymentGateway>();
             services.AddSingleton<IPaymentGateway>(MockPaymentGateway);
+
+            services.RemoveAll<IStripeCustomerService>();
+            services.AddSingleton<IStripeCustomerService>(MockStripeCustomerService);
 
             services.Configure<ExpirationOptions>(options =>
             {

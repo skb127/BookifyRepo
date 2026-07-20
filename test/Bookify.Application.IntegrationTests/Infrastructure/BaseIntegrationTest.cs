@@ -25,6 +25,7 @@ public abstract class BaseIntegrationTest
 
         factory.MockEmailService.Clear();
         factory.MockPaymentGateway.Clear();
+        factory.MockStripeCustomerService.Clear();
 
         _scope = factory.Services.CreateScope();
 

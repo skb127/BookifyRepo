@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 
 namespace Bookify.Domain.Users;
 
@@ -8,6 +8,8 @@ public interface IUserRepository
     /// Gets a user by ID without loading related entities.
     /// </summary>
     Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<User?> GetByIdIgnoringFiltersAsync(Guid id, CancellationToken cancellationToken = default);
 
     void Add(User user);
 
