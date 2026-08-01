@@ -44,14 +44,25 @@ public sealed class User : Entity
     public EmailChangeToken? EmailChangeToken { get; private set; }
     public DateTime? EmailChangedAt { get; private set; }
     public string? StripeCustomerId { get; private set; }
+    public int BanCount { get; private set; }
+    public DateTime? DeletionScheduledAt { get; private set; }
+    public AccountDeletionToken? AccountDeletionToken { get; private set; }
 
-    public static User Create(FirstName firstName, LastName lastName, Email email, DateOfBirth dateOfBirth)
+    public static User Create(FirstName firstName, LastName lastName, Email email, DateOfBirth dateOfBirth, Role userRole)
     {
         var user = new User(Guid.CreateVersion7(), firstName, lastName, email, dateOfBirth, UserStatus.Active);
 
         user.RaiseDomainEvent(new UserCreatedDomainEvent(user.Id));
 
-        user._roles.Add(Role.Registered);
+        if (userRole == Role.Host)
+        {
+            user._roles.Add(Role.Guest);
+            user._roles.Add(Role.Host);
+        }
+        else
+        {
+            user._roles.Add(userRole);
+        }
 
         return user;
     }
@@ -59,6 +70,9 @@ public sealed class User : Entity
     public void SetIdentityId(string identityId) =>
 
         IdentityId = identityId;
+
+    public void SetPhoneNumber(PhoneNumber phoneNumber) =>
+        PhoneNumber = phoneNumber;
 
     public void SetStripeCustomerId(string customerId) =>
         StripeCustomerId = customerId;
@@ -130,5 +144,47 @@ public sealed class User : Entity
         LastModifiedOn = DateTime.UtcNow;
 
         RaiseDomainEvent(new UserProfileUpdatedDomainEvent(Id));
+    }
+
+    public void RequestDeletion(string rawToken, string tokenHash, int gracePeriodHours)
+    {
+        AccountDeletionToken = AccountDeletionToken.Create(Id, tokenHash, DateTimeOffset.UtcNow.AddHours(gracePeriodHours));
+        Status = UserStatus.PendingDeletion;
+        DeletionScheduledAt = DateTime.UtcNow.AddHours(gracePeriodHours);
+
+        RaiseDomainEvent(new UserAccountDeletionRequestedDomainEvent(Id, rawToken, DeletionScheduledAt.Value));
+    }
+
+    public void CancelDeletion()
+    {
+        Status = UserStatus.Active;
+        DeletionScheduledAt = null;
+        AccountDeletionToken = null;
+
+        RaiseDomainEvent(new UserAccountDeletionCancelledDomainEvent(Id));
+    }
+
+    public void Delete()
+    {
+        Status = UserStatus.Deleted;
+        DeletedAt = DateTime.UtcNow;
+        AccountDeletionToken = null;
+
+        RaiseDomainEvent(new UserDeletedDomainEvent(Id, StripeCustomerId));
+    }
+
+    public void Ban()
+    {
+        Status = UserStatus.Suspended;
+        BanCount++;
+
+        RaiseDomainEvent(new UserBannedDomainEvent(Id, IdentityId));
+    }
+
+    public void Unban()
+    {
+        Status = UserStatus.Active;
+
+        RaiseDomainEvent(new UserUnbannedDomainEvent(Id, IdentityId));
     }
 }

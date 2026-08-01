@@ -1,4 +1,4 @@
-﻿namespace Bookify.Domain.Users;
+namespace Bookify.Domain.Users;
 
 public record UserStatus
 {
@@ -7,6 +7,7 @@ public record UserStatus
     public static readonly UserStatus Inactive = new('I', "Inactive");
     public static readonly UserStatus Suspended = new('S', "Suspended");
     public static readonly UserStatus Deleted = new('D', "Deleted");
+    public static readonly UserStatus PendingDeletion = new('P', "PendingDeletion");
 
     private UserStatus(char code, string name)
     {
@@ -26,6 +27,7 @@ public record UserStatus
         Active,
         Inactive,
         Suspended,
-        Deleted
+        Deleted,
+        PendingDeletion
     ];
 }

@@ -71,4 +71,35 @@ internal sealed class JobScheduler : IJobScheduler
 
         await scheduler.UnscheduleJob(triggerKey, cancellationToken);
     }
+
+    public async Task ScheduleAccountDeletionAsync(
+        Guid userId,
+        DateTime fireAt,
+        CancellationToken cancellationToken = default)
+    {
+        IScheduler scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
+
+        var jobKey = new JobKey(nameof(Users.FinalizeAccountDeletionJob));
+        var triggerKey = new TriggerKey($"finalize-account-deletion-{userId}");
+
+        ITrigger trigger = TriggerBuilder.Create()
+            .WithIdentity(triggerKey)
+            .ForJob(jobKey)
+            .UsingJobData("UserId", userId.ToString())
+            .StartAt(new DateTimeOffset(fireAt))
+            .Build();
+
+        await scheduler.ScheduleJob(trigger, cancellationToken);
+    }
+
+    public async Task CancelAccountDeletionAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        IScheduler scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
+
+        var triggerKey = new TriggerKey($"finalize-account-deletion-{userId}");
+
+        await scheduler.UnscheduleJob(triggerKey, cancellationToken);
+    }
 }

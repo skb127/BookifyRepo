@@ -1,6 +1,9 @@
 using Asp.Versioning;
 using Bookify.Api.Filters.Turnstile;
 using Bookify.Application.Users;
+using Bookify.Application.Users.AdminDeleteUser;
+using Bookify.Application.Users.BanUser;
+using Bookify.Application.Users.CancelAccountDeletion;
 using Bookify.Application.Users.ChangePasswordUser;
 using Bookify.Application.Users.ConfirmEmailChange;
 using Bookify.Application.Users.GetLoggedInUser;
@@ -11,8 +14,11 @@ using Bookify.Application.Users.LogoutUser;
 using Bookify.Application.Users.PasswordRecovery;
 using Bookify.Application.Users.PasswordReset;
 using Bookify.Application.Users.RefreshTokenUser;
-using Bookify.Application.Users.RegisterUser;
+using Bookify.Application.Users.RegisterGuest;
+using Bookify.Application.Users.RegisterHost;
+using Bookify.Application.Users.RequestAccountDeletion;
 using Bookify.Application.Users.RevokeAllSessions;
+using Bookify.Application.Users.UnbanUser;
 using Bookify.Application.Users.UpdateUserProfile;
 using Bookify.Domain.Abstractions;
 using Bookify.Infrastructure.Authorization;
@@ -106,15 +112,27 @@ public sealed class UsersController : ControllerBase
         return NoContent();
     }
 
+#pragma warning disable S1133
+    [Obsolete("This endpoint is deprecated. Use /register/guest or /register/host instead.")]
+    [HttpPost("register")]
+    public IActionResult RegisterOld() =>
+        StatusCode(StatusCodes.Status410Gone, new ProblemDetails
+        {
+            Status = StatusCodes.Status410Gone,
+            Title = "Endpoint Deprecated",
+            Detail = "This registration endpoint is no longer supported. Please use /register/guest or /register/host."
+        });
+#pragma warning restore S1133
+
     [AllowAnonymous]
     [Turnstile]
-    [HttpPost("register")]
+    [HttpPost("register/guest")]
     [EnableRateLimiting("write-operations")]
-    public async Task<IActionResult> Register(
+    public async Task<IActionResult> RegisterGuest(
         RegisterUserRequest request,
         CancellationToken cancellationToken)
     {
-        var command = new RegisterUserCommand(
+        var command = new RegisterGuestCommand(
             request.Email,
             request.FirstName,
             request.LastName,
@@ -134,7 +152,34 @@ public sealed class UsersController : ControllerBase
         return Ok(result.Value);
     }
 
-    // ... (rest of methods)
+    [AllowAnonymous]
+    [Turnstile]
+    [HttpPost("register/host")]
+    [EnableRateLimiting("write-operations")]
+    public async Task<IActionResult> RegisterHost(
+        RegisterHostRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new RegisterHostCommand(
+            request.Email,
+            request.FirstName,
+            request.LastName,
+            request.Password,
+            request.DateOfBirth,
+            request.PhoneNumber);
+
+        Result<Guid> result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok(result.Value);
+    }
 
     [HasPermission(Permissions.UsersAdminRead)]
     [HttpGet("{userId:guid}")]
@@ -142,7 +187,7 @@ public sealed class UsersController : ControllerBase
     {
         var query = new GetUserByIdQuery(userId);
 
-        Result<UserResponse> result = await _sender.Send(query, cancellationToken);
+        Result<AdminUserResponse> result = await _sender.Send(query, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -330,6 +375,110 @@ public sealed class UsersController : ControllerBase
         return Content(
             "<html><body><h1>Success</h1><p>Your email has been successfully changed! You can now login with your new email.</p></body></html>",
             "text/html");
+    }
+
+    [Authorize]
+    [HttpPost("deactivate")]
+    [EnableRateLimiting("write-operations")]
+    public async Task<IActionResult> RequestDeactivation(CancellationToken cancellationToken)
+    {
+        var command = new RequestAccountDeletionCommand();
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        Response.Cookies.Delete("refreshToken");
+
+        return Ok();
+    }
+
+    [AllowAnonymous]
+    [HttpPost("cancel-deactivation")]
+    [EnableRateLimiting("write-operations")]
+    public async Task<IActionResult> CancelDeactivation(
+        CancelAccountDeletionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new CancelAccountDeletionCommand(request.Token);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok();
+    }
+
+    [HasPermission(Permissions.UsersBan)]
+    [HttpPost("{userId:guid}/ban")]
+    [EnableRateLimiting("write-operations")]
+    public async Task<IActionResult> BanUser(Guid userId, CancellationToken cancellationToken)
+    {
+        var command = new BanUserCommand(userId);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok();
+    }
+
+    [HasPermission(Permissions.UsersBan)]
+    [HttpPost("{userId:guid}/unban")]
+    [EnableRateLimiting("write-operations")]
+    public async Task<IActionResult> UnbanUser(Guid userId, CancellationToken cancellationToken)
+    {
+        var command = new UnbanUserCommand(userId);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok();
+    }
+
+    [HasPermission(Permissions.UsersAdminWrite)]
+    [HttpDelete("{userId:guid}")]
+    [EnableRateLimiting("write-operations")]
+    public async Task<IActionResult> AdminDeleteUser(Guid userId, CancellationToken cancellationToken)
+    {
+        var command = new AdminDeleteUserCommand(userId);
+
+        Result result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: result.Error.Name,
+                title: result.Error.Code);
+        }
+
+        return Ok();
     }
 
     private void SetRefreshTokenCookie(AccessTokenResponse accessTokenResponse)

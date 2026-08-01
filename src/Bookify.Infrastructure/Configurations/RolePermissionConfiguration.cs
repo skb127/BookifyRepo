@@ -47,6 +47,41 @@ internal sealed class RolePermissionConfiguration : IEntityTypeConfiguration<Rol
             {
                 RoleId = Role.Admin.Id,
                 PermissionId = Permission.ReviewsRead.Id
+            },
+            new RolePermission
+            {
+                RoleId = Role.Admin.Id,
+                PermissionId = Permission.UsersAdminWrite.Id
+            },
+            new RolePermission
+            {
+                RoleId = Role.Admin.Id,
+                PermissionId = Permission.UsersBan.Id
+            },
+            new RolePermission
+            {
+                RoleId = Role.Guest.Id,
+                PermissionId = Permission.UsersRead.Id
+            },
+            new RolePermission
+            {
+                RoleId = Role.Guest.Id,
+                PermissionId = Permission.BookingsRead.Id
+            },
+            new RolePermission
+            {
+                RoleId = Role.Guest.Id,
+                PermissionId = Permission.BookingsWrite.Id
+            },
+            new RolePermission
+            {
+                RoleId = Role.Guest.Id,
+                PermissionId = Permission.ReviewsRead.Id
+            },
+            new RolePermission
+            {
+                RoleId = Role.Host.Id,
+                PermissionId = Permission.ApartmentsWrite.Id
             });
     }
 }

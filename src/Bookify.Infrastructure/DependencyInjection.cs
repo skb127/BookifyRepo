@@ -269,6 +269,7 @@ public static class DependencyInjection
         services.ConfigureOptions<CompleteBookingsJobSetup>(); // Configure the Quartz job to complete bookings
         services.ConfigureOptions<ExpireCheckoutSessionJobSetup>(); // Register ExpireCheckoutSessionJob durably
         services.ConfigureOptions<ExpireHostApprovalJobSetup>(); // Register ExpireHostApprovalJob durably
+        services.ConfigureOptions<Users.FinalizeAccountDeletionJobSetup>(); // Register FinalizeAccountDeletionJob durably
 
         AddEmailNotificationResiliencePipeline(services);
     }
@@ -386,6 +387,7 @@ public static class DependencyInjection
         services.Configure<BookifyAppOptions>(configuration.GetSection("BookifyApp"));
         services.Configure<ExpirationOptions>(configuration.GetSection("Expiration"));
         services.Configure<BookingOptions>(configuration.GetSection("Booking"));
+        services.Configure<AccountDeletionOptions>(configuration.GetSection("AccountDeletion"));
     }
 
     private static void AddRateLimiting(IServiceCollection services, IConfiguration configuration)

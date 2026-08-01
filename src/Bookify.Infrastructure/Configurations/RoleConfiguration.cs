@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Users;
+using Bookify.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -18,5 +18,7 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
 
         builder.HasData(Role.Registered);
         builder.HasData(Role.Admin);
+        builder.HasData(Role.Guest);
+        builder.HasData(Role.Host);
     }
 }

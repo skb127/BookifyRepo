@@ -14,6 +14,11 @@ internal sealed class UserRepository : Repository<User>, IUserRepository
         await DbContext.Set<User>()
             .FirstOrDefaultAsync(user => user.Id == id, cancellationToken);
 
+    public async Task<User?> GetByIdWithRolesAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await DbContext.Set<User>()
+            .Include(user => user.Roles)
+            .FirstOrDefaultAsync(user => user.Id == id, cancellationToken);
+
     public async Task<User?> GetByIdIgnoringFiltersAsync(Guid id, CancellationToken cancellationToken = default) =>
         await DbContext.Set<User>()
             .IgnoreQueryFilters()
@@ -44,4 +49,14 @@ internal sealed class UserRepository : Repository<User>, IUserRepository
             DbContext.Add(user.PasswordResetToken);
         }
     }
+
+    public async Task<User?> FindByAccountDeletionTokenAsync(string tokenHash, CancellationToken cancellationToken = default) =>
+        await DbContext.Set<User>()
+            .Include(u => u.AccountDeletionToken)
+            .FirstOrDefaultAsync(u => u.AccountDeletionToken != null && u.AccountDeletionToken.TokenHash == tokenHash, cancellationToken);
+
+    public async Task<int> CountAdminsAsync(CancellationToken cancellationToken = default) =>
+        await DbContext.Set<User>()
+            .Where(u => u.Roles.Any(r => r.Id == Role.Admin.Id))
+            .CountAsync(cancellationToken);
 }

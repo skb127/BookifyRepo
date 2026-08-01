@@ -60,6 +60,16 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMaxLength(255)
             .IsRequired(false);
 
+        builder.Property(user => user.BanCount)
+            .HasDefaultValue(0);
+
+        builder.Property(user => user.DeletionScheduledAt);
+
+        builder.HasOne(user => user.AccountDeletionToken)
+            .WithOne()
+            .HasForeignKey<AccountDeletionToken>(adt => adt.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.HasQueryFilter(user => user.Status != UserStatus.Deleted);
     }
 }

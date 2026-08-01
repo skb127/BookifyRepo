@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Abstractions.Authentication;
+using Bookify.Application.Abstractions.Authentication;
 using Bookify.Application.Abstractions.Identity;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Domain.Abstractions;
@@ -48,7 +48,8 @@ internal sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserC
             new FirstName(request.FirstName),
             new LastName(request.LastName),
             new Email(request.Email),
-            DateOfBirth.Create(request.DateOfBirth!.Value));
+            DateOfBirth.Create(request.DateOfBirth!.Value),
+            Role.Registered);
 
         string identityId = await _authenticationService.RegisterAsync(
             user,
