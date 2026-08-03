@@ -1,6 +1,6 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
-using Bookify.Api.Controllers.Users;
+using Bookify.Api.Controllers.Users.Requests;
 using Bookify.Api.FunctionalTests.Infrastructure;
 using FluentAssertions;
 
@@ -34,7 +34,7 @@ public class LoginUserTests : BaseFunctionalTest
     {
         // Arrange
         var registerRequest = new RegisterUserRequest(Email, "name", "last", Password, new DateOnly(2000, 1, 1));
-        await HttpClient.PostAsJsonAsync("api/v1/users/register", registerRequest);
+        await HttpClient.PostAsJsonAsync("api/v1/users/register/guest", registerRequest);
 
         var request = new LoginUserRequest(Email, Password);
 

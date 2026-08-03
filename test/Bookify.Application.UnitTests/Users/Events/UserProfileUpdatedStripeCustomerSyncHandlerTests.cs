@@ -52,7 +52,7 @@ public class UserProfileUpdatedStripeCustomerSyncHandlerTests
             new FirstName("First"),
             new LastName("Last"),
             new Email("test@test.com"),
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         var domainEvent = new UserProfileUpdatedDomainEvent(user.Id);
 
         _userRepositoryMock.GetByIdAsync(domainEvent.UserId, Arg.Any<CancellationToken>())
@@ -74,7 +74,7 @@ public class UserProfileUpdatedStripeCustomerSyncHandlerTests
             new FirstName("First"),
             new LastName("Last"),
             new Email("test@test.com"),
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         user.SetStripeCustomerId(" ");
         var domainEvent = new UserProfileUpdatedDomainEvent(user.Id);
 
@@ -97,7 +97,7 @@ public class UserProfileUpdatedStripeCustomerSyncHandlerTests
             new FirstName("First"),
             new LastName("Last"),
             new Email("test@test.com"),
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         user.SetStripeCustomerId("cus_123");
         var domainEvent = new UserProfileUpdatedDomainEvent(user.Id);
 
@@ -123,7 +123,7 @@ public class UserProfileUpdatedStripeCustomerSyncHandlerTests
             new FirstName("First"),
             new LastName("Last"),
             new Email("test@test.com"),
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         user.SetStripeCustomerId("cus_123");
         var domainEvent = new UserProfileUpdatedDomainEvent(user.Id);
 

@@ -2,8 +2,8 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Bookify.Api.Controllers.Users.Requests;
 using Bookify.Application.IntegrationTests.Infrastructure;
-using Bookify.Api.Controllers.Users;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

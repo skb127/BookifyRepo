@@ -35,7 +35,7 @@ public class CancelBookingTests : BaseIntegrationTest
         var guestEmail = $"guest_{Guid.CreateVersion7()}@test.com";
         var password = "Password123!";
 
-        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+        var registerGuestCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(
             guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
         _ = await Sender.Send(registerGuestCommand);
 
@@ -293,7 +293,7 @@ public class CancelBookingTests : BaseIntegrationTest
         hostCancellationEmail.Subject.Should().Be("Booking Cancelled by Guest");
 
         // Verify Stripe refund was initiated: 950.0m USD total, early guest penalty is 10% (95.0m), refund is 90% (855.0m)
-        string adminAccessToken = await GetAccessToken(hostEmail, "Password123!");
+        string adminAccessToken = await GetAdminTokenAsync();
         var transactions = await BookingTestHelpers.GetBookingTransactionsViaApiAsync(this, bookingId, adminAccessToken);
         var stripePaymentIntentId = transactions.Count > 0 ? transactions[0].StripePaymentIntentId : null;
 
@@ -370,7 +370,8 @@ public class CancelBookingTests : BaseIntegrationTest
         hostEmailMsg.Subject.Should().Be("Booking Cancelled - Penalty Applied");
 
         // Verify Stripe refund was initiated: 950.0m USD total, host cancels early so guest is fully refunded (950.0m)
-        var transactions = await BookingTestHelpers.GetBookingTransactionsViaApiAsync(this, bookingId, hostAccessToken);
+        string adminTokenForTx = await GetAdminTokenAsync();
+        var transactions = await BookingTestHelpers.GetBookingTransactionsViaApiAsync(this, bookingId, adminTokenForTx);
         var stripePaymentIntentId = transactions.Count > 0 ? transactions[0].StripePaymentIntentId : null;
 
         _mockPaymentGateway.RefundRequests.Should().ContainSingle(r => r.PaymentIntentId == stripePaymentIntentId && r.Amount == 950.0m && r.Currency == "USD");
@@ -475,7 +476,7 @@ public class CancelBookingTests : BaseIntegrationTest
         // Create Guest C (unauthorized user)
         var unauthorizedEmail = $"stranger_{Guid.CreateVersion7()}@test.com";
         var password = "Password123!";
-        var registerCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+        var registerCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(
             unauthorizedEmail, "Stranger", "User", password, new DateOnly(1990, 1, 1));
         var registerResult = await Sender.Send(registerCommand);
         registerResult.IsSuccess.Should().BeTrue();

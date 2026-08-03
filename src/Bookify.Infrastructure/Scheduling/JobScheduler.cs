@@ -24,7 +24,7 @@ internal sealed class JobScheduler : IJobScheduler
             .WithIdentity(triggerKey)
             .ForJob(jobKey)
             .UsingJobData("BookingId", bookingId.ToString())
-            .StartAt(new DateTimeOffset(fireAt))
+            .StartAt(new DateTimeOffset(DateTime.SpecifyKind(fireAt, DateTimeKind.Utc)))
             .Build();
 
         await scheduler.ScheduleJob(trigger, cancellationToken);
@@ -44,7 +44,7 @@ internal sealed class JobScheduler : IJobScheduler
             .WithIdentity(triggerKey)
             .ForJob(jobKey)
             .UsingJobData("BookingId", bookingId.ToString())
-            .StartAt(new DateTimeOffset(fireAt))
+            .StartAt(new DateTimeOffset(DateTime.SpecifyKind(fireAt, DateTimeKind.Utc)))
             .Build();
 
         await scheduler.ScheduleJob(trigger, cancellationToken);
@@ -86,7 +86,7 @@ internal sealed class JobScheduler : IJobScheduler
             .WithIdentity(triggerKey)
             .ForJob(jobKey)
             .UsingJobData("UserId", userId.ToString())
-            .StartAt(new DateTimeOffset(fireAt))
+            .StartAt(new DateTimeOffset(DateTime.SpecifyKind(fireAt, DateTimeKind.Utc)))
             .Build();
 
         await scheduler.ScheduleJob(trigger, cancellationToken);

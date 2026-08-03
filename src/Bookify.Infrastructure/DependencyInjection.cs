@@ -246,6 +246,9 @@ public static class DependencyInjection
         // Uses raw SQL for performance
         services.Configure<CompleteBookingsJobOptions>(configuration.GetSection("CompleteBookings"));
 
+        // --- Account Deletion Options ---
+        services.Configure<AccountDeletionOptions>(configuration.GetSection("AccountDeletion"));
+
         services.AddTransient<IJobScheduler, JobScheduler>();
 
         services.AddQuartz(options =>

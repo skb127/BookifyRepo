@@ -50,6 +50,14 @@ internal sealed class UserRepository : Repository<User>, IUserRepository
         }
     }
 
+    public void AddAccountDeletionToken(User user)
+    {
+        if (user.AccountDeletionToken is not null)
+        {
+            DbContext.Add(user.AccountDeletionToken);
+        }
+    }
+
     public async Task<User?> FindByAccountDeletionTokenAsync(string tokenHash, CancellationToken cancellationToken = default) =>
         await DbContext.Set<User>()
             .Include(u => u.AccountDeletionToken)

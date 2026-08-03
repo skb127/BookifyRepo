@@ -1,3 +1,4 @@
+using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Users;
@@ -8,11 +9,16 @@ internal sealed class BanUserCommandHandler : ICommandHandler<BanUserCommand>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICacheService _cacheService;
 
-    public BanUserCommandHandler(IUserRepository userRepository, IUnitOfWork unitOfWork)
+    public BanUserCommandHandler(
+        IUserRepository userRepository,
+        IUnitOfWork unitOfWork,
+        ICacheService cacheService)
     {
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
+        _cacheService = cacheService;
     }
 
     public async Task<Result> Handle(BanUserCommand request, CancellationToken cancellationToken)
@@ -37,6 +43,8 @@ internal sealed class BanUserCommandHandler : ICommandHandler<BanUserCommand>
         user.Ban();
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _cacheService.RemoveAsync(CacheKeys.User(request.UserId), cancellationToken);
 
         return Result.Success();
     }

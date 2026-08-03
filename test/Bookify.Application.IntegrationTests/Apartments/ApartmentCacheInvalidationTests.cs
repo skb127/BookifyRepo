@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Bookify.Application.IntegrationTests.Infrastructure;
-using Bookify.Application.IntegrationTests.Users;
+using Bookify.Application.Users.RegisterHost;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
@@ -17,11 +17,12 @@ public class ApartmentCacheInvalidationTests : BaseIntegrationTest
     [Fact]
     public async Task UpdateApartment_ShouldServeUpdatedData_AfterCacheIsInvalidated()
     {
-        // Arrange / Act
-        string adminEmail = UserData.CacheInvalidationAdminUserRequest.Email;
-        await PromoteToAdminAsync(adminEmail);
+        // Arrange / Act: register a Host user
+        string hostEmail = $"host_cacheupd_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678"));
 
-        string accessToken = await GetAccessToken(adminEmail, UserData.CacheInvalidationAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(hostEmail, password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme, accessToken);
 
@@ -64,12 +65,12 @@ public class ApartmentCacheInvalidationTests : BaseIntegrationTest
     [Fact]
     public async Task DeleteApartment_ShouldReturn404_AfterCacheIsInvalidated()
     {
-        // Arrange / Act
-        // authenticate as Admin
-        string adminEmail = UserData.CacheInvalidationAdminUserRequest.Email;
-        await PromoteToAdminAsync(adminEmail);
+        // Arrange / Act: register a Host user
+        string hostEmail = $"host_cachedel_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678"));
 
-        string accessToken = await GetAccessToken(adminEmail, UserData.CacheInvalidationAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(hostEmail, password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme, accessToken);
 

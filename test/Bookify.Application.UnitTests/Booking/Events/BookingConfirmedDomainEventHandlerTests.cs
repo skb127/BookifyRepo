@@ -67,7 +67,7 @@ public class BookingConfirmedDomainEventHandlerTests
         var email = new Email("test@test.com");
         var dateOfBirth = DateOfBirth.Create(new DateOnly(2000, 1, 1));
 
-        return User.Create(firstName, lastName, email, dateOfBirth);
+        return User.Create(firstName, lastName, email, dateOfBirth, Role.Host);
     }
 
     private static Apartment CreateApartment() =>

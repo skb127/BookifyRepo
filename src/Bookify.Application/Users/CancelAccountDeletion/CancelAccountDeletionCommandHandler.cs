@@ -1,3 +1,4 @@
+using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Application.Abstractions.Scheduling;
 using Bookify.Domain.Abstractions;
@@ -11,15 +12,18 @@ internal sealed class CancelAccountDeletionCommandHandler : ICommandHandler<Canc
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IJobScheduler _jobScheduler;
+    private readonly ICacheService _cacheService;
 
     public CancelAccountDeletionCommandHandler(
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
-        IJobScheduler jobScheduler)
+        IJobScheduler jobScheduler,
+        ICacheService cacheService)
     {
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _jobScheduler = jobScheduler;
+        _cacheService = cacheService;
     }
 
     public async Task<Result> Handle(CancelAccountDeletionCommand request, CancellationToken cancellationToken)
@@ -43,6 +47,8 @@ internal sealed class CancelAccountDeletionCommandHandler : ICommandHandler<Canc
         await _jobScheduler.CancelAccountDeletionAsync(user.Id, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _cacheService.RemoveAsync(CacheKeys.User(user.Id), cancellationToken);
 
         return Result.Success();
     }

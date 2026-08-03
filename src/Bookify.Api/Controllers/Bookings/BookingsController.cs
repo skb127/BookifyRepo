@@ -39,7 +39,7 @@ public sealed class BookingsController : ControllerBase
     public BookingsController(ISender sender) =>
         _sender = sender;
 
-    [HasPermission(Permissions.BookingsRead)]
+    [HasPermission(Permissions.UsersAdminRead)]
     [HttpGet]
     [ProducesResponseType(typeof(PagedResponse<BookingSummaryResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetBookings(

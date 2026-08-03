@@ -1,3 +1,4 @@
+using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Users;
@@ -8,13 +9,16 @@ internal sealed class FinalizeAccountDeletionCommandHandler : ICommandHandler<Fi
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICacheService _cacheService;
 
     public FinalizeAccountDeletionCommandHandler(
         IUserRepository userRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ICacheService cacheService)
     {
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
+        _cacheService = cacheService;
     }
 
     public async Task<Result> Handle(FinalizeAccountDeletionCommand request, CancellationToken cancellationToken)
@@ -34,6 +38,8 @@ internal sealed class FinalizeAccountDeletionCommandHandler : ICommandHandler<Fi
         user.Delete();
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _cacheService.RemoveAsync(CacheKeys.User(request.UserId), cancellationToken);
 
         return Result.Success();
     }

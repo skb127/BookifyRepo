@@ -1,4 +1,4 @@
-using Bookify.Api.Controllers.Apartments;
+using Bookify.Api.Controllers.Apartments.Requests;
 
 namespace Bookify.Application.IntegrationTests.Apartments;
 

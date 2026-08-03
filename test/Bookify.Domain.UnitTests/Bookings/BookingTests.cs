@@ -7,7 +7,6 @@ using Bookify.Domain.Shared;
 using Bookify.Domain.UnitTests.Apartments;
 using Bookify.Domain.UnitTests.Infrastructure;
 using Bookify.Domain.UnitTests.Users;
-using Bookify.Domain.Users;
 using FluentAssertions;
 
 namespace Bookify.Domain.UnitTests.Bookings;
@@ -18,8 +17,7 @@ public class BookingTests : BaseTest
     public void Reserve_ShouldRaiseBookingReservedDomainEvent()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -38,8 +36,7 @@ public class BookingTests : BaseTest
     public void Reserve_ShouldSetGuestCount_WhenProvided()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price, baseGuests: 2, maxGuests: 6);
@@ -56,8 +53,7 @@ public class BookingTests : BaseTest
     public void Reserve_ShouldDefaultToOneGuest_WhenNotProvided()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -74,8 +70,7 @@ public class BookingTests : BaseTest
     public void Confirm_ShouldRaiseBookingConfirmedDomainEvent()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -102,8 +97,7 @@ public class BookingTests : BaseTest
     public void Reserve_ShouldSetApartmentLastBookedOnUtc()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -121,8 +115,7 @@ public class BookingTests : BaseTest
     public void Cancel_ShouldReturnFailure_WhenStatusIsInvalid()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -145,8 +138,7 @@ public class BookingTests : BaseTest
     public void Cancel_ShouldReturnFailure_WhenDateHasStarted()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -171,8 +163,7 @@ public class BookingTests : BaseTest
     public void Cancel_ShouldSucceed_WhenValid()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -204,8 +195,7 @@ public class BookingTests : BaseTest
     public void Reject_ShouldReturnFailure_WhenStatusIsNotReserved()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -228,8 +218,7 @@ public class BookingTests : BaseTest
     public void Reject_ShouldSucceed_WhenStatusIsReserved()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -258,8 +247,7 @@ public class BookingTests : BaseTest
     public void Complete_ShouldReturnFailure_WhenStatusIsNotInProgress()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -280,8 +268,7 @@ public class BookingTests : BaseTest
     public void Complete_ShouldSucceed_WhenStatusIsInProgress()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -312,8 +299,7 @@ public class BookingTests : BaseTest
     public void Cancel_ShouldSucceed_WhenStatusIsReserved()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -339,8 +325,7 @@ public class BookingTests : BaseTest
     public void Cancel_ShouldSucceed_WhenStatusIsPendingPayment()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -368,8 +353,7 @@ public class BookingTests : BaseTest
     public void Cancel_ShouldFail_WhenStatusIsPendingPaymentAndCancelledByHost()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -390,8 +374,7 @@ public class BookingTests : BaseTest
     public void Cancel_ShouldRaiseBookingCancelledDomainEvent_WithRefundDetails()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -424,8 +407,7 @@ public class BookingTests : BaseTest
     public void CheckIn_ShouldReturnFailure_WhenStatusIsNotConfirmed()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -446,8 +428,7 @@ public class BookingTests : BaseTest
     public void CheckIn_ShouldSucceed_WhenStatusIsConfirmed()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -475,8 +456,7 @@ public class BookingTests : BaseTest
     public void MarkNoShow_ShouldReturnFailure_WhenStatusIsNotConfirmed()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 15), new DateOnly(2025, 12, 20));
         Apartment apartment = ApartmentData.Create(price);
@@ -497,8 +477,7 @@ public class BookingTests : BaseTest
     public void MarkNoShow_ShouldReturnFailure_WhenNowDateIsNotAfterStartDate()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 15), new DateOnly(2025, 12, 20));
         Apartment apartment = ApartmentData.Create(price);
@@ -522,8 +501,7 @@ public class BookingTests : BaseTest
     public void MarkNoShow_ShouldSucceed_WhenStatusIsConfirmedAndNowDateIsAfterStartDate()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 15), new DateOnly(2025, 12, 20));
         Apartment apartment = ApartmentData.Create(price);
@@ -551,8 +529,7 @@ public class BookingTests : BaseTest
     public void Expire_ShouldReturnFailure_WhenStatusIsNotReservedOrPendingPayment()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -575,8 +552,7 @@ public class BookingTests : BaseTest
     public void Expire_ShouldSucceed_WhenStatusIsReserved()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -602,8 +578,7 @@ public class BookingTests : BaseTest
     public void Expire_ShouldSucceed_WhenStatusIsPendingPayment()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -628,8 +603,7 @@ public class BookingTests : BaseTest
     public void AuthorizePayment_ShouldSucceed_WhenPendingPayment()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -646,7 +620,8 @@ public class BookingTests : BaseTest
         booking.Status.Should().Be(BookingStatus.Reserved);
         booking.PaymentStatus.Should().Be(PaymentStatus.Authorized);
 
-        BookingPaymentAuthorizedDomainEvent domainEvent = AssertDomainEventWasPublished<BookingPaymentAuthorizedDomainEvent>(booking);
+        BookingPaymentAuthorizedDomainEvent domainEvent =
+            AssertDomainEventWasPublished<BookingPaymentAuthorizedDomainEvent>(booking);
         domainEvent.BookingId.Should().Be(booking.Id);
         domainEvent.StripeSessionId.Should().Be("session_123");
         domainEvent.StripePaymentIntentId.Should().Be("intent_123");
@@ -656,8 +631,7 @@ public class BookingTests : BaseTest
     public void AuthorizePayment_ShouldFail_WhenNotPendingPayment()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -679,8 +653,7 @@ public class BookingTests : BaseTest
     public void MarkAsPaid_ShouldSucceed_WhenPendingPayment()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -698,7 +671,8 @@ public class BookingTests : BaseTest
         booking.PaymentStatus.Should().Be(PaymentStatus.Paid);
         booking.ConfirmedOnUtc.Should().Be(utcNow);
 
-        BookingPaymentCompletedDomainEvent domainEvent = AssertDomainEventWasPublished<BookingPaymentCompletedDomainEvent>(booking);
+        BookingPaymentCompletedDomainEvent domainEvent =
+            AssertDomainEventWasPublished<BookingPaymentCompletedDomainEvent>(booking);
         domainEvent.BookingId.Should().Be(booking.Id);
         domainEvent.StripePaymentIntentId.Should().Be("intent_123");
     }
@@ -707,8 +681,7 @@ public class BookingTests : BaseTest
     public void MarkAsPaid_ShouldFail_WhenNotPendingPayment()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -730,8 +703,7 @@ public class BookingTests : BaseTest
     public void InitiateRefund_ShouldSucceed_WhenCancelledAndPaid()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -751,7 +723,8 @@ public class BookingTests : BaseTest
         result.IsSuccess.Should().BeTrue();
         booking.PaymentStatus.Should().Be(PaymentStatus.RefundProcessing);
 
-        BookingRefundInitiatedDomainEvent domainEvent = AssertDomainEventWasPublished<BookingRefundInitiatedDomainEvent>(booking);
+        BookingRefundInitiatedDomainEvent domainEvent =
+            AssertDomainEventWasPublished<BookingRefundInitiatedDomainEvent>(booking);
         domainEvent.BookingId.Should().Be(booking.Id);
         domainEvent.RefundAmount.Should().Be(100.0m);
         domainEvent.Currency.Should().Be("USD");
@@ -762,8 +735,7 @@ public class BookingTests : BaseTest
     public void Cancel_ShouldReleaseAuthorization_WhenReservedAndAuthorized()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -785,8 +757,7 @@ public class BookingTests : BaseTest
     public void Reject_ShouldReleaseAuthorization_WhenReservedAndAuthorized()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -808,8 +779,7 @@ public class BookingTests : BaseTest
     public void Expire_ShouldReleaseAuthorization_WhenReservedAndAuthorized()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -831,8 +801,7 @@ public class BookingTests : BaseTest
     public void InitiateRefund_ShouldFail_WhenNotCancelled()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -854,8 +823,7 @@ public class BookingTests : BaseTest
     public void InitiateRefund_ShouldFail_WhenUnpaid()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -877,8 +845,7 @@ public class BookingTests : BaseTest
     public void CheckIn_ShouldReturnFailure_WhenGuestCheckInDateIsAfterUtcNow()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -902,8 +869,7 @@ public class BookingTests : BaseTest
     public void CheckIn_ShouldReturnFailure_WhenGuestCheckInDateIsBeforeStartDate()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 2), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -927,8 +893,7 @@ public class BookingTests : BaseTest
     public void CheckOut_ShouldReturnFailure_WhenStatusIsNotInProgress()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -949,8 +914,7 @@ public class BookingTests : BaseTest
     public void CheckOut_ShouldReturnFailure_WhenGuestCheckOutDateIsAfterUtcNow()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -975,8 +939,7 @@ public class BookingTests : BaseTest
     public void CheckOut_ShouldReturnFailure_WhenGuestCheckOutDateIsBeforeStartDate()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 2), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -1001,8 +964,7 @@ public class BookingTests : BaseTest
     public void CheckOut_ShouldSucceed_WhenStatusIsInProgress()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -1030,8 +992,7 @@ public class BookingTests : BaseTest
     public void CloseStay_ShouldReturnFailure_WhenStatusIsNotConfirmed()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -1052,8 +1013,7 @@ public class BookingTests : BaseTest
     public void CloseStay_ShouldReturnFailure_WhenStayNotYetEnded()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -1076,8 +1036,7 @@ public class BookingTests : BaseTest
     public void CloseStay_ShouldReturnFailure_WhenCheckInDateIsInvalid()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 2), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -1100,8 +1059,7 @@ public class BookingTests : BaseTest
     public void CloseStay_ShouldReturnFailure_WhenCheckOutDateIsInvalid()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -1124,8 +1082,7 @@ public class BookingTests : BaseTest
     public void CloseStay_ShouldSucceed_WhenValid()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);

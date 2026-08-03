@@ -8,6 +8,7 @@ using Bookify.Application.Common;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
+using Bookify.Application.Users;
 using Bookify.Domain.Users;
 using Dapper;
 
@@ -46,13 +47,18 @@ internal sealed class GetApartmentBookingsQueryHandler
             return Result.Failure<PagedResponse<BookingSummaryResponse>>(ApartmentErrors.NotFound);
         }
 
-        // 2. Authorization (Admin or Owner)
-        HashSet<string> permissions = await _authorizationService.GetPermissionsForUserAsync(_userContext.IdentityId);
-        bool isAdmin = permissions.Contains(Permission.BookingsRead.Name);
+        // 2. Authorization (Owner or Admin)
+        bool isOwner = ownerId.Value == _userContext.UserId;
 
-        if (!isAdmin && ownerId.Value != _userContext.UserId)
+        if (!isOwner)
         {
-            return Result.Failure<PagedResponse<BookingSummaryResponse>>(BookingErrors.Unauthorized);
+            UserRolesResponse rolesResponse = await _authorizationService.GetRolesForUserAsync(_userContext.IdentityId);
+            bool isAdmin = rolesResponse.Roles.Any(role => role.Id == Role.Admin.Id);
+
+            if (!isAdmin)
+            {
+                return Result.Failure<PagedResponse<BookingSummaryResponse>>(BookingErrors.Unauthorized);
+            }
         }
 
         // 3. Query Bookings

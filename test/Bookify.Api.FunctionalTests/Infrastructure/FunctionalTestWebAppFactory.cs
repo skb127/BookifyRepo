@@ -132,13 +132,13 @@ public class FunctionalTestWebAppFactory : WebApplicationFactory<Program>, IAsyn
         HttpClient httpClient = CreateClient();
         httpClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
 
-        var response1 = await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest).ConfigureAwait(false);
+        var response1 = await httpClient.PostAsJsonAsync("api/v1/users/register/guest", UserData.RegisterTestUserRequest).ConfigureAwait(false);
         response1.EnsureSuccessStatusCode();
 
-        var response2 = await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest2).ConfigureAwait(false);
+        var response2 = await httpClient.PostAsJsonAsync("api/v1/users/register/guest", UserData.RegisterTestUserRequest2).ConfigureAwait(false);
         response2.EnsureSuccessStatusCode();
 
-        var response3 = await httpClient.PostAsJsonAsync("api/v1/users/register", UserData.RegisterTestUserRequest3).ConfigureAwait(false);
+        var response3 = await httpClient.PostAsJsonAsync("api/v1/users/register/guest", UserData.RegisterTestUserRequest3).ConfigureAwait(false);
         response3.EnsureSuccessStatusCode();
     }
 }

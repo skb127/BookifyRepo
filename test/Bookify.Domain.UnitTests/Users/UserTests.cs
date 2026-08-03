@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Shared;
+using Bookify.Domain.Shared;
 using Bookify.Domain.UnitTests.Infrastructure;
 using Bookify.Domain.Users;
 using Bookify.Domain.Users.Events;
@@ -16,7 +16,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         // Assert
         user.FirstName.Should().Be(UserData.FirstName);
@@ -32,7 +33,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         // Assert
         UserCreatedDomainEvent domainEvent = AssertDomainEventWasPublished<UserCreatedDomainEvent>(user);
@@ -41,17 +43,33 @@ public class UserTests : BaseTest
     }
 
     [Fact]
-    public void Create_ShouldAddRegisteredRoleToUser()
+    public void Create_ShouldAddGuestRole_WhenCreatingGuest()
     {
         // Act
         var user = User.Create(
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         // Assert
-        user.Roles.Should().Contain(Role.Registered);
+        user.Roles.Should().ContainSingle().Which.Should().Be(Role.Guest);
+    }
+
+    [Fact]
+    public void Create_ShouldAddGuestAndHostRoles_WhenCreatingHost()
+    {
+        // Act
+        var user = User.Create(
+            UserData.FirstName,
+            UserData.LastName,
+            UserData.Email,
+            UserData.DateOfBirth,
+            Role.Host);
+
+        // Assert
+        user.Roles.Should().HaveCount(2).And.Contain(Role.Guest).And.Contain(Role.Host);
     }
 
     [Fact]
@@ -62,7 +80,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         // Assert
         user.Status.Should().Be(UserStatus.Active);
@@ -76,7 +95,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         // Assert
         user.DateOfBirth.Should().Be(UserData.DateOfBirth);
@@ -90,7 +110,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         // Assert
         user.PhoneNumber.Should().BeNull();
@@ -104,7 +125,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         // Assert
         user.IdentityId.Should().BeEmpty();
@@ -118,7 +140,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         var identityId = "auth0|123456";
 
@@ -137,7 +160,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         // Act
         user.ChangePassword();
@@ -154,7 +178,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         // Act
         user.ChangePassword();
@@ -172,7 +197,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         // Act
         user.RequestPasswordRecovery(TimeSpan.FromMinutes(30));
@@ -189,7 +215,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         // Act
         user.RequestPasswordRecovery(TimeSpan.FromMinutes(30));
@@ -208,7 +235,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         // Act
         user.RequestPasswordRecovery(TimeSpan.FromMinutes(30));
@@ -227,7 +255,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         user.RequestPasswordRecovery(TimeSpan.FromMinutes(30));
 
@@ -246,7 +275,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         user.RequestPasswordRecovery(TimeSpan.FromMinutes(30));
 
@@ -265,7 +295,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         user.RequestPasswordRecovery(TimeSpan.FromMinutes(30));
 
@@ -285,7 +316,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         var newEmail = new Email("new@test.com");
 
@@ -306,7 +338,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         var newEmail = new Email("new@test.com");
 
@@ -328,7 +361,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         var newEmail = new Email("new@test.com");
         user.RequestEmailChange(newEmail, TimeSpan.FromMinutes(30));
@@ -344,7 +378,7 @@ public class UserTests : BaseTest
     public void ConfirmEmailChange_Should_UpdateEmail_WhenTokenIsValid()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, UserData.DateOfBirth);
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, UserData.DateOfBirth, Role.Guest);
         var newEmail = new Email("new@test.com");
         user.RequestEmailChange(newEmail, TimeSpan.FromMinutes(30));
 
@@ -365,7 +399,7 @@ public class UserTests : BaseTest
     public void ConfirmEmailChange_Should_RaiseEventWithOldAndNewEmail()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, UserData.DateOfBirth);
+        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email, UserData.DateOfBirth, Role.Guest);
         var originalEmail = UserData.Email;
         var newEmail = new Email("new@test.com");
         user.RequestEmailChange(newEmail, TimeSpan.FromMinutes(30));
@@ -387,7 +421,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         var newFirstName = new FirstName("NewFirst");
         var newLastName = new LastName("NewLast");
@@ -412,7 +447,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         var newFirstName = new FirstName("NewFirst");
         var newLastName = new LastName("NewLast");
@@ -434,7 +470,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         var newFirstName = new FirstName("NewFirst");
         var newLastName = new LastName("NewLast");
@@ -457,7 +494,8 @@ public class UserTests : BaseTest
             UserData.FirstName,
             UserData.LastName,
             UserData.Email,
-            UserData.DateOfBirth);
+            UserData.DateOfBirth,
+            Role.Guest);
 
         var newFirstName = new FirstName("NewFirst");
         var newLastName = new LastName("NewLast");

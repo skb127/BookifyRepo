@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Bookify.Api.Controllers.Users;
+using Bookify.Api.Controllers.Users.Requests;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Application.Users.GetLoggedInUser;
 using Bookify.Domain.Users;

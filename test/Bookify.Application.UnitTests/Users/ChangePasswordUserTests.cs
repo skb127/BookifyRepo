@@ -54,7 +54,7 @@ public class ChangePasswordUserTests
     public async Task Handle_ShouldReturnFailure_WhenCurrentPasswordIsInvalid()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         _userContextMock.UserId.Returns(user.Id);
         _userContextMock.Email.Returns(user.Email.Value); // Mock Email property
         _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
@@ -75,7 +75,7 @@ public class ChangePasswordUserTests
     public async Task Handle_ShouldReturnFailure_WhenIdPResetFails()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         _userContextMock.UserId.Returns(user.Id);
         _userContextMock.Email.Returns(user.Email.Value);
         _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
@@ -99,7 +99,7 @@ public class ChangePasswordUserTests
     public async Task Handle_ShouldReturnSuccess_WhenPasswordChanged()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         _userContextMock.UserId.Returns(user.Id);
         _userContextMock.Email.Returns(user.Email.Value);
         _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
@@ -123,7 +123,7 @@ public class ChangePasswordUserTests
     public async Task Handle_ShouldThrowException_WhenUnitOfWorkThrows()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         _userContextMock.UserId.Returns(user.Id);
         _userContextMock.Email.Returns(user.Email.Value);
         _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())

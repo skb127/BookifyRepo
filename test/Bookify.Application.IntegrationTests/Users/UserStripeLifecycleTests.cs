@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Bookify.Api.Controllers.Users;
+using Bookify.Api.Controllers.Users.Requests;
 using Bookify.Application.Abstractions.Email.Models;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Domain.Users;
@@ -33,7 +33,7 @@ public class UserStripeLifecycleTests : BaseIntegrationTest
         var request = new RegisterUserRequest(email, firstName, lastName, password, new DateOnly(2000, 1, 1));
 
         // Act
-        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/users/register", request);
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/users/register/guest", request);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -74,7 +74,7 @@ public class UserStripeLifecycleTests : BaseIntegrationTest
         var password = "ClaveSegura1$";
         var registerRequest = new RegisterUserRequest(email, firstName, lastName, password, new DateOnly(2000, 1, 1));
 
-        HttpResponseMessage registerResponse = await HttpClient.PostAsJsonAsync("api/v1/users/register", registerRequest);
+        HttpResponseMessage registerResponse = await HttpClient.PostAsJsonAsync("api/v1/users/register/guest", registerRequest);
         registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Wait for upsert to finish so StripeCustomerId is set
@@ -142,7 +142,7 @@ public class UserStripeLifecycleTests : BaseIntegrationTest
         var password = "ClaveSegura1$";
         var registerRequest = new RegisterUserRequest(email, firstName, lastName, password, new DateOnly(2000, 1, 1));
 
-        HttpResponseMessage registerResponse = await HttpClient.PostAsJsonAsync("api/v1/users/register", registerRequest);
+        HttpResponseMessage registerResponse = await HttpClient.PostAsJsonAsync("api/v1/users/register/guest", registerRequest);
         registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Wait for StripeCustomerId

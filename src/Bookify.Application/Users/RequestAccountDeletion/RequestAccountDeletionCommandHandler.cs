@@ -1,4 +1,5 @@
 using Bookify.Application.Abstractions.Authentication;
+using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Abstractions.Identity;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Application.Abstractions.Scheduling;
@@ -19,6 +20,7 @@ internal sealed class RequestAccountDeletionCommandHandler : ICommandHandler<Req
     private readonly IUnitOfWork _unitOfWork;
     private readonly IJobScheduler _jobScheduler;
     private readonly IIdentityProvider _identityProvider;
+    private readonly ICacheService _cacheService;
     private readonly AccountDeletionOptions _options;
 
     public RequestAccountDeletionCommandHandler(
@@ -28,6 +30,7 @@ internal sealed class RequestAccountDeletionCommandHandler : ICommandHandler<Req
         IUnitOfWork unitOfWork,
         IJobScheduler jobScheduler,
         IIdentityProvider identityProvider,
+        ICacheService cacheService,
         IOptions<AccountDeletionOptions> options)
     {
         _userContext = userContext;
@@ -36,6 +39,7 @@ internal sealed class RequestAccountDeletionCommandHandler : ICommandHandler<Req
         _unitOfWork = unitOfWork;
         _jobScheduler = jobScheduler;
         _identityProvider = identityProvider;
+        _cacheService = cacheService;
         _options = options.Value;
     }
 
@@ -49,6 +53,11 @@ internal sealed class RequestAccountDeletionCommandHandler : ICommandHandler<Req
         }
 
         if (user.Roles.Any(r => r.Id == Role.Admin.Id))
+        {
+            return Result.Failure(UserErrors.RequestFailed);
+        }
+
+        if (user.Status == UserStatus.PendingDeletion)
         {
             return Result.Failure(UserErrors.RequestFailed);
         }
@@ -72,12 +81,15 @@ internal sealed class RequestAccountDeletionCommandHandler : ICommandHandler<Req
         string tokenHash = SecurityUtils.ComputeSha256Hash(rawToken);
 
         user.RequestDeletion(rawToken, tokenHash, _options.GracePeriodHours);
+        _userRepository.AddAccountDeletionToken(user);
 
         await _jobScheduler.ScheduleAccountDeletionAsync(user.Id, user.DeletionScheduledAt!.Value, cancellationToken);
 
         await _identityProvider.LogoutAllSessionsAsync(user.IdentityId, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _cacheService.RemoveAsync(CacheKeys.User(user.Id), cancellationToken);
 
         return Result.Success();
     }

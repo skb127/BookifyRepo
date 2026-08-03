@@ -1,4 +1,4 @@
-namespace Bookify.Api.Controllers.Users;
+namespace Bookify.Api.Controllers.Users.Requests;
 
 public record RegisterHostRequest(
     string Email,

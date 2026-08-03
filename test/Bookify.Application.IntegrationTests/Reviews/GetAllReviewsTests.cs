@@ -11,8 +11,6 @@ namespace Bookify.Application.IntegrationTests.Reviews;
 
 public class GetAllReviewsTests : BaseIntegrationTest
 {
-    private const string Password = "Password123!";
-
     public GetAllReviewsTests(IntegrationTestWebAppFactory factory) : base(factory)
     {
     }
@@ -28,11 +26,17 @@ public class GetAllReviewsTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task GetAllReviews_ShouldReturn403_WhenCallerIsRegularUser()
+    public async Task GetAllReviews_ShouldReturn200_WhenCallerIsRegularUser()
     {
-        // Arrange
-        // We use GetAllReviewsRegularUserRequest but we DO NOT promote it to Admin
-        string accessToken = await GetAccessToken(UserData.GetAllReviewsRegularUserRequest.Email, UserData.GetAllReviewsRegularUserRequest.Password);
+        // Arrange: Register a fresh regular user who has Guest role
+        string email = $"regular_{Guid.CreateVersion7()}@test.com";
+        string password = "Password123!";
+        var registerCommand =
+            new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(email, "Regular", "User", password,
+                new DateOnly(1995, 1, 1));
+        _ = await Sender.Send(registerCommand);
+
+        string accessToken = await GetAccessToken(email, password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
@@ -41,7 +45,7 @@ public class GetAllReviewsTests : BaseIntegrationTest
         HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/reviews", UriKind.Relative));
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -49,19 +53,20 @@ public class GetAllReviewsTests : BaseIntegrationTest
     {
         // Arrange
         await PromoteToAdminAsync(UserData.GetAllReviewsAdminUserRequest.Email);
-        string accessToken = await GetAccessToken(UserData.GetAllReviewsAdminUserRequest.Email, UserData.GetAllReviewsAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(UserData.GetAllReviewsAdminUserRequest.Email,
+            UserData.GetAllReviewsAdminUserRequest.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/reviews?page=1&pageSize=0", UriKind.Relative));
+        HttpResponseMessage response =
+            await HttpClient.GetAsync(new Uri("api/v1/reviews?page=1&pageSize=0", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var content = await response.Content.ReadAsStringAsync();
         content.Should().Contain("PageSize");
-
     }
 
     [Fact]
@@ -69,7 +74,8 @@ public class GetAllReviewsTests : BaseIntegrationTest
     {
         // Arrange
         await PromoteToAdminAsync(UserData.GetAllReviewsAdminUserRequest.Email);
-        string accessToken = await GetAccessToken(UserData.GetAllReviewsAdminUserRequest.Email, UserData.GetAllReviewsAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(UserData.GetAllReviewsAdminUserRequest.Email,
+            UserData.GetAllReviewsAdminUserRequest.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
@@ -77,11 +83,14 @@ public class GetAllReviewsTests : BaseIntegrationTest
         Guid nonExistentApartmentId = Guid.CreateVersion7();
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/reviews?apartmentId={nonExistentApartmentId}", UriKind.Relative));
+        HttpResponseMessage response =
+            await HttpClient.GetAsync(new Uri($"api/v1/reviews?apartmentId={nonExistentApartmentId}",
+                UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<Common.PagedResponse<Bookify.Application.Reviews.GetAllReviews.AllReviewsResponse>>();
+        var result = await response.Content
+            .ReadFromJsonAsync<Common.PagedResponse<Bookify.Application.Reviews.GetAllReviews.AllReviewsResponse>>();
 
 
         result.Should().NotBeNull();
@@ -94,11 +103,12 @@ public class GetAllReviewsTests : BaseIntegrationTest
     {
         // Arrange
         var reviewsToCreate = new List<(int Rating, string Comment)> { (5, "Great place!") };
-        await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate, Password);
+        await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate);
 
         // Promote the admin user so they can read all reviews
         await PromoteToAdminAsync(UserData.GetAllReviewsAdminUserRequest.Email);
-        string accessToken = await GetAccessToken(UserData.GetAllReviewsAdminUserRequest.Email, UserData.GetAllReviewsAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(UserData.GetAllReviewsAdminUserRequest.Email,
+            UserData.GetAllReviewsAdminUserRequest.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
@@ -108,7 +118,8 @@ public class GetAllReviewsTests : BaseIntegrationTest
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<Common.PagedResponse<Bookify.Application.Reviews.GetAllReviews.AllReviewsResponse>>();
+        var result = await response.Content
+            .ReadFromJsonAsync<Common.PagedResponse<Bookify.Application.Reviews.GetAllReviews.AllReviewsResponse>>();
 
         result.Should().NotBeNull();
         result.Items.Should().NotBeEmpty();
@@ -129,23 +140,26 @@ public class GetAllReviewsTests : BaseIntegrationTest
         // Arrange
         var reviewsToCreate = new List<(int Rating, string Comment)> { (4, "Nice place!") };
         var (apartmentId, _, _, _, _, _) =
-            await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate, Password);
+            await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate);
 
         // We run a second setup to ensure there are other reviews in the system
-        await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate, Password);
+        await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate);
 
         await PromoteToAdminAsync(UserData.GetAllReviewsAdminUserRequest.Email);
-        string accessToken = await GetAccessToken(UserData.GetAllReviewsAdminUserRequest.Email, UserData.GetAllReviewsAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(UserData.GetAllReviewsAdminUserRequest.Email,
+            UserData.GetAllReviewsAdminUserRequest.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/reviews?apartmentId={apartmentId}", UriKind.Relative));
+        HttpResponseMessage response =
+            await HttpClient.GetAsync(new Uri($"api/v1/reviews?apartmentId={apartmentId}", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<Common.PagedResponse<Bookify.Application.Reviews.GetAllReviews.AllReviewsResponse>>();
+        var result = await response.Content
+            .ReadFromJsonAsync<Common.PagedResponse<Bookify.Application.Reviews.GetAllReviews.AllReviewsResponse>>();
 
 
         result.Should().NotBeNull();
@@ -164,7 +178,7 @@ public class GetAllReviewsTests : BaseIntegrationTest
         // Arrange
         var reviewsToCreate = new List<(int Rating, string Comment)> { (5, "Super host!") };
         var (_, _, _, _, guestToken, _) =
-            await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate, Password);
+            await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate);
 
         // Resolve the guest's userId by calling GET api/v1/users/me with the guest's token
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -175,20 +189,24 @@ public class GetAllReviewsTests : BaseIntegrationTest
         Guid guestId = me!.Id;
 
         // We run a second setup to ensure there are other reviews in the system
-        await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, new List<(int, string)> { (1, "Bad") }, Password);
+        await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this,
+            new List<(int, string)> { (1, "Bad") });
 
         await PromoteToAdminAsync(UserData.GetAllReviewsAdminUserRequest.Email);
-        string accessToken = await GetAccessToken(UserData.GetAllReviewsAdminUserRequest.Email, UserData.GetAllReviewsAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(UserData.GetAllReviewsAdminUserRequest.Email,
+            UserData.GetAllReviewsAdminUserRequest.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
 
         // Act
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri($"api/v1/reviews?userId={guestId}", UriKind.Relative));
+        HttpResponseMessage response =
+            await HttpClient.GetAsync(new Uri($"api/v1/reviews?userId={guestId}", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<Common.PagedResponse<Bookify.Application.Reviews.GetAllReviews.AllReviewsResponse>>();
+        var result = await response.Content
+            .ReadFromJsonAsync<Common.PagedResponse<Bookify.Application.Reviews.GetAllReviews.AllReviewsResponse>>();
 
         result.Should().NotBeNull();
         result.Items.Should().NotBeEmpty();
@@ -204,7 +222,7 @@ public class GetAllReviewsTests : BaseIntegrationTest
         // Arrange
         var reviewsToCreate = new List<(int Rating, string Comment)> { (3, "Okay place.") };
         var (_, _, _, _, guestToken, _) =
-            await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate, Password);
+            await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate);
 
         // 1. Get the review ID (using guest token or owner token since it was just created)
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -213,7 +231,8 @@ public class GetAllReviewsTests : BaseIntegrationTest
         // Get guest's own reviews to find the review ID
         HttpResponseMessage getMyReviewsResponse = await HttpClient.GetAsync(
             new Uri("api/v1/reviews/me", UriKind.Relative));
-        var myReviewList = await getMyReviewsResponse.Content.ReadFromJsonAsync<Common.PagedResponse<Bookify.Application.Reviews.GetMyReviews.MyReviewResponse>>();
+        var myReviewList = await getMyReviewsResponse.Content
+            .ReadFromJsonAsync<Common.PagedResponse<Bookify.Application.Reviews.GetMyReviews.MyReviewResponse>>();
         Guid reviewId = myReviewList!.Items[0].Id;
 
         // 2. Edit the review
@@ -222,17 +241,20 @@ public class GetAllReviewsTests : BaseIntegrationTest
 
         // 3. Authenticate as Admin
         await PromoteToAdminAsync(UserData.GetAllReviewsAdminUserRequest.Email);
-        string accessToken = await GetAccessToken(UserData.GetAllReviewsAdminUserRequest.Email, UserData.GetAllReviewsAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(UserData.GetAllReviewsAdminUserRequest.Email,
+            UserData.GetAllReviewsAdminUserRequest.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
 
         // Act - Fetch only edited reviews
-        HttpResponseMessage response = await HttpClient.GetAsync(new Uri("api/v1/reviews?isEdited=true", UriKind.Relative));
+        HttpResponseMessage response =
+            await HttpClient.GetAsync(new Uri("api/v1/reviews?isEdited=true", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<Common.PagedResponse<Bookify.Application.Reviews.GetAllReviews.AllReviewsResponse>>();
+        var result = await response.Content
+            .ReadFromJsonAsync<Common.PagedResponse<Bookify.Application.Reviews.GetAllReviews.AllReviewsResponse>>();
 
         result.Should().NotBeNull();
         result.Items.Should().NotBeEmpty();

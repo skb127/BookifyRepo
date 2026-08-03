@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using Bookify.Api.Controllers.Users;
+using Bookify.Api.Controllers.Users.Requests;
 using Bookify.Application.Users;
 
 namespace Bookify.Api.FunctionalTests.Infrastructure;
@@ -11,7 +11,7 @@ public abstract class BaseFunctionalTest : IClassFixture<FunctionalTestWebAppFac
     protected BaseFunctionalTest(FunctionalTestWebAppFactory factory)
     {
         ArgumentNullException.ThrowIfNull(factory);
-        
+
         HttpClient = factory.CreateClient();
         HttpClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
     }
@@ -24,7 +24,8 @@ public abstract class BaseFunctionalTest : IClassFixture<FunctionalTestWebAppFac
                 userEmail,
                 userPassword)).ConfigureAwait(false);
 
-        AccessTokenResponse? accessTokenResponse = await loginResponse.Content.ReadFromJsonAsync<AccessTokenResponse>().ConfigureAwait(false);
+        AccessTokenResponse? accessTokenResponse =
+            await loginResponse.Content.ReadFromJsonAsync<AccessTokenResponse>().ConfigureAwait(false);
 
         return accessTokenResponse?.AccessToken ?? throw new InvalidOperationException("Unable to get access token");
     }

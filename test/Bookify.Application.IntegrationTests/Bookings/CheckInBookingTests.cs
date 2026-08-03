@@ -30,7 +30,7 @@ public class CheckInBookingTests : BaseIntegrationTest
         var guestEmail = $"guest_{Guid.CreateVersion7()}@test.com";
         var password = "Password123!";
 
-        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+        var registerGuestCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(
             guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
         _ = await Sender.Send(registerGuestCommand);
 

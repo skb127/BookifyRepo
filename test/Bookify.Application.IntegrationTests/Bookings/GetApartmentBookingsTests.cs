@@ -112,14 +112,19 @@ public class GetApartmentBookingsTests : BaseIntegrationTest
         var (apartmentId, bookingId, _, _, _, _) = await BookingTestHelpers.SetupApartmentWithOwnerAsync(this);
 
         // We need an admin token who is NOT the owner to test the admin bypass.
-        // It's easiest to create a fresh admin user.
-        var adminEmail = $"admin2_{Guid.CreateVersion7()}@test.com";
+        var adminEmail = $"admin_{Guid.CreateVersion7()}@test.com";
+        var ownerEmail = $"owner_{Guid.CreateVersion7()}@test.com";
         var password = "Password123!";
-        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
-            adminEmail, "Admin2", "User", password, new DateOnly(1990, 1, 1));
+
+        var registerAdminCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(
+            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
         _ = await Sender.Send(registerAdminCommand);
         await PromoteToAdminAsync(adminEmail);
 
+        var registerOwnerCommand = new Bookify.Application.Users.RegisterHost.RegisterHostCommand(
+            ownerEmail, "Owner", "User", password, new DateOnly(1990, 1, 1), "+34612345678");
+        _ = await Sender.Send(registerOwnerCommand);
+        
         string adminToken = await GetAccessToken(adminEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -145,10 +150,9 @@ public class GetApartmentBookingsTests : BaseIntegrationTest
         var ownerEmail = $"owner_empty_{Guid.CreateVersion7()}@test.com";
         var password = "Password123!";
 
-        var registerOwnerCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
-            ownerEmail, "AdminOwnerEmpty", "User", password, new DateOnly(1990, 1, 1));
+        var registerOwnerCommand = new Bookify.Application.Users.RegisterHost.RegisterHostCommand(
+            ownerEmail, "AdminOwnerEmpty", "User", password, new DateOnly(1990, 1, 1), "+34612345678");
         _ = await Sender.Send(registerOwnerCommand);
-        await PromoteToAdminAsync(ownerEmail);
 
         string ownerToken = await GetAccessToken(ownerEmail, password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -181,7 +185,7 @@ public class GetApartmentBookingsTests : BaseIntegrationTest
 
         var adminEmail = $"admin3_{Guid.CreateVersion7()}@test.com";
         var password = "Password123!";
-        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+        var registerAdminCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(
             adminEmail, "Admin3", "User", password, new DateOnly(1990, 1, 1));
         _ = await Sender.Send(registerAdminCommand);
         await PromoteToAdminAsync(adminEmail);

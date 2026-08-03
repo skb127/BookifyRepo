@@ -22,6 +22,8 @@ public interface IUserRepository
 
     void AddPasswordResetToken(User user);
 
+    void AddAccountDeletionToken(User user);
+
     Task<User?> FindOneAsync(Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default);
 
     Task<User?> GetOneWithIncludesAsync(

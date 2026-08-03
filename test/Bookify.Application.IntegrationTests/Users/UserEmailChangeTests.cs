@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Bookify.Api.Controllers.Users;
+using Bookify.Api.Controllers.Users.Requests;
 using Bookify.Application.Abstractions.Email;
 using Bookify.Application.Abstractions.Email.Models;
 using Bookify.Application.IntegrationTests.Infrastructure;
@@ -53,8 +53,10 @@ public class UserEmailChangeTests : BaseIntegrationTest
         await _mockEmailService.WaitForEmailToAsync(user.Email, since: since);
 
         // Assert - Both emails were sent (verification to new email + security alert to current email)
-        _mockEmailService.HasEmailTo(user.Email, since).Should().BeTrue("A security alert should be sent to the current email");
-        _mockEmailService.HasEmailTo(newEmail, since).Should().BeTrue("A verification email should be sent to the new email");
+        _mockEmailService.HasEmailTo(user.Email, since).Should()
+            .BeTrue("A security alert should be sent to the current email");
+        _mockEmailService.HasEmailTo(newEmail, since).Should()
+            .BeTrue("A verification email should be sent to the new email");
 
         verificationEmail.Subject.Should().Be("Confirm Your New Email Address");
 
@@ -133,7 +135,8 @@ public class UserEmailChangeTests : BaseIntegrationTest
             .PostAsJsonAsync("api/v1/users/confirm-email-change", confirmRequest);
 
         // Assert - Should return BadRequest with explicit error
-        confirmResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest, await confirmResponse.Content.ReadAsStringAsync());
+        confirmResponse.StatusCode.Should()
+            .Be(HttpStatusCode.BadRequest, await confirmResponse.Content.ReadAsStringAsync());
 
         var problemDetails = await confirmResponse.Content.ReadFromJsonAsync<ProblemDetails>();
         problemDetails.Should().NotBeNull();

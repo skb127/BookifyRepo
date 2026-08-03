@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using Bookify.Api.Controllers.Users;
+using Bookify.Api.Controllers.Users.Requests;
 using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Users;
 using Bookify.Domain.Users;
@@ -82,7 +82,7 @@ public abstract class BaseIntegrationTest
     protected async Task<string> GetAdminTokenAsync(string password = "Password123!")
     {
         var adminEmail = $"admin_{Guid.CreateVersion7()}@test.com";
-        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+        var registerAdminCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(
             adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
         _ = await Sender.Send(registerAdminCommand).ConfigureAwait(false);
         await PromoteToAdminAsync(adminEmail).ConfigureAwait(false);

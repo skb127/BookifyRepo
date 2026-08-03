@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using Bookify.Api.Controllers.Users;
+using Bookify.Api.Controllers.Users.Requests;
 using Bookify.Application.Abstractions.Email;
 using Bookify.Application.Abstractions.Email.Models;
 using Bookify.Application.IntegrationTests.Infrastructure;
@@ -164,7 +164,7 @@ public class UserPasswordTests : BaseIntegrationTest
         );
 
         // Register using custom client
-        var response = await customClient.PostAsJsonAsync("api/v1/users/register", user);
+        var response = await customClient.PostAsJsonAsync("api/v1/users/register/guest", user);
         if (!response.IsSuccessStatusCode)
         {
             throw new InvalidOperationException($"RegisterUser failed: {await response.Content.ReadAsStringAsync()}");

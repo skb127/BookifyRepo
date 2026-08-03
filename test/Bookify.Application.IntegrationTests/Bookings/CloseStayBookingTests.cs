@@ -12,13 +12,12 @@ namespace Bookify.Application.IntegrationTests.Bookings;
 
 public class CloseStayBookingTests : BaseIntegrationTest
 {
-    public CloseStayBookingTests(IntegrationTestWebAppFactory factory)
-        : base(factory)
+    public CloseStayBookingTests(IntegrationTestWebAppFactory factory) : base(factory)
     {
     }
 
     [Fact]
-    public async Task CloseStayBooking_ShouldReturn401_WhenNotAuthenticated()
+    public async Task CloseStayBooking_ShouldReturnUnauthorized_WhenNoToken()
     {
         // Act
         HttpResponseMessage response = await HttpClient.PutAsJsonAsync(
@@ -33,17 +32,16 @@ public class CloseStayBookingTests : BaseIntegrationTest
     public async Task CloseStayBooking_ShouldReturn404_WhenBookingNotFound()
     {
         // Arrange
-        var adminEmail = $"admin_{Guid.CreateVersion7()}@test.com";
+        var hostEmail = $"host_{Guid.CreateVersion7()}@test.com";
         var password = "Password123!";
-        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
-            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
-        await Sender.Send(registerAdminCommand);
-        await PromoteToAdminAsync(adminEmail);
+        var registerHostCommand = new Bookify.Application.Users.RegisterHost.RegisterHostCommand(
+            hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678");
+        await Sender.Send(registerHostCommand);
 
-        string adminToken = await GetAccessToken(adminEmail, password);
+        string hostToken = await GetAccessToken(hostEmail, password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
-            adminToken);
+            hostToken);
 
         // Act
         HttpResponseMessage response = await HttpClient.PutAsJsonAsync(
@@ -72,13 +70,12 @@ public class CloseStayBookingTests : BaseIntegrationTest
             null);
         confirmResponse.EnsureSuccessStatusCode();
 
-        // Owner/Admin token is used to perform write operations (has BookingsWrite permission)
+        // Owner/Host token is used to perform write operations (has BookingsWrite permission)
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             ownerToken);
 
         // Booking by default starts in 2027 (future). For CloseStay to work, the stay end date must be in the past.
-        // Let's change utcNow? We cannot mock it here, but we can update the Booking's duration in database to be in the past
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var dbBooking = await DbContext.Set<Booking>().FindAsync(bookingId);
         typeof(Booking).GetProperty(nameof(Booking.Duration))!.SetValue(dbBooking,
@@ -113,17 +110,16 @@ public class CloseStayBookingTests : BaseIntegrationTest
     public async Task CloseStayBooking_ShouldReturn400_WhenDatesAreMissing()
     {
         // Arrange
-        var adminEmail = $"admin_{Guid.CreateVersion7()}@test.com";
+        var hostEmail = $"host_{Guid.CreateVersion7()}@test.com";
         var password = "Password123!";
-        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
-            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
-        await Sender.Send(registerAdminCommand);
-        await PromoteToAdminAsync(adminEmail);
+        var registerHostCommand = new Bookify.Application.Users.RegisterHost.RegisterHostCommand(
+            hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678");
+        await Sender.Send(registerHostCommand);
 
-        string adminToken = await GetAccessToken(adminEmail, password);
+        string hostToken = await GetAccessToken(hostEmail, password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
-            adminToken);
+            hostToken);
 
         // Act - Dates are missing (null)
         HttpResponseMessage response = await HttpClient.PutAsJsonAsync(
@@ -138,17 +134,16 @@ public class CloseStayBookingTests : BaseIntegrationTest
     public async Task CloseStayBooking_ShouldReturn400_WhenCheckInDateIsAfterCheckOutDate()
     {
         // Arrange
-        var adminEmail = $"admin_{Guid.CreateVersion7()}@test.com";
+        var hostEmail = $"host_{Guid.CreateVersion7()}@test.com";
         var password = "Password123!";
-        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
-            adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
-        await Sender.Send(registerAdminCommand);
-        await PromoteToAdminAsync(adminEmail);
+        var registerHostCommand = new Bookify.Application.Users.RegisterHost.RegisterHostCommand(
+            hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678");
+        await Sender.Send(registerHostCommand);
 
-        string adminToken = await GetAccessToken(adminEmail, password);
+        string hostToken = await GetAccessToken(hostEmail, password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
-            adminToken);
+            hostToken);
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 

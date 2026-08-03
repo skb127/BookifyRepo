@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Bookify.Api.Controllers.Apartments;
+using Bookify.Api.Controllers.Apartments.Requests;
 using Bookify.Application.Apartments.SearchApartments;
 using Bookify.Application.Common;
 using Bookify.Application.IntegrationTests.Infrastructure;
@@ -203,10 +203,11 @@ public class SearchApartmentsTests : BaseIntegrationTest
     public async Task SearchApartments_ShouldReturnResults_WhenCityFilterMatches()
     {
         // Arrange
-        await PromoteToAdminAsync(UserData.CreateApartmentAdminUserRequest.Email);
-        string accessToken = await GetAccessToken(
-            UserData.CreateApartmentAdminUserRequest.Email,
-            UserData.CreateApartmentAdminUserRequest.Password);
+        string hostEmail = $"host_search2_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new Bookify.Application.Users.RegisterHost.RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678"));
+
+        string accessToken = await GetAccessToken(hostEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
@@ -347,10 +348,11 @@ public class SearchApartmentsTests : BaseIntegrationTest
         // Arrange - use a specific city to isolate our new apartment in search results
         string uniqueCity = $"City_{Guid.CreateVersion7()}";
 
-        await PromoteToAdminAsync(UserData.CreateApartmentAdminUserRequest.Email);
-        string adminToken = await GetAccessToken(
-            UserData.CreateApartmentAdminUserRequest.Email,
-            UserData.CreateApartmentAdminUserRequest.Password);
+        string hostEmail = $"host_search_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new Bookify.Application.Users.RegisterHost.RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678"));
+
+        string adminToken = await GetAccessToken(hostEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,

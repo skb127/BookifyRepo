@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Bookify.Api.Controllers.Users;
+using Bookify.Api.Controllers.Users.Requests;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Application.Users.GetLoggedInUser;
 using FluentAssertions;
@@ -35,7 +35,8 @@ public class UpdateUserProfileTests : BaseIntegrationTest
             updatedDateOfBirth,
             user.Password);
 
-        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, accessToken);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, accessToken);
 
         // Act
         HttpResponseMessage response = await HttpClient.PutAsJsonAsync("api/v1/users/profile", request);
@@ -69,7 +70,8 @@ public class UpdateUserProfileTests : BaseIntegrationTest
             new DateOnly(1995, 6, 15),
             "WrongPassword123!");
 
-        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, accessToken);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, accessToken);
 
         // Act
         HttpResponseMessage response = await HttpClient.PutAsJsonAsync("api/v1/users/profile", request);
@@ -99,7 +101,8 @@ public class UpdateUserProfileTests : BaseIntegrationTest
             dateOfBirth,
             user.Password);
 
-        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, accessToken);
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, accessToken);
 
         // Act
         HttpResponseMessage response = await HttpClient.PutAsJsonAsync("api/v1/users/profile", request);

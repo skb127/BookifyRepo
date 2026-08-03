@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Bookify.Api.Controllers.Users.Requests;
 using Bookify.Api.Filters.Turnstile;
 using Bookify.Application.Users;
 using Bookify.Application.Users.AdminDeleteUser;
@@ -432,8 +433,12 @@ public sealed class UsersController : ControllerBase
 
         if (result.IsFailure)
         {
+            int statusCode = result.Error == Domain.Users.UserErrors.NotFound
+                ? StatusCodes.Status404NotFound
+                : StatusCodes.Status400BadRequest;
+
             return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
+                statusCode: statusCode,
                 detail: result.Error.Name,
                 title: result.Error.Code);
         }
@@ -452,8 +457,12 @@ public sealed class UsersController : ControllerBase
 
         if (result.IsFailure)
         {
+            int statusCode = result.Error == Domain.Users.UserErrors.NotFound
+                ? StatusCodes.Status404NotFound
+                : StatusCodes.Status400BadRequest;
+
             return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
+                statusCode: statusCode,
                 detail: result.Error.Name,
                 title: result.Error.Code);
         }
@@ -472,8 +481,12 @@ public sealed class UsersController : ControllerBase
 
         if (result.IsFailure)
         {
+            int statusCode = result.Error == Domain.Users.UserErrors.NotFound
+                ? StatusCodes.Status404NotFound
+                : StatusCodes.Status400BadRequest;
+
             return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
+                statusCode: statusCode,
                 detail: result.Error.Name,
                 title: result.Error.Code);
         }

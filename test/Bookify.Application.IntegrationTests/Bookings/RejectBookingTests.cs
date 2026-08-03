@@ -77,7 +77,8 @@ public class RejectBookingTests : BaseIntegrationTest
         _mockPaymentGateway.CancelledPaymentIntents.Should().Contain($"intent_{bookingId}");
 
         // Verify Local Transaction Status is updated to "canceled"
-        var transactions = await BookingTestHelpers.GetBookingTransactionsViaApiAsync(this, bookingId, hostToken);
+        string adminToken = await GetAdminTokenAsync();
+        var transactions = await BookingTestHelpers.GetBookingTransactionsViaApiAsync(this, bookingId, adminToken);
         transactions.Should().ContainSingle(t => t.ProviderStatus == "canceled");
     }
 }

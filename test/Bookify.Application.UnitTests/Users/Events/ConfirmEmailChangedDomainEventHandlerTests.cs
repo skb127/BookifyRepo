@@ -48,7 +48,7 @@ public class ConfirmEmailChangedDomainEventHandlerTests
     public async Task Handle_Should_SendTwoEmails_WhenUserFound()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("new@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("new@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         var domainEvent = new UserEmailChangedDomainEvent(user.Id, "old@test.com", "new@test.com");
 
         _userRepositoryMock.GetByIdAsync(domainEvent.UserId, Arg.Any<CancellationToken>())
@@ -79,7 +79,7 @@ public class ConfirmEmailChangedDomainEventHandlerTests
     public async Task Handle_ShouldThrowException_WhenEmailServiceFails()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("new@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("new@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         var domainEvent = new UserEmailChangedDomainEvent(user.Id, "old@test.com", "new@test.com");
 
         _userRepositoryMock.GetByIdAsync(domainEvent.UserId, Arg.Any<CancellationToken>())
@@ -103,7 +103,7 @@ public class ConfirmEmailChangedDomainEventHandlerTests
     public async Task Handle_ShouldThrowException_WhenTemplateNotFound()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("new@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("new@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         var domainEvent = new UserEmailChangedDomainEvent(user.Id, "old@test.com", "new@test.com");
 
         _userRepositoryMock.GetByIdAsync(domainEvent.UserId, Arg.Any<CancellationToken>())
@@ -124,7 +124,7 @@ public class ConfirmEmailChangedDomainEventHandlerTests
     public async Task Handle_ShouldThrowException_WhenTemplateHasErrors()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("new@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("new@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         var domainEvent = new UserEmailChangedDomainEvent(user.Id, "old@test.com", "new@test.com");
 
         _userRepositoryMock.GetByIdAsync(domainEvent.UserId, Arg.Any<CancellationToken>())

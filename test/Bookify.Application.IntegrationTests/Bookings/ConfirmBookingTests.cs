@@ -73,7 +73,8 @@ public class ConfirmBookingTests : BaseIntegrationTest
         _mockPaymentGateway.CapturedPaymentIntents.Should().Contain($"intent_{bookingId}");
 
         // Verify Local Transaction Status is updated to "paid"
-        var transactions = await BookingTestHelpers.GetBookingTransactionsViaApiAsync(this, bookingId, hostToken);
+        string adminToken = await GetAdminTokenAsync();
+        var transactions = await BookingTestHelpers.GetBookingTransactionsViaApiAsync(this, bookingId, adminToken);
         transactions.Should().ContainSingle(t => t.ProviderStatus == "paid");
     }
 }

@@ -5,6 +5,7 @@ using Bookify.Application.Abstractions.Messaging;
 using Bookify.Application.Users;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Reviews;
+using Bookify.Domain.Users;
 
 namespace Bookify.Application.Reviews.DeleteReview;
 
@@ -43,7 +44,7 @@ internal sealed class DeleteReviewCommandHandler : ICommandHandler<DeleteReviewC
         {
             UserRolesResponse rolesResponse = await _authorizationService.GetRolesForUserAsync(_userContext.IdentityId);
 
-            if (!rolesResponse.Roles.Any(r => r.Name == "Admin"))
+            if (rolesResponse.Roles.All(r => r.Id != Role.Admin.Id))
             {
                 return Result.Failure(ReviewErrors.NotAuthor);
             }

@@ -53,7 +53,7 @@ public class PasswordRecoveryTests
     public async Task Handle_ShouldReturnSuccess_WhenTokenAlreadyExistsAndValid()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email(Command.Email), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email(Command.Email), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
 
         var validToken = PasswordResetToken.Create(
             user.Id,
@@ -80,7 +80,7 @@ public class PasswordRecoveryTests
     public async Task Handle_ShouldCreateTokenAndSave_WhenTokenIsNull()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email(Command.Email), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email(Command.Email), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         // Token is null by default
 
         _userRepositoryMock.GetOneWithIncludesAsync(Arg.Any<Expression<Func<User, bool>>>(), Arg.Any<CancellationToken>(), Arg.Any<Expression<Func<User, object?>>>())
@@ -101,7 +101,7 @@ public class PasswordRecoveryTests
     public async Task Handle_ShouldCreateTokenAndSave_WhenTokenIsExpired()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email(Command.Email), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email(Command.Email), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
 
         var expiredToken = PasswordResetToken.Create(
             user.Id,
@@ -131,7 +131,7 @@ public class PasswordRecoveryTests
     public async Task Handle_ShouldThrowException_WhenUnitOfWorkThrows()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email(Command.Email), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email(Command.Email), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
 
         _userRepositoryMock.GetOneWithIncludesAsync(Arg.Any<Expression<Func<User, bool>>>(), Arg.Any<CancellationToken>(), Arg.Any<Expression<Func<User, object?>>>())
             .Returns(user);

@@ -131,8 +131,7 @@ public class GetPriceEstimateTests : BaseIntegrationTest
     {
         // Arrange
         var ownerEmail = $"owner_{Guid.NewGuid()}@test.com";
-        _ = await Sender.Send(new Bookify.Application.Users.RegisterUser.RegisterUserCommand(ownerEmail, "Owner", "Admin", "Password123!", new DateOnly(1990, 1, 1)));
-        await PromoteToAdminAsync(ownerEmail);
+        _ = await Sender.Send(new Bookify.Application.Users.RegisterHost.RegisterHostCommand(ownerEmail, "Owner", "Admin", "Password123!", new DateOnly(1990, 1, 1), "+34612345678"));
         var ownerToken = await GetAccessToken(ownerEmail, "Password123!");
 
         HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
@@ -145,7 +144,7 @@ public class GetPriceEstimateTests : BaseIntegrationTest
         var apartmentId = await createResponse.Content.ReadFromJsonAsync<Guid>();
 
         var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
-        _ = await Sender.Send(new Bookify.Application.Users.RegisterUser.RegisterUserCommand(guestEmail, "Guest", "User", "Password123!", new DateOnly(1995, 5, 5)));
+        _ = await Sender.Send(new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(guestEmail, "Guest", "User", "Password123!", new DateOnly(1995, 5, 5)));
         var guestToken = await GetAccessToken(guestEmail, "Password123!");
 
         HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", guestToken);

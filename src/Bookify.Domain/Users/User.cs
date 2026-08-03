@@ -146,7 +146,7 @@ public sealed class User : Entity
         RaiseDomainEvent(new UserProfileUpdatedDomainEvent(Id));
     }
 
-    public void RequestDeletion(string rawToken, string tokenHash, int gracePeriodHours)
+    public void RequestDeletion(string rawToken, string tokenHash, double gracePeriodHours)
     {
         AccountDeletionToken = AccountDeletionToken.Create(Id, tokenHash, DateTimeOffset.UtcNow.AddHours(gracePeriodHours));
         Status = UserStatus.PendingDeletion;

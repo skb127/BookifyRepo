@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Deactivation Request</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 40px 0;">
+                <table role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">⚠️</div>
+                            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">Account Deactivation Requested</h1>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+                                Hi <strong>{{ FirstName }}</strong>,
+                            </p>
+                            <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+                                We received a request to deactivate and delete your Bookify account. Your account is now scheduled for permanent deletion on <strong>{{ ScheduledDateUtc }}</strong>.
+                            </p>
+                            <div style="margin: 30px 0; text-align: center;">
+                                <a href="{{ CancelDeactivationUrl }}" style="background-color: #28a745; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 4px; font-weight: 600; display: inline-block;">Cancel Account Deactivation</a>
+                            </div>
+                            <div style="padding: 20px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                                <p style="color: #856404; font-size: 14px; margin: 0;">
+                                    <strong>ℹ️ Changed your mind?</strong> Click the button above to restore your account before the scheduled deletion date.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f8f9fa; padding: 30px; text-align: center; border-radius: 0 0 8px 8px;">
+                            <p style="color: #aaaaaa; font-size: 12px; margin: 0;">
+                                © {{ date.now | date.to_string "%Y" }} Bookify.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

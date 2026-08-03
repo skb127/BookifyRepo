@@ -35,7 +35,8 @@ public class CancellationPolicyEngineTests
             new FirstName("Guest"),
             new LastName("User"),
             new Email("guest@test.com"),
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+            DateOfBirth.Create(new DateOnly(2000, 1, 1)),
+            Role.Guest);
 
         var price = new Money(40.00m, Currency.Usd);
         var apartment = ApartmentData.Create(price, Money.Zero(Currency.Usd));
