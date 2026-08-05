@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using Bookify.Domain.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,6 +31,14 @@ internal abstract class Repository<T>
         Expression<Func<T, bool>> predicate,
         CancellationToken cancellationToken = default) =>
             await DbContext.Set<T>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(predicate, cancellationToken);
+
+    public async Task<T?> FindOneIgnoringFiltersAsync(
+        Expression<Func<T, bool>> predicate,
+        CancellationToken cancellationToken = default) =>
+            await DbContext.Set<T>()
+                .IgnoreQueryFilters()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(predicate, cancellationToken);
 

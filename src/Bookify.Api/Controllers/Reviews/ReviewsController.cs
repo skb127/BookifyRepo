@@ -24,6 +24,7 @@ public sealed class ReviewsController : ControllerBase
         _sender = sender;
 
     [HttpPost]
+    [HasPermission(Permissions.ReviewsWrite)]
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> AddReview(AddReviewRequest request, CancellationToken cancellationToken)
     {
@@ -71,6 +72,7 @@ public sealed class ReviewsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [HasPermission(Permissions.ReviewsWrite)]
     [EnableRateLimiting("write-operations")]
     public async Task<IActionResult> UpdateReview(
         Guid id,
@@ -157,6 +159,7 @@ public sealed class ReviewsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [HasPermission(Permissions.ReviewsWrite)]
     [EnableRateLimiting("write-operations")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -195,4 +198,14 @@ public sealed class ReviewsController : ControllerBase
             title: result.Error.Code);
 
     }
+
+    [HttpDelete("{id:guid}/admin")]
+    [HasPermission(Permissions.ReviewsAdminDelete)]
+    [EnableRateLimiting("write-operations")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public Task<IActionResult> DeleteReviewAdmin(Guid id, CancellationToken cancellationToken) =>
+        DeleteReview(id, cancellationToken);
 }

@@ -282,11 +282,13 @@ public class ReserveBookingTests : BaseIntegrationTest
         var now = DateTime.UtcNow;
         var today = DateOnly.FromDateTime(now);
 
-        // Cut-off limit hour of the day must be after current UTC hour so that utcNow < cutOffLimit
-        var targetCutOffHour = Math.Min(23, now.Hour + 2);
-        var cutOffHours = 24 - targetCutOffHour;
-
-        var aptData = ApartmentData.ValidCreateApartmentRequest with { CheckInCutOffHours = cutOffHours };
+        // With InstantBooking = false and CheckInCutOffHours = 0, cutOffLimit is midnight (24:00) at the end of today,
+        // ensuring utcNow <= cutOffLimit evaluates to true at any time of day (00:00 to 23:59 UTC) while exercising non-instant cutoff logic.
+        var aptData = ApartmentData.ValidCreateApartmentRequest with
+        {
+            CheckInCutOffHours = 0,
+            InstantBooking = false
+        };
         HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
         aptResponse.EnsureSuccessStatusCode();
         var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>();

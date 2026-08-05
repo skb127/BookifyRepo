@@ -21,6 +21,7 @@ public class RegisterHostTests : BaseIntegrationTest
     public async Task RegisterHost_ShouldReturnOk_WhenRequestIsValid()
     {
         // Arrange
+        DateTime since = DateTime.UtcNow;
         var request = new RegisterHostRequest($"host-{Guid.NewGuid()}@test.com", "Host", "User", "ClaveSegura1$", new DateOnly(1990, 1, 1), "+34612345678");
 
         // Act
@@ -28,6 +29,11 @@ public class RegisterHostTests : BaseIntegrationTest
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Verify welcome email was sent via UserCreatedDomainEvent outbox processing
+        var welcomeEmail = await _factory.MockEmailService.WaitForEmailToAsync(request.Email, "Welcome to Bookify", since: since);
+        welcomeEmail.Should().NotBeNull();
+        welcomeEmail.Body.Should().Contain(request.FirstName);
     }
 
     [Theory]
@@ -90,5 +96,66 @@ public class RegisterHostTests : BaseIntegrationTest
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         string content = await response.Content.ReadAsStringAsync();
         content.Should().Contain("Invalid Turnstile token");
+    }
+
+    [Fact]
+    public async Task RegisterHost_ShouldSucceed_AfterAccountDeletion()
+    {
+        // Arrange
+        DateTime sinceInitial = DateTime.UtcNow;
+        string email = $"host_reregister_{Guid.NewGuid()}@test.com";
+        var request = new RegisterHostRequest(email, "Host", "User", "ClaveSegura1$", new DateOnly(1990, 1, 1), "+34612345678");
+
+        // 1. Initial registration
+        HttpResponseMessage registerResponse = await HttpClient.PostAsJsonAsync("api/v1/users/register/host", request);
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        Guid userId = await registerResponse.Content.ReadFromJsonAsync<Guid>();
+
+        // Verify initial welcome email sent
+        var initialWelcomeEmail = await _factory.MockEmailService.WaitForEmailToAsync(email, "Welcome to Bookify", since: sinceInitial);
+        initialWelcomeEmail.Should().NotBeNull();
+
+        // 2. Admin deletes user (soft delete + Keycloak sync)
+        string adminToken = await GetAdminTokenAsync();
+        HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
+
+        HttpResponseMessage deleteResponse = await HttpClient.DeleteAsync(new Uri($"api/v1/users/{userId}", UriKind.Relative));
+        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Allow outbox processing (1s interval in IntegrationTestWebAppFactory) to sync deletion with Keycloak
+        await Task.Delay(1200);
+
+        // 3. Reset authorization header
+        HttpClient.DefaultRequestHeaders.Authorization = null;
+
+        // 4. Re-register with the same email
+        DateTime sinceReRegister = DateTime.UtcNow;
+        HttpResponseMessage reRegisterResponse = await HttpClient.PostAsJsonAsync("api/v1/users/register/host", request);
+
+        // Assert
+        reRegisterResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Verify welcome email was sent again on re-registration
+        var reRegisterWelcomeEmail = await _factory.MockEmailService.WaitForEmailToAsync(email, "Welcome to Bookify", since: sinceReRegister);
+        reRegisterWelcomeEmail.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task RegisterHost_ShouldFail_WhenEmailExistsAndIsActive()
+    {
+        // Arrange
+        string email = $"host_active_dup_{Guid.NewGuid()}@test.com";
+        var request = new RegisterHostRequest(email, "Host", "User", "ClaveSegura1$", new DateOnly(1990, 1, 1), "+34612345678");
+
+        // 1. Initial registration succeeds
+        HttpResponseMessage registerResponse = await HttpClient.PostAsJsonAsync("api/v1/users/register/host", request);
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 2. Duplicate registration attempt without deleting
+        HttpResponseMessage duplicateResponse = await HttpClient.PostAsJsonAsync("api/v1/users/register/host", request);
+
+        // Assert
+        duplicateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

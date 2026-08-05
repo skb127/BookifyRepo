@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Bookify.Application.IntegrationTests.Infrastructure;
+using Bookify.Application.Users;
 using Bookify.Application.Users.GetUserById;
 using Bookify.Application.Users.RegisterGuest;
 using Bookify.Domain.Users;
@@ -51,6 +52,15 @@ public class BanUserTests : BaseIntegrationTest
         userResponse.Should().NotBeNull();
         userResponse.StatusName.Should().Be("Suspended");
         userResponse.BanCount.Should().Be(1);
+
+        // Allow outbox processing (1s interval in IntegrationTestWebAppFactory) to sync ban with Keycloak
+        await Task.Delay(1200);
+
+        // Verify target user cannot log in while banned
+        HttpResponseMessage loginResponse = await HttpClient.PostAsJsonAsync(
+            "api/v1/users/login",
+            new Bookify.Api.Controllers.Users.Requests.LoginUserRequest(targetEmail, "Password123!"));
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -93,6 +103,19 @@ public class BanUserTests : BaseIntegrationTest
         userResponse.Should().NotBeNull();
         userResponse.StatusName.Should().Be("Active");
         userResponse.BanCount.Should().Be(1);
+
+        // Allow outbox processing (1s interval in IntegrationTestWebAppFactory) to sync unban with Keycloak
+        await Task.Delay(1200);
+
+        // Verify target user can log in after unban
+        HttpResponseMessage loginResponse = await HttpClient.PostAsJsonAsync(
+            "api/v1/users/login",
+            new Bookify.Api.Controllers.Users.Requests.LoginUserRequest(targetEmail, "Password123!"));
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var tokenResponse = await loginResponse.Content.ReadFromJsonAsync<AccessTokenOnlyResponse>();
+        tokenResponse.Should().NotBeNull();
+        tokenResponse.AccessToken.Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]

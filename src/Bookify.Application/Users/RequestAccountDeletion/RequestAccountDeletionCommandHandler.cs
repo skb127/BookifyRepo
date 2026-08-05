@@ -1,4 +1,5 @@
 using Bookify.Application.Abstractions.Authentication;
+using Bookify.Application.Abstractions.Authorization;
 using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Abstractions.Identity;
 using Bookify.Application.Abstractions.Messaging;
@@ -17,6 +18,7 @@ internal sealed class RequestAccountDeletionCommandHandler : ICommandHandler<Req
     private readonly IUserContext _userContext;
     private readonly IUserRepository _userRepository;
     private readonly IBookingRepository _bookingRepository;
+    private readonly IAuthorizationService _authorizationService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IJobScheduler _jobScheduler;
     private readonly IIdentityProvider _identityProvider;
@@ -27,6 +29,7 @@ internal sealed class RequestAccountDeletionCommandHandler : ICommandHandler<Req
         IUserContext userContext,
         IUserRepository userRepository,
         IBookingRepository bookingRepository,
+        IAuthorizationService authorizationService,
         IUnitOfWork unitOfWork,
         IJobScheduler jobScheduler,
         IIdentityProvider identityProvider,
@@ -36,6 +39,7 @@ internal sealed class RequestAccountDeletionCommandHandler : ICommandHandler<Req
         _userContext = userContext;
         _userRepository = userRepository;
         _bookingRepository = bookingRepository;
+        _authorizationService = authorizationService;
         _unitOfWork = unitOfWork;
         _jobScheduler = jobScheduler;
         _identityProvider = identityProvider;
@@ -45,14 +49,16 @@ internal sealed class RequestAccountDeletionCommandHandler : ICommandHandler<Req
 
     public async Task<Result> Handle(RequestAccountDeletionCommand request, CancellationToken cancellationToken)
     {
-        User? user = await _userRepository.GetByIdWithRolesAsync(_userContext.UserId, cancellationToken);
+        User? user = await _userRepository.GetByIdAsync(_userContext.UserId, cancellationToken);
 
         if (user is null)
         {
             return Result.Failure(UserErrors.NotFound);
         }
 
-        if (user.Roles.Any(r => r.Id == Role.Admin.Id))
+        UserRolesResponse rolesResponse = await _authorizationService.GetRolesForUserAsync(_userContext.IdentityId);
+
+        if (rolesResponse.Roles.Any(r => r.Id == Role.Admin.Id))
         {
             return Result.Failure(UserErrors.RequestFailed);
         }
@@ -68,7 +74,7 @@ internal sealed class RequestAccountDeletionCommandHandler : ICommandHandler<Req
             return Result.Failure(UserErrors.HasActiveBookingsAsGuest);
         }
 
-        if (user.Roles.Any(r => r.Id == Role.Host.Id))
+        if (rolesResponse.Roles.Any(r => r.Id == Role.Host.Id))
         {
             bool hasActiveHostBookings = await _bookingRepository.HasActiveBookingsAsHostAsync(user.Id, cancellationToken);
             if (hasActiveHostBookings)

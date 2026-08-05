@@ -31,9 +31,9 @@ internal sealed class RegisterHostCommandHandler : ICommandHandler<RegisterHostC
         CancellationToken cancellationToken)
     {
         User? userAlreadyExistsDb =
-            await _userRepository.FindOneAsync(user => user.Email == new Email(request.Email), cancellationToken);
+            await _userRepository.FindOneIgnoringFiltersAsync(user => user.Email == new Email(request.Email), cancellationToken);
 
-        if (userAlreadyExistsDb is not null)
+        if (userAlreadyExistsDb is not null && userAlreadyExistsDb.Status != UserStatus.Deleted)
         {
             return Result.Failure<Guid>(UserErrors.AlreadyExists);
         }

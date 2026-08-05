@@ -26,7 +26,7 @@ public class GetAllReviewsTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task GetAllReviews_ShouldReturn200_WhenCallerIsRegularUser()
+    public async Task GetAllReviews_ShouldReturn200_WhenCallerIsGuest()
     {
         // Arrange: Register a fresh regular user who has Guest role
         string email = $"regular_{Guid.CreateVersion7()}@test.com";

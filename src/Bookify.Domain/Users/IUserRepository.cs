@@ -26,6 +26,8 @@ public interface IUserRepository
 
     Task<User?> FindOneAsync(Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default);
 
+    Task<User?> FindOneIgnoringFiltersAsync(Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default);
+
     Task<User?> GetOneWithIncludesAsync(
         Expression<Func<User, bool>> predicate,
         CancellationToken cancellationToken,

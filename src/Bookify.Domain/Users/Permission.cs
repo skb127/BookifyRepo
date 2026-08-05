@@ -12,6 +12,8 @@ public sealed class Permission
     public static readonly Permission ReviewsRead = new(6, "reviews:read");
     public static readonly Permission UsersAdminWrite = new(7, "users:admin-write");
     public static readonly Permission UsersBan = new(8, "users:ban");
+    public static readonly Permission ReviewsWrite = new(9, "reviews:write");
+    public static readonly Permission ReviewsAdminDelete = new(10, "reviews:admin-delete");
 
     public Permission(int id, string name)
     {
