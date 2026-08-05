@@ -454,4 +454,72 @@ internal sealed class KeycloakIdentityProvider : IIdentityProvider
             return Result.Failure(new Error("Keycloak.UnexpectedError", "An unexpected error occurred while updating the user profile"));
         }
     }
+
+    public async Task<Result> DisableUserAsync(string identityId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            IKeycloakClient client = await _clientFactory.GetClientAsync();
+            string? token = await _clientFactory.GetAccessToken();
+            string realm = _clientFactory.GetRealm();
+
+            var userUpdate = new KcUser
+            {
+                Enabled = false
+            };
+
+            KcResponse<object> response = await client.Users.UpdateAsync(realm, token, identityId, userUpdate, cancellationToken);
+
+            if (!response.IsError)
+            {
+                return Result.Success();
+            }
+
+            _logger.LogWarning(response.Exception,
+                "Failed to disable user {IdentityId}. Error: {Error}",
+                identityId,
+                response.ErrorMessage);
+
+            return Result.Failure(new Error("Keycloak.DisableUserFailed", "Failed to disable user in identity provider"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error disabling user {IdentityId} in Keycloak", identityId);
+            return Result.Failure(new Error("Keycloak.UnexpectedError", "An unexpected error occurred while disabling the user"));
+        }
+    }
+
+    public async Task<Result> EnableUserAsync(string identityId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            IKeycloakClient client = await _clientFactory.GetClientAsync();
+            string? token = await _clientFactory.GetAccessToken();
+            string realm = _clientFactory.GetRealm();
+
+            var userUpdate = new KcUser
+            {
+                Enabled = true
+            };
+
+            KcResponse<object> response = await client.Users.UpdateAsync(realm, token, identityId, userUpdate, cancellationToken);
+
+            if (!response.IsError)
+            {
+                return Result.Success();
+            }
+
+            _logger.LogWarning(response.Exception,
+                "Failed to enable user {IdentityId}. Error: {Error}",
+                identityId,
+                response.ErrorMessage);
+
+            return Result.Failure(new Error("Keycloak.EnableUserFailed", "Failed to enable user in identity provider"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error enabling user {IdentityId} in Keycloak", identityId);
+            return Result.Failure(new Error("Keycloak.UnexpectedError", "An unexpected error occurred while enabling the user"));
+        }
+    }
 }

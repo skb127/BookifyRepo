@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Bookify.Api.Controllers.Apartments.Requests;
 using Bookify.Application.Apartments.SearchApartments;
 using Bookify.Application.Bookings.GetBookings;
 using Bookify.Application.Bookings.GetPriceEstimate;
@@ -177,6 +178,7 @@ public sealed class ApartmentsController : ControllerBase
         return NoContent();
     }
 
+    [HasPermission(Permissions.BookingsRead)]
     [HttpGet("{apartmentId:guid}/bookings")]
     public async Task<IActionResult> GetApartmentBookings(
         Guid apartmentId,

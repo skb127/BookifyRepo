@@ -3,7 +3,7 @@ using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Email;
 using Bookify.Application.Abstractions.Payments;
 using Bookify.Application.IntegrationTests.Users;
-using Bookify.Api.Controllers.Users;
+using Bookify.Api.Controllers.Users.Requests;
 using Bookify.Application.Options;
 using Bookify.Infrastructure;
 using Bookify.Infrastructure.Authentication;
@@ -59,12 +59,15 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
 
     public MockPaymentGateway MockPaymentGateway { get; } = new();
 
+    public MockStripeCustomerService MockStripeCustomerService { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.UseSetting("ConnectionStrings:Database", _dbContainer.GetConnectionString());
         builder.UseSetting("ConnectionStrings:ServiceBus", _serviceBusContainer.GetConnectionString());
+        builder.UseSetting("AccountDeletion:GracePeriodHours", "0.00083");
 
         builder.ConfigureTestServices(services =>
         {
@@ -107,14 +110,23 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
                 o.CronExpression = "*/2 * * * * ?"); // Every two seconds
 
             // Configure booking TTL options to be extremely short for integration tests
-            services.Configure<BookingOptions>(options =>
+            services.PostConfigure<BookingOptions>(options =>
             {
                 options.CheckoutSessionTtlMinutes = 0.05; // 3 seconds
                 options.HostApprovalTtlHours = 0.00083; // 3 seconds
             });
 
+            // Configure Account Deletion grace period to be extremely short for integration tests (3 seconds)
+            services.PostConfigure<AccountDeletionOptions>(options =>
+            {
+                options.GracePeriodHours = 0.00083; // 3 seconds
+            });
+
             services.RemoveAll<IPaymentGateway>();
             services.AddSingleton<IPaymentGateway>(MockPaymentGateway);
+
+            services.RemoveAll<IStripeCustomerService>();
+            services.AddSingleton<IStripeCustomerService>(MockStripeCustomerService);
 
             services.Configure<ExpirationOptions>(options =>
             {
@@ -204,7 +216,7 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             httpClient.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
 
             HttpResponseMessage response =
-                await httpClient.PostAsJsonAsync("api/v1/users/register", request).ConfigureAwait(false);
+                await httpClient.PostAsJsonAsync("api/v1/users/register/guest", request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
         }
 

@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using Bookify.Application.IntegrationTests.Bookings;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Application.IntegrationTests.Users;
+using Bookify.Application.Users.RegisterHost;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
@@ -28,7 +29,7 @@ public class DeleteApartmentTests : BaseIntegrationTest
     [Fact]
     public async Task DeleteApartment_ShouldReturn403_WhenUserLacksAdminPermission()
     {
-        // Arrange: login as a regular Registered user (no Admin role)
+        // Arrange: login as a regular Registered user (no Host role)
         string accessToken = await GetAccessToken(
             UserData.DeleteApartmentStandardUserRequest.Email,
             UserData.DeleteApartmentStandardUserRequest.Password);
@@ -47,13 +48,12 @@ public class DeleteApartmentTests : BaseIntegrationTest
     [Fact]
     public async Task DeleteApartment_ShouldReturn404_WhenApartmentDoesNotExist()
     {
-        // Arrange: promote user to Admin
-        string adminEmail = UserData.DeleteApartmentAdminUserRequest.Email;
-        await PromoteToAdminAsync(adminEmail);
+        // Arrange: register a Host user
+        string hostEmail = $"host_del404_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678"));
 
-        string accessToken = await GetAccessToken(
-            adminEmail,
-            UserData.DeleteApartmentAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(hostEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
@@ -72,21 +72,18 @@ public class DeleteApartmentTests : BaseIntegrationTest
     [Fact]
     public async Task DeleteApartment_ShouldReturn400_WhenApartmentHasActiveBookings()
     {
-        // Arrange: use helper to create admin + guest + apartment + Reserved booking
+        // Arrange: use helper to create host + guest + apartment + Reserved booking
         var (_, apartmentId, _, _, _) = await BookingTestHelpers.SetupReservedBookingAsync(this);
 
-        // SetupReservedBookingAsync uses random generic admin email internally. 
-        // We can just grab a new admin token for our dedicated test user to perform the Delete.
-        string adminEmail = UserData.DeleteApartmentAdminUserRequest.Email;
-        await PromoteToAdminAsync(adminEmail);
+        string hostEmail = $"host_delactive_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678"));
 
-        string adminToken = await GetAccessToken(
-            adminEmail,
-            UserData.DeleteApartmentAdminUserRequest.Password);
+        string hostToken = await GetAccessToken(hostEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
-            adminToken);
+            hostToken);
 
         // Act: try to delete the apartment that has a reserved booking
         HttpResponseMessage response = await HttpClient.DeleteAsync(new Uri($"api/v1/apartments/{apartmentId}", UriKind.Relative));
@@ -101,13 +98,12 @@ public class DeleteApartmentTests : BaseIntegrationTest
     [Fact]
     public async Task DeleteApartment_ShouldReturn204_WhenApartmentExists()
     {
-        // Arrange: promote user to Admin
-        string adminEmail = UserData.DeleteApartmentAdminUserRequest.Email;
-        await PromoteToAdminAsync(adminEmail);
+        // Arrange: register a Host user
+        string hostEmail = $"host_del204_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678"));
 
-        string accessToken = await GetAccessToken(
-            adminEmail,
-            UserData.DeleteApartmentAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(hostEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,

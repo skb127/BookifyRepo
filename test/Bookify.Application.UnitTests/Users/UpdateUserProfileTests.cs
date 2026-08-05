@@ -59,7 +59,7 @@ public class UpdateUserProfileTests
     public async Task Handle_ShouldReturnFailure_WhenPasswordIsInvalid()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         _userContextMock.UserId.Returns(user.Id);
         _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
             .Returns(user);
@@ -80,7 +80,7 @@ public class UpdateUserProfileTests
     public async Task Handle_ShouldReturnFailure_WhenIdentityProviderFails()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         _userContextMock.UserId.Returns(user.Id);
         _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
             .Returns(user);
@@ -104,7 +104,7 @@ public class UpdateUserProfileTests
     public async Task Handle_ShouldReturnSuccess_WhenUpdateIsValid()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         _userContextMock.UserId.Returns(user.Id);
         _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
             .Returns(user);
@@ -140,7 +140,7 @@ public class UpdateUserProfileTests
             new DateOnly(2000, 1, 1),
             "Password");
 
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         _userContextMock.UserId.Returns(user.Id);
         _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
             .Returns(user);
@@ -165,7 +165,7 @@ public class UpdateUserProfileTests
     public async Task Handle_ShouldReturnFailure_WhenUnitOfWorkThrows()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         _userContextMock.UserId.Returns(user.Id);
         _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
             .Returns(user);
@@ -190,7 +190,7 @@ public class UpdateUserProfileTests
     public async Task Handle_ShouldCallRepository_WithCorrectParameters()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         _userContextMock.UserId.Returns(user.Id);
         _userRepositoryMock.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
             .Returns(user);

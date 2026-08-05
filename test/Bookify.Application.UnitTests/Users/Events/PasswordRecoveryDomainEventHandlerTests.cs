@@ -54,7 +54,7 @@ public class PasswordRecoveryDomainEventHandlerTests
     public async Task Handle_Should_SendEmail_WhenUserFound()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         var domainEvent = new UserPasswordRecoveryDomainEvent(user.Id, "recovery-token");
 
         _userRepositoryMock.GetByIdAsync(domainEvent.UserId, Arg.Any<CancellationToken>())
@@ -81,7 +81,7 @@ public class PasswordRecoveryDomainEventHandlerTests
     public async Task Handle_ShouldThrowException_WhenEmailServiceFails()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         var domainEvent = new UserPasswordRecoveryDomainEvent(user.Id, "recovery-token");
 
         _userRepositoryMock.GetByIdAsync(domainEvent.UserId, Arg.Any<CancellationToken>())
@@ -105,7 +105,7 @@ public class PasswordRecoveryDomainEventHandlerTests
     public async Task Handle_ShouldThrowException_WhenTemplateNotFound()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         var domainEvent = new UserPasswordRecoveryDomainEvent(user.Id, "recovery-token");
 
         _userRepositoryMock.GetByIdAsync(domainEvent.UserId, Arg.Any<CancellationToken>())
@@ -126,7 +126,7 @@ public class PasswordRecoveryDomainEventHandlerTests
     public async Task Handle_ShouldThrowException_WhenTemplateHasErrors()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
         var domainEvent = new UserPasswordRecoveryDomainEvent(user.Id, "recovery-token");
 
         _userRepositoryMock.GetByIdAsync(domainEvent.UserId, Arg.Any<CancellationToken>())

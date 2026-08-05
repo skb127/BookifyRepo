@@ -39,7 +39,7 @@ public class GetCancellationPreviewTests : BaseIntegrationTest
 
         var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
         var password = "Password123!";
-        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+        var registerGuestCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(
             guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
         await Sender.Send(registerGuestCommand);
 
@@ -64,7 +64,7 @@ public class GetCancellationPreviewTests : BaseIntegrationTest
         // Register a completely different third user
         var otherEmail = $"other_{Guid.NewGuid()}@test.com";
         var password = "Password123!";
-        var registerOtherCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+        var registerOtherCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(
             otherEmail, "Other", "User", password, new DateOnly(1995, 5, 5));
         await Sender.Send(registerOtherCommand);
 
@@ -88,7 +88,8 @@ public class GetCancellationPreviewTests : BaseIntegrationTest
     public async Task GetCancellationPreview_ShouldReturn200WithZeroPenalty_WhenBookingNotPaid()
     {
         // Arrange - Setup a reserved booking (which has Authorized payment, not Paid)
-        var (_, _, bookingId, guestAccessToken, _, _) = await BookingTestHelpers.SetupReservedBookingWithHostAsync(this);
+        var (_, _, bookingId, guestAccessToken, _, _) =
+            await BookingTestHelpers.SetupReservedBookingWithHostAsync(this);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme, guestAccessToken);
@@ -113,7 +114,8 @@ public class GetCancellationPreviewTests : BaseIntegrationTest
     public async Task GetCancellationPreview_ShouldReturn200WithGuestEarlyDetails_WhenGuestCancelsPaidBookingEarly()
     {
         // Arrange - Setup a reserved booking
-        var (_, _, bookingId, guestAccessToken, _, _) = await BookingTestHelpers.SetupReservedBookingWithHostAsync(this);
+        var (_, _, bookingId, guestAccessToken, _, _) =
+            await BookingTestHelpers.SetupReservedBookingWithHostAsync(this);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme, guestAccessToken);
@@ -149,7 +151,7 @@ public class GetCancellationPreviewTests : BaseIntegrationTest
     {
         // Arrange - Setup a confirmed paid booking starting TOMORROW (so it's a late cancellation)
         var password = "Password123!";
-        var (apartmentId, guestToken, _, _) = 
+        var (apartmentId, guestToken, _, _) =
             await BookingTestHelpers.SetupApartmentAndGuestWithHostAsync(this, password);
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -206,7 +208,7 @@ public class GetCancellationPreviewTests : BaseIntegrationTest
     public async Task GetCancellationPreview_ShouldReturn200WithHostEarlyDetails_WhenHostCancelsPaidBookingEarly()
     {
         // Arrange - Setup a confirmed paid booking (early cancellation)
-        var (_, _, bookingId, _, _, hostEmail) = 
+        var (_, _, bookingId, _, _, hostEmail) =
             await BookingTestHelpers.SetupConfirmedPaidBookingWithHostAsync(this);
 
         // Authenticate as Host
@@ -239,7 +241,7 @@ public class GetCancellationPreviewTests : BaseIntegrationTest
     {
         // Arrange - Setup a confirmed paid booking starting TOMORROW (so it's a late cancellation)
         var password = "Password123!";
-        var (apartmentId, guestToken, _, hostEmail) = 
+        var (apartmentId, guestToken, _, hostEmail) =
             await BookingTestHelpers.SetupApartmentAndGuestWithHostAsync(this, password);
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);

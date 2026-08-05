@@ -9,4 +9,8 @@ public interface IJobScheduler
     Task CancelExpireCheckoutSessionAsync(Guid bookingId, CancellationToken cancellationToken = default);
 
     Task CancelExpireHostApprovalAsync(Guid bookingId, CancellationToken cancellationToken = default);
+
+    Task ScheduleAccountDeletionAsync(Guid userId, DateTime fireAt, CancellationToken cancellationToken = default);
+
+    Task CancelAccountDeletionAsync(Guid userId, CancellationToken cancellationToken = default);
 }

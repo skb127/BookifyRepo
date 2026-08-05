@@ -1,9 +1,10 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Bookify.Api.Controllers.Apartments;
+using Bookify.Api.Controllers.Apartments.Requests;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Application.IntegrationTests.Users;
+using Bookify.Application.Users.RegisterHost;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
@@ -31,7 +32,7 @@ public class CreateApartmentTests : BaseIntegrationTest
     [Fact]
     public async Task CreateApartment_ShouldReturnForbidden_WhenUserLacksAdminPermission()
     {
-        // Arrange: login as a regular Registered user (no Admin role)
+        // Arrange: login as a regular Registered user (no Admin or Host role)
         string accessToken = await GetAccessToken(
             UserData.CreateApartmentStandardUserRequest.Email,
             UserData.CreateApartmentStandardUserRequest.Password);
@@ -65,13 +66,12 @@ public class CreateApartmentTests : BaseIntegrationTest
         string cleaningFeeCurrency,
         int[] amenities)
     {
-        // Arrange: promote user to Admin
-        string adminEmail = UserData.CreateApartmentAdminUserRequest.Email;
-        await PromoteToAdminAsync(adminEmail);
+        // Arrange: register a Host user
+        string hostEmail = $"host_invalid_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678"));
 
-        string accessToken = await GetAccessToken(
-            adminEmail,
-            UserData.CreateApartmentAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(hostEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
@@ -93,15 +93,14 @@ public class CreateApartmentTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task CreateApartment_ShouldReturnCreatedAtAction_WhenRequestIsValidAndUserIsAdmin()
+    public async Task CreateApartment_ShouldReturnCreatedAtAction_WhenRequestIsValidAndUserIsHost()
     {
-        // Arrange: promote user to Admin
-        string adminEmail = UserData.CreateApartmentAdminUserRequest.Email;
-        await PromoteToAdminAsync(adminEmail);
+        // Arrange: register a Host user
+        string hostEmail = $"host_valid_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678"));
 
-        string accessToken = await GetAccessToken(
-            adminEmail,
-            UserData.CreateApartmentAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(hostEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
@@ -137,13 +136,12 @@ public class CreateApartmentTests : BaseIntegrationTest
     [Fact]
     public async Task CreateApartment_ShouldSetInstantBooking_WhenRequestHasInstantBookingTrue()
     {
-        // Arrange
-        string adminEmail = UserData.CreateApartmentAdminUserRequest.Email;
-        await PromoteToAdminAsync(adminEmail);
+        // Arrange: register a Host user
+        string hostEmail = $"host_instant_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678"));
 
-        string accessToken = await GetAccessToken(
-            adminEmail,
-            UserData.CreateApartmentAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(hostEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,

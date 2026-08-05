@@ -1,7 +1,7 @@
 #pragma warning disable
 using System.Net.Http.Json;
 using System.Threading.RateLimiting;
-using Bookify.Api.Controllers.Users;
+using Bookify.Api.Controllers.Users.Requests;
 using Bookify.Application.Abstractions.Email;
 using Bookify.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Builder;
@@ -234,7 +234,7 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
             client.DefaultRequestHeaders.Add("X-Test-Bypass-RateLimit", "true");
             client.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
 
-            HttpResponseMessage response = await client.PostAsJsonAsync("api/v1/users/register", request).ConfigureAwait(false);
+            HttpResponseMessage response = await client.PostAsJsonAsync("api/v1/users/register/guest", request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
         }
 

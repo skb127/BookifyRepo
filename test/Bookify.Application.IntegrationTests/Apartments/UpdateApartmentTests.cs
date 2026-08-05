@@ -1,9 +1,10 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Bookify.Api.Controllers.Apartments;
+using Bookify.Api.Controllers.Apartments.Requests;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Application.IntegrationTests.Users;
+using Bookify.Application.Users.RegisterHost;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
@@ -22,7 +23,8 @@ public class UpdateApartmentTests : BaseIntegrationTest
         var request = ApartmentData.ValidUpdateApartmentRequest;
 
         // Act
-        HttpResponseMessage response = await HttpClient.PutAsJsonAsync($"api/v1/apartments/{Guid.CreateVersion7()}", request);
+        HttpResponseMessage response =
+            await HttpClient.PutAsJsonAsync($"api/v1/apartments/{Guid.CreateVersion7()}", request);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -31,7 +33,7 @@ public class UpdateApartmentTests : BaseIntegrationTest
     [Fact]
     public async Task UpdateApartment_ShouldReturn403_WhenUserLacksAdminPermission()
     {
-        // Arrange: login as a regular Registered user (no Admin role)
+        // Arrange: login as a regular Registered user (no Host role)
         string accessToken = await GetAccessToken(
             UserData.UpdateApartmentStandardUserRequest.Email,
             UserData.UpdateApartmentStandardUserRequest.Password);
@@ -43,7 +45,8 @@ public class UpdateApartmentTests : BaseIntegrationTest
         var request = ApartmentData.ValidUpdateApartmentRequest;
 
         // Act
-        HttpResponseMessage response = await HttpClient.PutAsJsonAsync($"api/v1/apartments/{Guid.CreateVersion7()}", request);
+        HttpResponseMessage response =
+            await HttpClient.PutAsJsonAsync($"api/v1/apartments/{Guid.CreateVersion7()}", request);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -52,13 +55,13 @@ public class UpdateApartmentTests : BaseIntegrationTest
     [Fact]
     public async Task UpdateApartment_ShouldReturn404_WhenApartmentDoesNotExist()
     {
-        // Arrange: promote user to Admin
-        string adminEmail = UserData.UpdateApartmentAdminUserRequest.Email;
-        await PromoteToAdminAsync(adminEmail);
+        // Arrange: register a Host user
+        string hostEmail = $"host_upd404_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1),
+            "+34612345678"));
 
-        string accessToken = await GetAccessToken(
-            adminEmail,
-            UserData.UpdateApartmentAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(hostEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
@@ -67,7 +70,8 @@ public class UpdateApartmentTests : BaseIntegrationTest
         var request = ApartmentData.ValidUpdateApartmentRequest;
 
         // Act
-        HttpResponseMessage response = await HttpClient.PutAsJsonAsync($"api/v1/apartments/{Guid.CreateVersion7()}", request);
+        HttpResponseMessage response =
+            await HttpClient.PutAsJsonAsync($"api/v1/apartments/{Guid.CreateVersion7()}", request);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -79,13 +83,13 @@ public class UpdateApartmentTests : BaseIntegrationTest
     [Fact]
     public async Task UpdateApartment_ShouldReturn400_WhenRequestIsInvalid()
     {
-        // Arrange: promote user to Admin
-        string adminEmail = UserData.UpdateApartmentAdminUserRequest.Email;
-        await PromoteToAdminAsync(adminEmail);
+        // Arrange: register a Host user
+        string hostEmail = $"host_upd400_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1),
+            "+34612345678"));
 
-        string accessToken = await GetAccessToken(
-            adminEmail,
-            UserData.UpdateApartmentAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(hostEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
@@ -106,7 +110,8 @@ public class UpdateApartmentTests : BaseIntegrationTest
             validRequest.InstantBooking);
 
         // Act
-        HttpResponseMessage response = await HttpClient.PutAsJsonAsync($"api/v1/apartments/{Guid.CreateVersion7()}", invalidRequest);
+        HttpResponseMessage response =
+            await HttpClient.PutAsJsonAsync($"api/v1/apartments/{Guid.CreateVersion7()}", invalidRequest);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -115,13 +120,13 @@ public class UpdateApartmentTests : BaseIntegrationTest
     [Fact]
     public async Task UpdateApartment_ShouldReturn204_AndPersistChanges_WhenRequestIsValid()
     {
-        // Arrange: promote user to Admin
-        string adminEmail = UserData.UpdateApartmentAdminUserRequest.Email;
-        await PromoteToAdminAsync(adminEmail);
+        // Arrange: register a Host user
+        string hostEmail = $"host_upd204_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1),
+            "+34612345678"));
 
-        string accessToken = await GetAccessToken(
-            adminEmail,
-            UserData.UpdateApartmentAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(hostEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
@@ -134,7 +139,10 @@ public class UpdateApartmentTests : BaseIntegrationTest
         Uri locationUri = createResponse.Headers.Location!;
 
         // 2. Prepare update request
-        var updateRequest = ApartmentData.ValidUpdateApartmentRequest with { MinimumNights = 3, CheckInCutOffHours = 6 };
+        var updateRequest = ApartmentData.ValidUpdateApartmentRequest with
+        {
+            MinimumNights = 3, CheckInCutOffHours = 6
+        };
 
         // Act: Update the created apartment
         HttpResponseMessage updateResponse = await HttpClient.PutAsJsonAsync(locationUri, updateRequest);
@@ -146,7 +154,8 @@ public class UpdateApartmentTests : BaseIntegrationTest
         HttpResponseMessage getResponse = await HttpClient.GetAsync(locationUri);
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var apartmentResponse = await getResponse.Content.ReadFromJsonAsync<Application.Apartments.GetApartment.ApartmentResponse>();
+        var apartmentResponse =
+            await getResponse.Content.ReadFromJsonAsync<Application.Apartments.GetApartment.ApartmentResponse>();
         apartmentResponse.Should().NotBeNull();
         apartmentResponse.Name.Should().Be(updateRequest.Name);
         apartmentResponse.Description.Should().Be(updateRequest.Description);
@@ -162,13 +171,13 @@ public class UpdateApartmentTests : BaseIntegrationTest
     [Fact]
     public async Task UpdateApartment_ShouldSetInstantBooking_WhenRequestHasInstantBookingTrue()
     {
-        // Arrange: promote user to Admin
-        string adminEmail = UserData.UpdateApartmentAdminUserRequest.Email;
-        await PromoteToAdminAsync(adminEmail);
+        // Arrange: register a Host user
+        string hostEmail = $"host_updinst_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1),
+            "+34612345678"));
 
-        string accessToken = await GetAccessToken(
-            adminEmail,
-            UserData.UpdateApartmentAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(hostEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
@@ -203,7 +212,8 @@ public class UpdateApartmentTests : BaseIntegrationTest
         HttpResponseMessage getResponse = await HttpClient.GetAsync(locationUri);
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var apartmentResponse = await getResponse.Content.ReadFromJsonAsync<Application.Apartments.GetApartment.ApartmentResponse>();
+        var apartmentResponse =
+            await getResponse.Content.ReadFromJsonAsync<Application.Apartments.GetApartment.ApartmentResponse>();
         apartmentResponse.Should().NotBeNull();
         apartmentResponse.InstantBooking.Should().BeTrue();
     }

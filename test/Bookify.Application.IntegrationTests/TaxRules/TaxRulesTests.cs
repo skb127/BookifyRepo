@@ -360,7 +360,7 @@ public class TaxRulesTests : BaseIntegrationTest
     private async Task<string> SetupAdminTokenAsync()
     {
         var adminEmail = $"admin_{Guid.NewGuid()}@test.com";
-        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+        var registerAdminCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(
             adminEmail, "Admin", "User", Password, new DateOnly(1990, 1, 1));
         await Sender.Send(registerAdminCommand).ConfigureAwait(false);
         await PromoteToAdminAsync(adminEmail).ConfigureAwait(false);
@@ -370,7 +370,7 @@ public class TaxRulesTests : BaseIntegrationTest
     private async Task<string> SetupGuestTokenAsync()
     {
         var guestEmail = $"guest_{Guid.NewGuid()}@test.com";
-        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+        var registerGuestCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(
             guestEmail, "Guest", "User", Password, new DateOnly(1995, 5, 5));
         await Sender.Send(registerGuestCommand).ConfigureAwait(false);
         return await GetAccessToken(guestEmail, Password).ConfigureAwait(false);

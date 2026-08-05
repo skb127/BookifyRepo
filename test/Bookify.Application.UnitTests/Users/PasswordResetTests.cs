@@ -50,7 +50,7 @@ public class PasswordResetTests
     public async Task Handle_ShouldReturnFailure_WhenTokenIsExpired()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
 
         var expiredToken = PasswordResetToken.Create(
             user.Id,
@@ -76,7 +76,7 @@ public class PasswordResetTests
     public async Task Handle_ShouldReturnSuccess_WhenTokenIsValid()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
 
         var validToken = PasswordResetToken.Create(
             user.Id,
@@ -107,7 +107,7 @@ public class PasswordResetTests
     public async Task Handle_ShouldReturnFailure_WhenIdentityProviderFails()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
 
         var validToken = PasswordResetToken.Create(
             user.Id,
@@ -136,7 +136,7 @@ public class PasswordResetTests
     public async Task Handle_ShouldThrowException_WhenUnitOfWorkThrows()
     {
         // Arrange
-        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = User.Create(new FirstName("First"), new LastName("Last"), new Email("test@test.com"), DateOfBirth.Create(new DateOnly(2000, 1, 1)), Role.Guest);
 
         var validToken = PasswordResetToken.Create(
             user.Id,

@@ -7,7 +7,6 @@ using Bookify.Domain.Shared;
 using Bookify.Domain.UnitTests.Apartments;
 using Bookify.Domain.UnitTests.Infrastructure;
 using Bookify.Domain.UnitTests.Users;
-using Bookify.Domain.Users;
 using FluentAssertions;
 
 namespace Bookify.Domain.UnitTests.Reviews;
@@ -18,8 +17,7 @@ public class ReviewTests : BaseTest
     public void Create_ShouldReturnFailure_WhenBookingIsNotCompleted()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -44,8 +42,7 @@ public class ReviewTests : BaseTest
     public void Create_ShouldReturnSuccess_WhenBookingIsCompleted()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -77,8 +74,7 @@ public class ReviewTests : BaseTest
     public void Update_ShouldReturnFailure_WhenBookingDoesNotMatch()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -114,8 +110,7 @@ public class ReviewTests : BaseTest
     public void Update_ShouldReturnFailure_WhenBookingIsNotCompleted()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -149,8 +144,7 @@ public class ReviewTests : BaseTest
     public void Update_ShouldReturnFailure_WhenEditTimeIsExpired()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -180,8 +174,7 @@ public class ReviewTests : BaseTest
     public void Update_ShouldReturnSuccess_WhenValid()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);
@@ -220,8 +213,7 @@ public class ReviewTests : BaseTest
     public void Delete_ShouldSetDeletedOnUtc_WhenCalled()
     {
         // Arrange
-        var user = User.Create(UserData.FirstName, UserData.LastName, UserData.Email,
-            DateOfBirth.Create(new DateOnly(2000, 1, 1)));
+        var user = UserData.CreateUser();
         var price = new Money(10.0m, Currency.Usd);
         var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
         Apartment apartment = ApartmentData.Create(price);

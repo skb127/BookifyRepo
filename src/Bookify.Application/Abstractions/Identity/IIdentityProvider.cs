@@ -41,4 +41,8 @@ public interface IIdentityProvider
     Task<Result> LogoutAllSessionsAsync(string identityId, CancellationToken cancellationToken = default);
 
     Task<Result> UpdateUserProfileAsync(string identityId, string firstName, string lastName, CancellationToken cancellationToken = default);
+
+    Task<Result> DisableUserAsync(string identityId, CancellationToken cancellationToken = default);
+
+    Task<Result> EnableUserAsync(string identityId, CancellationToken cancellationToken = default);
 }

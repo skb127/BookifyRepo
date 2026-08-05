@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Apartments;
+using Bookify.Domain.Apartments;
 
 namespace Bookify.Domain.Bookings;
 
@@ -12,6 +12,10 @@ public interface IBookingRepository
         CancellationToken cancellationToken = default);
 
     Task<bool> HasActiveBookingsAsync(Guid apartmentId, CancellationToken cancellationToken = default);
+
+    Task<bool> HasActiveBookingsAsGuestAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    Task<bool> HasActiveBookingsAsHostAsync(Guid hostId, CancellationToken cancellationToken = default);
 
     void Add(Booking booking);
 }

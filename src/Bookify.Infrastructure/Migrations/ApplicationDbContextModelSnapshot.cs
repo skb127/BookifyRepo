@@ -513,6 +513,41 @@ namespace Bookify.Infrastructure.Migrations
                     b.ToTable("tax_rules", (string)null);
                 });
 
+            modelBuilder.Entity("Bookify.Domain.Users.AccountDeletionToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("ExpirationUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expiration_utc");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_account_deletion_tokens");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_account_deletion_tokens_token_hash");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_account_deletion_tokens_user_id");
+
+                    b.ToTable("account_deletion_tokens", (string)null);
+                });
+
             modelBuilder.Entity("Bookify.Domain.Users.EmailChangeToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -638,6 +673,16 @@ namespace Bookify.Infrastructure.Migrations
                         {
                             Id = 6,
                             Name = "reviews:read"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Name = "users:admin-write"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Name = "users:ban"
                         });
                 });
 
@@ -670,6 +715,16 @@ namespace Bookify.Infrastructure.Migrations
                         {
                             Id = 2,
                             Name = "Admin"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Guest"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Host"
                         });
                 });
 
@@ -726,6 +781,41 @@ namespace Bookify.Infrastructure.Migrations
                         {
                             RoleId = 2,
                             PermissionId = 6
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            PermissionId = 7
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            PermissionId = 8
+                        },
+                        new
+                        {
+                            RoleId = 3,
+                            PermissionId = 1
+                        },
+                        new
+                        {
+                            RoleId = 3,
+                            PermissionId = 5
+                        },
+                        new
+                        {
+                            RoleId = 3,
+                            PermissionId = 4
+                        },
+                        new
+                        {
+                            RoleId = 3,
+                            PermissionId = 6
+                        },
+                        new
+                        {
+                            RoleId = 4,
+                            PermissionId = 3
                         });
                 });
 
@@ -736,6 +826,12 @@ namespace Bookify.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<int>("BanCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("ban_count");
+
                     b.Property<DateOnly>("DateOfBirth")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("date")
@@ -745,6 +841,10 @@ namespace Bookify.Infrastructure.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
+
+                    b.Property<DateTime?>("DeletionScheduledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deletion_scheduled_at");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -811,7 +911,8 @@ namespace Bookify.Infrastructure.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique()
-                        .HasDatabaseName("ix_users_email");
+                        .HasDatabaseName("ix_users_email")
+                        .HasFilter("status != 'D'");
 
                     b.HasIndex("IdentityId")
                         .IsUnique()
@@ -970,7 +1071,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("ApartmentId");
 
-                            b1.ToTable("apartments", (string)null);
+                            b1.ToTable("apartments");
 
                             b1.WithOwner()
                                 .HasForeignKey("ApartmentId")
@@ -994,7 +1095,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("ApartmentId");
 
-                            b1.ToTable("apartments", (string)null);
+                            b1.ToTable("apartments");
 
                             b1.WithOwner()
                                 .HasForeignKey("ApartmentId")
@@ -1020,7 +1121,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("ApartmentId");
 
-                            b1.ToTable("apartments", (string)null);
+                            b1.ToTable("apartments");
 
                             b1.WithOwner()
                                 .HasForeignKey("ApartmentId")
@@ -1044,7 +1145,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("ApartmentId");
 
-                            b1.ToTable("apartments", (string)null);
+                            b1.ToTable("apartments");
 
                             b1.WithOwner()
                                 .HasForeignKey("ApartmentId")
@@ -1097,7 +1198,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("BookingId");
 
-                            b1.ToTable("bookings", (string)null);
+                            b1.ToTable("bookings");
 
                             b1.WithOwner()
                                 .HasForeignKey("BookingId")
@@ -1121,30 +1222,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("BookingId");
 
-                            b1.ToTable("bookings", (string)null);
-
-                            b1.WithOwner()
-                                .HasForeignKey("BookingId")
-                                .HasConstraintName("fk_bookings_bookings_id");
-                        });
-
-                    b.OwnsOne("Bookify.Domain.Bookings.DateRange", "Duration", b1 =>
-                        {
-                            b1.Property<Guid>("BookingId")
-                                .HasColumnType("uuid")
-                                .HasColumnName("id");
-
-                            b1.Property<DateOnly>("End")
-                                .HasColumnType("date")
-                                .HasColumnName("duration_end");
-
-                            b1.Property<DateOnly>("Start")
-                                .HasColumnType("date")
-                                .HasColumnName("duration_start");
-
-                            b1.HasKey("BookingId");
-
-                            b1.ToTable("bookings", (string)null);
+                            b1.ToTable("bookings");
 
                             b1.WithOwner()
                                 .HasForeignKey("BookingId")
@@ -1170,7 +1248,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("BookingId");
 
-                            b1.ToTable("bookings", (string)null);
+                            b1.ToTable("bookings");
 
                             b1.WithOwner()
                                 .HasForeignKey("BookingId")
@@ -1194,7 +1272,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("BookingId");
 
-                            b1.ToTable("bookings", (string)null);
+                            b1.ToTable("bookings");
 
                             b1.WithOwner()
                                 .HasForeignKey("BookingId")
@@ -1218,7 +1296,30 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("BookingId");
 
-                            b1.ToTable("bookings", (string)null);
+                            b1.ToTable("bookings");
+
+                            b1.WithOwner()
+                                .HasForeignKey("BookingId")
+                                .HasConstraintName("fk_bookings_bookings_id");
+                        });
+
+                    b.OwnsOne("Bookify.Domain.Bookings.DateRange", "Duration", b1 =>
+                        {
+                            b1.Property<Guid>("BookingId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<DateOnly>("End")
+                                .HasColumnType("date")
+                                .HasColumnName("duration_end");
+
+                            b1.Property<DateOnly>("Start")
+                                .HasColumnType("date")
+                                .HasColumnName("duration_start");
+
+                            b1.HasKey("BookingId");
+
+                            b1.ToTable("bookings");
 
                             b1.WithOwner()
                                 .HasForeignKey("BookingId")
@@ -1332,7 +1433,7 @@ namespace Bookify.Infrastructure.Migrations
 
                                     b2.HasKey("BookingTaxId");
 
-                                    b2.ToTable("booking_taxes", (string)null);
+                                    b2.ToTable("booking_taxes");
 
                                     b2.WithOwner()
                                         .HasForeignKey("BookingTaxId")
@@ -1410,7 +1511,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("TransactionId");
 
-                            b1.ToTable("transactions", (string)null);
+                            b1.ToTable("transactions");
 
                             b1.WithOwner()
                                 .HasForeignKey("TransactionId")
@@ -1464,7 +1565,7 @@ namespace Bookify.Infrastructure.Migrations
 
                             b1.HasKey("TaxRuleId");
 
-                            b1.ToTable("tax_rules", (string)null);
+                            b1.ToTable("tax_rules");
 
                             b1.WithOwner()
                                 .HasForeignKey("TaxRuleId")
@@ -1473,6 +1574,16 @@ namespace Bookify.Infrastructure.Migrations
 
                     b.Navigation("Rate")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Bookify.Domain.Users.AccountDeletionToken", b =>
+                {
+                    b.HasOne("Bookify.Domain.Users.User", null)
+                        .WithOne("AccountDeletionToken")
+                        .HasForeignKey("Bookify.Domain.Users.AccountDeletionToken", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_account_deletion_tokens_user_user_id");
                 });
 
             modelBuilder.Entity("Bookify.Domain.Users.EmailChangeToken", b =>
@@ -1548,6 +1659,8 @@ namespace Bookify.Infrastructure.Migrations
 
             modelBuilder.Entity("Bookify.Domain.Users.User", b =>
                 {
+                    b.Navigation("AccountDeletionToken");
+
                     b.Navigation("EmailChangeToken");
 
                     b.Navigation("PasswordResetToken");

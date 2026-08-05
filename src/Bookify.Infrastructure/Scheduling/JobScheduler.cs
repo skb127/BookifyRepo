@@ -24,7 +24,7 @@ internal sealed class JobScheduler : IJobScheduler
             .WithIdentity(triggerKey)
             .ForJob(jobKey)
             .UsingJobData("BookingId", bookingId.ToString())
-            .StartAt(new DateTimeOffset(fireAt))
+            .StartAt(new DateTimeOffset(DateTime.SpecifyKind(fireAt, DateTimeKind.Utc)))
             .Build();
 
         await scheduler.ScheduleJob(trigger, cancellationToken);
@@ -44,7 +44,7 @@ internal sealed class JobScheduler : IJobScheduler
             .WithIdentity(triggerKey)
             .ForJob(jobKey)
             .UsingJobData("BookingId", bookingId.ToString())
-            .StartAt(new DateTimeOffset(fireAt))
+            .StartAt(new DateTimeOffset(DateTime.SpecifyKind(fireAt, DateTimeKind.Utc)))
             .Build();
 
         await scheduler.ScheduleJob(trigger, cancellationToken);
@@ -68,6 +68,37 @@ internal sealed class JobScheduler : IJobScheduler
         IScheduler scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
 
         var triggerKey = new TriggerKey($"expire-host-approval-{bookingId}");
+
+        await scheduler.UnscheduleJob(triggerKey, cancellationToken);
+    }
+
+    public async Task ScheduleAccountDeletionAsync(
+        Guid userId,
+        DateTime fireAt,
+        CancellationToken cancellationToken = default)
+    {
+        IScheduler scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
+
+        var jobKey = new JobKey(nameof(Users.FinalizeAccountDeletionJob));
+        var triggerKey = new TriggerKey($"finalize-account-deletion-{userId}");
+
+        ITrigger trigger = TriggerBuilder.Create()
+            .WithIdentity(triggerKey)
+            .ForJob(jobKey)
+            .UsingJobData("UserId", userId.ToString())
+            .StartAt(new DateTimeOffset(DateTime.SpecifyKind(fireAt, DateTimeKind.Utc)))
+            .Build();
+
+        await scheduler.ScheduleJob(trigger, cancellationToken);
+    }
+
+    public async Task CancelAccountDeletionAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        IScheduler scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
+
+        var triggerKey = new TriggerKey($"finalize-account-deletion-{userId}");
 
         await scheduler.UnscheduleJob(triggerKey, cancellationToken);
     }

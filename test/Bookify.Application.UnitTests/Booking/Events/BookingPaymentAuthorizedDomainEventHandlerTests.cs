@@ -80,7 +80,7 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
         var email = new Email("test@test.com");
         var dateOfBirth = DateOfBirth.Create(new DateOnly(2000, 1, 1));
 
-        return User.Create(firstName, lastName, email, dateOfBirth);
+        return User.Create(firstName, lastName, email, dateOfBirth, Role.Guest);
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
     {
         // Arrange
         var user = CreateUser();
-        var host = User.Create(new FirstName("Host"), new LastName("User"), new Email("host@test.com"), DateOfBirth.Create(new DateOnly(1990, 1, 1)));
+        var host = User.Create(new FirstName("Host"), new LastName("User"), new Email("host@test.com"), DateOfBirth.Create(new DateOnly(1990, 1, 1)), Role.Host);
 
         Apartment apartment = ApartmentData.Create();
         typeof(Apartment).GetProperty("OwnerId")!.SetValue(apartment, host.Id);
@@ -228,7 +228,7 @@ public class BookingPaymentAuthorizedDomainEventHandlerTests
     {
         // Arrange
         var user = CreateUser();
-        var host = User.Create(new FirstName("Host"), new LastName("User"), new Email("host@test.com"), DateOfBirth.Create(new DateOnly(1990, 1, 1)));
+        var host = User.Create(new FirstName("Host"), new LastName("User"), new Email("host@test.com"), DateOfBirth.Create(new DateOnly(1990, 1, 1)), Role.Host);
 
         Apartment apartment = ApartmentData.Create();
         typeof(Apartment).GetProperty("OwnerId")!.SetValue(apartment, host.Id);

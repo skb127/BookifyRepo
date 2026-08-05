@@ -6,6 +6,13 @@ namespace Bookify.Infrastructure.Repositories;
 
 internal sealed class BookingRepository : Repository<Booking>, IBookingRepository
 {
+    private static readonly BookingStatus[] ActiveStatuses =
+    [
+        BookingStatus.Reserved,
+        BookingStatus.PendingPayment,
+        BookingStatus.Confirmed,
+        BookingStatus.InProgress
+    ];
 
     private readonly Bookify.Application.Abstractions.Clock.IDateTimeProvider _dateTimeProvider;
 
@@ -15,9 +22,14 @@ internal sealed class BookingRepository : Repository<Booking>, IBookingRepositor
         : base(dbContext) =>
         _dateTimeProvider = dateTimeProvider;
 
-    public async Task<bool> IsOverlappingAsync(Apartment apartment, DateRange duration,
-        CancellationToken cancellationToken = default) =>
-        await DbContext
+    public async Task<bool> IsOverlappingAsync(
+        Apartment apartment,
+        DateRange duration,
+        CancellationToken cancellationToken = default)
+    {
+        DateTime utcNow = _dateTimeProvider.UtcNow;
+
+        return await DbContext
             .Set<Booking>()
             .AnyAsync(
                 booking =>
@@ -27,8 +39,9 @@ internal sealed class BookingRepository : Repository<Booking>, IBookingRepositor
                     (booking.Status == BookingStatus.Confirmed ||
                      booking.Status == BookingStatus.InProgress ||
                      (booking.Status == BookingStatus.Reserved || booking.Status == BookingStatus.PendingPayment) &&
-                     (booking.ExpiresAt == null || booking.ExpiresAt > _dateTimeProvider.UtcNow)),
-            cancellationToken);
+                     (booking.ExpiresAt == null || booking.ExpiresAt > utcNow)),
+                cancellationToken);
+    }
 
     public async Task<bool> HasActiveBookingsAsync(Guid apartmentId, CancellationToken cancellationToken = default) =>
         await DbContext
@@ -36,8 +49,27 @@ internal sealed class BookingRepository : Repository<Booking>, IBookingRepositor
             .AnyAsync(
                 booking =>
                     booking.ApartmentId == apartmentId &&
-                    (booking.Status == BookingStatus.Reserved ||
-                     booking.Status == BookingStatus.Confirmed ||
-                     booking.Status == BookingStatus.InProgress),
+                    ActiveStatuses.Contains(booking.Status),
+                cancellationToken);
+
+    public async Task<bool> HasActiveBookingsAsGuestAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        await DbContext
+            .Set<Booking>()
+            .AnyAsync(
+                booking =>
+                    booking.UserId == userId &&
+                    ActiveStatuses.Contains(booking.Status),
+                cancellationToken);
+
+    public async Task<bool> HasActiveBookingsAsHostAsync(Guid hostId, CancellationToken cancellationToken = default) =>
+        await DbContext
+            .Set<Booking>()
+            .Join(
+                DbContext.Set<Apartment>(),
+                booking => booking.ApartmentId,
+                apartment => apartment.Id,
+                (booking, apartment) => new { booking, apartment })
+            .AnyAsync(
+                x => x.apartment.OwnerId == hostId && ActiveStatuses.Contains(x.booking.Status),
                 cancellationToken);
 }

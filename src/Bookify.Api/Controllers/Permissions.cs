@@ -8,4 +8,8 @@ internal static class Permissions
     public const string BookingsWrite = "bookings:write";
     public const string BookingsRead = "bookings:read";
     public const string ReviewsRead = "reviews:read";
+    public const string UsersAdminWrite = "users:admin-write";
+    public const string UsersBan = "users:ban";
+    public const string ReviewsWrite = "reviews:write";
+    public const string ReviewsAdminDelete = "reviews:admin-delete";
 }

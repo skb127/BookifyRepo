@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Abstractions;
+using Bookify.Domain.Abstractions;
 
 namespace Bookify.Domain.Users;
 
@@ -55,4 +55,48 @@ public static class UserErrors
     public static Error UpdateFailed => new(
         "User.UpdateFailed",
         "Failed to update the user profile");
+
+    public static Error CannotDeleteAdmin => new(
+        "User.CannotDeleteAdmin",
+        "Admins cannot be deleted via self deactivation");
+
+    public static Error CannotDeleteLastAdmin => new(
+        "User.CannotDeleteLastAdmin",
+        "The last admin account cannot be deleted");
+
+    public static Error CannotBanAdmin => new(
+        "User.CannotBanAdmin",
+        "Admin users cannot be banned");
+
+    public static Error HasActiveBookingsAsGuest => new(
+        "User.HasActiveBookingsAsGuest",
+        "User has active bookings as a guest and cannot be deleted");
+
+    public static Error HasActiveBookingsAsHost => new(
+        "User.HasActiveBookingsAsHost",
+        "Host has active bookings for their apartments and cannot be deleted");
+
+    public static Error AlreadyDeleted => new(
+        "User.AlreadyDeleted",
+        "The user is already deleted");
+
+    public static Error NotPendingDeletion => new(
+        "User.NotPendingDeletion",
+        "The user is not pending deletion");
+
+    public static Error AlreadySuspended => new(
+        "User.AlreadySuspended",
+        "The user is already banned/suspended");
+
+    public static Error NotSuspended => new(
+        "User.NotSuspended",
+        "The user is not suspended");
+
+    public static Error RequestFailed => new(
+        "User.RequestFailed",
+        "The request could not be completed");
+
+    public static Error DeletionWindowExpired => new(
+        "User.DeletionWindowExpired",
+        "The deletion cancellation window has expired");
 }

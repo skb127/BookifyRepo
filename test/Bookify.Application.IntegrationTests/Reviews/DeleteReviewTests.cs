@@ -11,8 +11,6 @@ namespace Bookify.Application.IntegrationTests.Reviews;
 
 public class DeleteReviewTests : BaseIntegrationTest
 {
-    private const string Password = "Password123!";
-
     public DeleteReviewTests(IntegrationTestWebAppFactory factory) : base(factory)
     {
     }
@@ -33,7 +31,8 @@ public class DeleteReviewTests : BaseIntegrationTest
     {
         // Arrange
 
-        string accessToken = await GetAccessToken(UserData.DeleteReviewSecondaryUserRequest.Email, UserData.DeleteReviewSecondaryUserRequest.Password);
+        string accessToken = await GetAccessToken(UserData.DeleteReviewSecondaryUserRequest.Email,
+            UserData.DeleteReviewSecondaryUserRequest.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             accessToken);
@@ -55,7 +54,7 @@ public class DeleteReviewTests : BaseIntegrationTest
         // Create an apartment with a completed booking and a review (Review is created by 'guestEmail')
         var reviewsToCreate = new List<(int Rating, string Comment)> { (5, "Great place!") };
         var (apartmentId, _, _, _, guestToken, _) =
-            await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate, Password);
+            await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate);
 
         // Fetch the review ID assigned to this apartment via the guest token
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -63,10 +62,12 @@ public class DeleteReviewTests : BaseIntegrationTest
 
         HttpResponseMessage getApartmentReviewsResponse = await HttpClient.GetAsync(
             new Uri($"api/v1/apartments/{apartmentId}/reviews", UriKind.Relative));
-        var reviewList = await getApartmentReviewsResponse.Content.ReadFromJsonAsync<Bookify.Application.Reviews.GetApartmentReviews.ApartmentReviewsResponse>();
+        var reviewList = await getApartmentReviewsResponse.Content
+            .ReadFromJsonAsync<Bookify.Application.Reviews.GetApartmentReviews.ApartmentReviewsResponse>();
         Guid reviewId = reviewList!.Items[0].Id;
 
-        string secondaryAccessToken = await GetAccessToken(UserData.DeleteReviewTertiaryUserRequest.Email, UserData.DeleteReviewTertiaryUserRequest.Password);
+        string secondaryAccessToken = await GetAccessToken(UserData.DeleteReviewTertiaryUserRequest.Email,
+            UserData.DeleteReviewTertiaryUserRequest.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,
             secondaryAccessToken);
@@ -87,7 +88,7 @@ public class DeleteReviewTests : BaseIntegrationTest
         // Arrange
         var reviewsToCreate = new List<(int Rating, string Comment)> { (5, "Great place!") };
         var (apartmentId, _, _, _, guestToken, _) =
-            await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate, Password);
+            await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate);
 
         // Fetch the review ID
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -95,7 +96,8 @@ public class DeleteReviewTests : BaseIntegrationTest
 
         HttpResponseMessage getApartmentReviewsResponse = await HttpClient.GetAsync(
             new Uri($"api/v1/apartments/{apartmentId}/reviews", UriKind.Relative));
-        var reviewList = await getApartmentReviewsResponse.Content.ReadFromJsonAsync<Bookify.Application.Reviews.GetApartmentReviews.ApartmentReviewsResponse>();
+        var reviewList = await getApartmentReviewsResponse.Content
+            .ReadFromJsonAsync<Bookify.Application.Reviews.GetApartmentReviews.ApartmentReviewsResponse>();
         Guid reviewId = reviewList!.Items[0].Id;
 
         // Act - Author deletes their own review
@@ -117,7 +119,7 @@ public class DeleteReviewTests : BaseIntegrationTest
         // Arrange
         var reviewsToCreate = new List<(int Rating, string Comment)> { (5, "Great place!") };
         var (apartmentId, _, ownerToken, ownerEmail, guestToken, _) =
-            await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate, Password);
+            await BookingTestHelpers.SetupApartmentWithMultipleReviewedBookingsAsync(this, reviewsToCreate);
 
         // Fetch the review ID (using guest token)
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -125,7 +127,8 @@ public class DeleteReviewTests : BaseIntegrationTest
 
         HttpResponseMessage getApartmentReviewsResponse = await HttpClient.GetAsync(
             new Uri($"api/v1/apartments/{apartmentId}/reviews", UriKind.Relative));
-        var reviewList = await getApartmentReviewsResponse.Content.ReadFromJsonAsync<Bookify.Application.Reviews.GetApartmentReviews.ApartmentReviewsResponse>();
+        var reviewList = await getApartmentReviewsResponse.Content
+            .ReadFromJsonAsync<Bookify.Application.Reviews.GetApartmentReviews.ApartmentReviewsResponse>();
         Guid reviewId = reviewList!.Items[0].Id;
 
         // Promote the owner to Admin (AdminOwner) so they have Moderation capabilities
@@ -135,9 +138,9 @@ public class DeleteReviewTests : BaseIntegrationTest
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme, ownerToken);
 
-        // Act - Admin deletes someone's review
+        // Act - Admin deletes someone's review via admin endpoint
         HttpResponseMessage response = await HttpClient.DeleteAsync(
-            new Uri($"api/v1/reviews/{reviewId}", UriKind.Relative));
+            new Uri($"api/v1/reviews/{reviewId}/admin", UriKind.Relative));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);

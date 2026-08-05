@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Application.IntegrationTests.Users;
+using Bookify.Application.Users.RegisterHost;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
@@ -54,13 +55,12 @@ public class GetApartmentTests : BaseIntegrationTest
     [Fact]
     public async Task GetApartment_ShouldReturn200_WhenApartmentExists()
     {
-        // Arrange: promote user to Admin and create apartment
-        string adminEmail = UserData.CreateApartmentAdminUserRequest.Email;
-        await PromoteToAdminAsync(adminEmail);
+        // Arrange: register a Host user and create apartment
+        string hostEmail = $"host_getapt_{Guid.NewGuid()}@test.com";
+        string password = "Password123!";
+        _ = await Sender.Send(new RegisterHostCommand(hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678"));
 
-        string accessToken = await GetAccessToken(
-            adminEmail,
-            UserData.CreateApartmentAdminUserRequest.Password);
+        string accessToken = await GetAccessToken(hostEmail, password);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             JwtBearerDefaults.AuthenticationScheme,

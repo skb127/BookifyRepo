@@ -36,7 +36,7 @@ public class GetBookingsTests : BaseIntegrationTest
         // Arrange
         var guestEmail = $"guest_forbidden_{Guid.CreateVersion7()}@test.com";
         var password = "Password123!";
-        var registerGuestCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+        var registerGuestCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(
             guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
 
         await Sender.Send(registerGuestCommand);
@@ -205,7 +205,7 @@ public class GetBookingsTests : BaseIntegrationTest
     {
         var adminEmail = $"admin_caller_{Guid.CreateVersion7()}@test.com";
         var password = "Password123!";
-        var registerAdminCommand = new Bookify.Application.Users.RegisterUser.RegisterUserCommand(
+        var registerAdminCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(
             adminEmail, "Admin", "User", password, new DateOnly(1990, 1, 1));
 
         await Sender.Send(registerAdminCommand).ConfigureAwait(false);

@@ -41,7 +41,8 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.LastModifiedOn);
 
         builder.HasIndex(user => user.Email)
-            .IsUnique(); // We are defining an index on the email property, this is a unique index, this is going to give us a database guaranteed constraint.
+            .IsUnique()
+            .HasFilter("status != 'D'"); // Partial index allowing re-registration of soft-deleted emails
 
         builder.HasIndex(user => user.IdentityId)
             .IsUnique();
@@ -59,6 +60,16 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.StripeCustomerId)
             .HasMaxLength(255)
             .IsRequired(false);
+
+        builder.Property(user => user.BanCount)
+            .HasDefaultValue(0);
+
+        builder.Property(user => user.DeletionScheduledAt);
+
+        builder.HasOne(user => user.AccountDeletionToken)
+            .WithOne()
+            .HasForeignKey<AccountDeletionToken>(adt => adt.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasQueryFilter(user => user.Status != UserStatus.Deleted);
     }
