@@ -33,6 +33,7 @@ using MailKit.Net.Smtp;
 using Bookify.Application.Abstractions.Payments;
 using Bookify.Infrastructure.Payments;
 using Stripe;
+using Azure.Messaging.ServiceBus;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Authentication;
@@ -158,9 +159,9 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(
-                connectionString,
-                npgsqlOptions => npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
-            .UseSnakeCaseNamingConvention());
+                    connectionString,
+                    npgsqlOptions => npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+                .UseSnakeCaseNamingConvention());
 
         services.AddScoped<IUserRepository, UserRepository>();
 
@@ -216,7 +217,7 @@ public static class DependencyInjection
             .AddUrlGroup(new Uri(configuration["Keycloak:BaseUrl"]!), HttpMethod.Get, "keycloak")
             .AddAzureServiceBusQueue(
                 configuration.GetConnectionString("ServiceBus")!,
-                configuration["ServiceBus:QueueName"]!,
+                configuration["ServiceBus:Queues:StripeEvents"]!,
                 name: "azure-service-bus");
 
     private static void AddApiVersioning(IServiceCollection services) =>
@@ -272,7 +273,8 @@ public static class DependencyInjection
         services.ConfigureOptions<CompleteBookingsJobSetup>(); // Configure the Quartz job to complete bookings
         services.ConfigureOptions<ExpireCheckoutSessionJobSetup>(); // Register ExpireCheckoutSessionJob durably
         services.ConfigureOptions<ExpireHostApprovalJobSetup>(); // Register ExpireHostApprovalJob durably
-        services.ConfigureOptions<Users.FinalizeAccountDeletionJobSetup>(); // Register FinalizeAccountDeletionJob durably
+        services
+            .ConfigureOptions<Users.FinalizeAccountDeletionJobSetup>(); // Register FinalizeAccountDeletionJob durably
 
         AddEmailNotificationResiliencePipeline(services);
     }
@@ -447,7 +449,7 @@ public static class DependencyInjection
         services.Configure<StripeOptions>(configuration.GetSection("Stripe"));
 
         services.AddHttpClient("Stripe")
-                .AddStandardResilienceHandler();
+            .AddStandardResilienceHandler();
 
         services.AddTransient<IStripeClient, StripeClient>(s =>
         {
@@ -469,10 +471,20 @@ public static class DependencyInjection
     private static void AddServiceBus(IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<ServiceBusOptions>(options =>
+            options.ConnectionString = configuration.GetConnectionString("ServiceBus") ?? string.Empty);
+
+        services.Configure<ServiceBusQueuesOptions>(
+            configuration.GetSection(ServiceBusQueuesOptions.SectionName));
+
+        services.AddSingleton<ServiceBusClient>(_ =>
         {
-            options.ConnectionString = configuration.GetConnectionString("ServiceBus") ?? string.Empty;
-            options.QueueName = configuration["ServiceBus:QueueName"] ?? "stripe-events";
+            string connectionString = configuration.GetConnectionString("ServiceBus") ?? string.Empty;
+            return string.IsNullOrWhiteSpace(connectionString)
+                ? null!
+                : new ServiceBusClient(connectionString);
         });
+
+        services.AddSingleton<IMessagePublisher, ServiceBusMessagePublisher>();
 
         services.AddSingleton<ServiceBusEventConsumer>();
         services.AddHostedService(sp => sp.GetRequiredService<ServiceBusEventConsumer>());

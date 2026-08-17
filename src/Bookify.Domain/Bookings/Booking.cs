@@ -428,6 +428,8 @@ public sealed class Booking : Entity
 
         PaymentStatus = PaymentStatus.Refunded;
 
+        RaiseDomainEvent(new BookingRefundCompletedDomainEvent(Id));
+
         return Result.Success();
     }
 

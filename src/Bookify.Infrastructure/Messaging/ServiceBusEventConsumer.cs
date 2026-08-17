@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Azure.Messaging.ServiceBus;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Application.Payments.CompleteRefund;
@@ -17,33 +18,36 @@ internal sealed class ServiceBusEventConsumer : BackgroundService, IEventBusCons
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ServiceBusOptions _options;
+    private readonly ServiceBusQueuesOptions _queuesOptions;
     private readonly ILogger<ServiceBusEventConsumer> _logger;
-    private ServiceBusClient? _client;
+    private readonly ServiceBusClient? _client;
     private ServiceBusProcessor? _processor;
 
     public ServiceBusEventConsumer(
         IServiceScopeFactory scopeFactory,
         IOptions<ServiceBusOptions> options,
-        ILogger<ServiceBusEventConsumer> logger)
+        IOptions<ServiceBusQueuesOptions> queuesOptions,
+        ILogger<ServiceBusEventConsumer> logger,
+        ServiceBusClient? client = null)
     {
         _scopeFactory = scopeFactory;
         _options = options.Value;
+        _queuesOptions = queuesOptions.Value;
         _logger = logger;
+        _client = client;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (string.IsNullOrWhiteSpace(_options.ConnectionString))
+        if (_client is null || string.IsNullOrWhiteSpace(_options.ConnectionString))
         {
-            _logger.LogWarning("Service Bus ConnectionString is empty. Bypassing event consumer initialization.");
+            _logger.LogWarning("Service Bus ConnectionString or Client is not configured. Bypassing event consumer initialization.");
             return;
         }
 
         try
         {
-            _client = new ServiceBusClient(_options.ConnectionString);
-            
-            _processor = _client.CreateProcessor(_options.QueueName, new ServiceBusProcessorOptions
+            _processor = _client.CreateProcessor(_queuesOptions.StripeEvents, new ServiceBusProcessorOptions
             {
                 AutoCompleteMessages = false,
                 MaxConcurrentCalls = 1
@@ -52,7 +56,7 @@ internal sealed class ServiceBusEventConsumer : BackgroundService, IEventBusCons
             _processor.ProcessMessageAsync += ProcessMessageAsync;
             _processor.ProcessErrorAsync += ProcessErrorAsync;
 
-            _logger.LogInformation("Starting Service Bus Processor for queue {QueueName}...", _options.QueueName);
+            _logger.LogInformation("Starting Service Bus Processor for queue {QueueName}...", _queuesOptions.StripeEvents);
             await _processor.StartProcessingAsync(stoppingToken);
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
@@ -82,18 +86,12 @@ internal sealed class ServiceBusEventConsumer : BackgroundService, IEventBusCons
                 _processor.ProcessErrorAsync -= ProcessErrorAsync;
                 await _processor.DisposeAsync();
             }
-
-            if (_client is not null)
-            {
-                await _client.DisposeAsync();
-            }
         }
     }
 
     public override void Dispose()
     {
         _processor?.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        _client?.DisposeAsync().AsTask().GetAwaiter().GetResult();
         base.Dispose();
     }
 
@@ -104,7 +102,9 @@ internal sealed class ServiceBusEventConsumer : BackgroundService, IEventBusCons
 
         try
         {
-            StripeWebhookEvent? stripeEvent = args.Message.Body.ToObjectFromJson<StripeWebhookEvent>();
+            StripeWebhookEvent? stripeEvent = JsonSerializer.Deserialize(
+                args.Message.Body.ToMemory().Span,
+                StripeMessagingSerializerContext.Default.StripeWebhookEvent);
 
             if (stripeEvent is null)
             {
@@ -120,23 +120,23 @@ internal sealed class ServiceBusEventConsumer : BackgroundService, IEventBusCons
             {
                 "checkout.session.completed" => await sender.Send(new ConfirmPaymentCommand(
                     stripeEvent.BookingId,
-                    stripeEvent.SessionId,
-                    stripeEvent.PaymentIntentId,
+                    stripeEvent.SessionId ?? string.Empty,
+                    stripeEvent.PaymentIntentId ?? string.Empty,
                     stripeEvent.IsInstant), args.CancellationToken),
 
                 "checkout.session.expired" => await sender.Send(new ExpireStripeSessionCommand(
                     stripeEvent.BookingId,
-                    stripeEvent.SessionId), args.CancellationToken),
+                    stripeEvent.SessionId ?? string.Empty), args.CancellationToken),
 
                 "charge.refunded" => await sender.Send(new CompleteRefundCommand(
                     stripeEvent.BookingId,
-                    stripeEvent.RefundId,
+                    stripeEvent.RefundId ?? string.Empty,
                     stripeEvent.Amount), args.CancellationToken),
 
                 "refund.failed" => await sender.Send(new FailRefundCommand(
                     stripeEvent.BookingId,
-                    stripeEvent.RefundId,
-                    stripeEvent.FailureReason), args.CancellationToken),
+                    stripeEvent.RefundId ?? string.Empty,
+                    stripeEvent.FailureReason ?? string.Empty), args.CancellationToken),
 
                 _ => Result.Failure(new Error("ServiceBus.UnknownEvent", $"Unknown event type: {stripeEvent.EventType}"))
             };

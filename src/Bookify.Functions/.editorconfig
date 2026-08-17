@@ -1,0 +1,3 @@
+[*.cs]
+# S2139: Exceptions should be either logged or rethrown, not both
+dotnet_diagnostic.S2139.severity = none

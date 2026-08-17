@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Bookify.Domain.Bookings;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +11,9 @@ internal sealed class InvoiceRepository : Repository<Invoice>, IInvoiceRepositor
     {
     }
 
-    public async Task<Invoice?> GetByBookingIdAsync(Guid bookingId, CancellationToken cancellationToken = default) =>
+    public async Task<Invoice?> GetAsync(
+        Expression<Func<Invoice, bool>> predicate,
+        CancellationToken cancellationToken = default) =>
         await DbContext.Set<Invoice>()
-            .FirstOrDefaultAsync(i => i.BookingId == bookingId, cancellationToken);
+            .FirstOrDefaultAsync(predicate, cancellationToken);
 }
