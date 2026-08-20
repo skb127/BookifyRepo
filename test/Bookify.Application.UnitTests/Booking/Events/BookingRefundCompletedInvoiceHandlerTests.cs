@@ -3,8 +3,10 @@ using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Application.Bookings.Events;
 using Bookify.Domain.Abstractions;
+using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Bookings.Events;
+using Bookify.Domain.CancellationPolicies;
 using Bookify.Domain.Shared;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
@@ -16,7 +18,7 @@ namespace Bookify.Application.UnitTests.Booking.Events;
 
 public class BookingRefundCompletedInvoiceHandlerTests
 {
-    private static readonly DateTime UtcNow = DateTime.UtcNow;
+    private static readonly DateTime UtcNow = new(2026, 1, 15, 12, 0, 0, DateTimeKind.Utc);
 
     private readonly IBookingRepository _bookingRepositoryMock;
     private readonly IInvoiceRepository _invoiceRepositoryMock;
@@ -33,7 +35,8 @@ public class BookingRefundCompletedInvoiceHandlerTests
         _unitOfWorkMock = Substitute.For<IUnitOfWork>();
         _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
         _messagePublisherMock = Substitute.For<IMessagePublisher>();
-        _queuesOptionsMock = Microsoft.Extensions.Options.Options.Create(new ServiceBusQueuesOptions { InvoiceRequests = "invoice-requests" });
+        _queuesOptionsMock = Microsoft.Extensions.Options.Options.Create(new ServiceBusQueuesOptions
+            { InvoiceRequests = "invoice-requests" });
 
         _dateTimeProviderMock.UtcNow.Returns(UtcNow);
 
@@ -46,27 +49,58 @@ public class BookingRefundCompletedInvoiceHandlerTests
             _queuesOptionsMock);
     }
 
-    private static Domain.Bookings.Booking CreateTestBooking(Guid bookingId)
+    private static Domain.Bookings.Booking CreateCancelledBookingWithRefund(
+        decimal refundAmount = 150.00m,
+        string refundReason = "Cancelled by Guest")
     {
-        var booking = (Domain.Bookings.Booking)Activator.CreateInstance(typeof(Domain.Bookings.Booking), true)!;
-        typeof(Domain.Bookings.Booking).GetProperty("Id")!.SetValue(booking, bookingId);
-        typeof(Domain.Bookings.Booking).GetProperty("TotalPrice")!.SetValue(booking, new Money(150.00m, Currency.Eur));
+        var apartment = new Apartment(
+            Guid.CreateVersion7(),
+            Guid.NewGuid(),
+            new Name("Test Apartment"),
+            new Description("Test Description"),
+            new Address("Spain", "Madrid", "28001", "Madrid", "Calle Mayor"),
+            new Money(10.0m, Currency.Eur),
+            Money.Zero(Currency.Eur),
+            [],
+            UtcNow,
+            false,
+            null,
+            1,
+            3,
+            1,
+            2,
+            Money.Zero(Currency.Eur));
+
+        var booking = Domain.Bookings.Booking.Reserve(
+            apartment,
+            Guid.NewGuid(),
+            DateRange.Create(new DateOnly(2026, 2, 1), new DateOnly(2026, 2, 16)),
+            UtcNow,
+            new PricingService());
+
+        booking.MarkAsPaid("intent_test", UtcNow);
+
+        var policy = CancellationPolicy.Create("Standard", 0m, 0m, 0m, 0m, 24, true, UtcNow);
+        var engine = new CancellationPolicyEngine();
+        booking.Cancel(UtcNow, policy, engine, false);
+        booking.InitiateRefund(refundAmount, "EUR", refundReason, UtcNow);
+        booking.CompleteRefund(UtcNow);
+
         return booking;
     }
 
-    private static Invoice CreateOriginalInvoice(Guid bookingId)
-    {
-        return Invoice.CreateForBooking(bookingId, 150.00m, 15.00m, "EUR", UtcNow);
-    }
+    private static Invoice CreateOriginalInvoice(Guid bookingId, decimal totalAmount = 150.00m,
+        decimal taxAmount = 15.00m) =>
+        Invoice.CreateForBooking(bookingId, totalAmount, taxAmount, "EUR", UtcNow);
 
     [Fact]
     public async Task
         Handle_ShouldCreateCreditNoteAndPublishMessage_WhenBookingAndOriginalInvoiceExistAndNoCreditNoteExists()
     {
         // Arrange
-        Guid bookingId = Guid.CreateVersion7();
+        Domain.Bookings.Booking booking = CreateCancelledBookingWithRefund();
+        Guid bookingId = booking.Id;
         var domainEvent = new BookingRefundCompletedDomainEvent(bookingId);
-        Domain.Bookings.Booking booking = CreateTestBooking(bookingId);
         Invoice originalInvoice = CreateOriginalInvoice(bookingId);
 
         _invoiceRepositoryMock.GetAsync(Arg.Any<Expression<Func<Invoice, bool>>>(), Arg.Any<CancellationToken>())
@@ -84,7 +118,7 @@ public class BookingRefundCompletedInvoiceHandlerTests
                 return predicate(originalInvoice) ? originalInvoice : null;
             });
 
-        _bookingRepositoryMock.GetWithTaxesAsync(bookingId, Arg.Any<CancellationToken>())
+        _bookingRepositoryMock.GetWithRefundAsync(bookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
 
         // Act
@@ -128,7 +162,7 @@ public class BookingRefundCompletedInvoiceHandlerTests
         // Assert
         _invoiceRepositoryMock.DidNotReceive().Add(Arg.Any<Invoice>());
         await _unitOfWorkMock.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
-        await _bookingRepositoryMock.DidNotReceive().GetWithTaxesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _bookingRepositoryMock.DidNotReceive().GetWithRefundAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
 
         await _messagePublisherMock.Received(1).PublishAsync(
             "invoice-requests",
@@ -148,7 +182,7 @@ public class BookingRefundCompletedInvoiceHandlerTests
         _invoiceRepositoryMock.GetAsync(Arg.Any<Expression<Func<Invoice, bool>>>(), Arg.Any<CancellationToken>())
             .ReturnsNull();
 
-        _bookingRepositoryMock.GetWithTaxesAsync(domainEvent.BookingId, Arg.Any<CancellationToken>())
+        _bookingRepositoryMock.GetWithRefundAsync(domainEvent.BookingId, Arg.Any<CancellationToken>())
             .ReturnsNull();
 
         // Act
@@ -165,14 +199,14 @@ public class BookingRefundCompletedInvoiceHandlerTests
     public async Task Handle_ShouldNotCreateCreditNote_WhenOriginalInvoiceNotFound()
     {
         // Arrange
-        Guid bookingId = Guid.CreateVersion7();
+        Domain.Bookings.Booking booking = CreateCancelledBookingWithRefund();
+        Guid bookingId = booking.Id;
         var domainEvent = new BookingRefundCompletedDomainEvent(bookingId);
-        Domain.Bookings.Booking booking = CreateTestBooking(bookingId);
 
         _invoiceRepositoryMock.GetAsync(Arg.Any<Expression<Func<Invoice, bool>>>(), Arg.Any<CancellationToken>())
             .ReturnsNull();
 
-        _bookingRepositoryMock.GetWithTaxesAsync(bookingId, Arg.Any<CancellationToken>())
+        _bookingRepositoryMock.GetWithRefundAsync(bookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
 
         // Act
@@ -189,9 +223,9 @@ public class BookingRefundCompletedInvoiceHandlerTests
     public async Task Handle_ShouldNotPublish_WhenSaveChangesFails()
     {
         // Arrange
-        Guid bookingId = Guid.CreateVersion7();
+        Domain.Bookings.Booking booking = CreateCancelledBookingWithRefund();
+        Guid bookingId = booking.Id;
         var domainEvent = new BookingRefundCompletedDomainEvent(bookingId);
-        Domain.Bookings.Booking booking = CreateTestBooking(bookingId);
         Invoice originalInvoice = CreateOriginalInvoice(bookingId);
 
         _invoiceRepositoryMock.GetAsync(Arg.Any<Expression<Func<Invoice, bool>>>(), Arg.Any<CancellationToken>())
@@ -209,7 +243,7 @@ public class BookingRefundCompletedInvoiceHandlerTests
                 return predicate(originalInvoice) ? originalInvoice : null;
             });
 
-        _bookingRepositoryMock.GetWithTaxesAsync(bookingId, Arg.Any<CancellationToken>())
+        _bookingRepositoryMock.GetWithRefundAsync(bookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
 
         _unitOfWorkMock.SaveChangesAsync(Arg.Any<CancellationToken>())
@@ -228,9 +262,9 @@ public class BookingRefundCompletedInvoiceHandlerTests
     public async Task Handle_ShouldPropagateException_WhenPublishFails()
     {
         // Arrange
-        Guid bookingId = Guid.CreateVersion7();
+        Domain.Bookings.Booking booking = CreateCancelledBookingWithRefund();
+        Guid bookingId = booking.Id;
         var domainEvent = new BookingRefundCompletedDomainEvent(bookingId);
-        Domain.Bookings.Booking booking = CreateTestBooking(bookingId);
         Invoice originalInvoice = CreateOriginalInvoice(bookingId);
 
         _invoiceRepositoryMock.GetAsync(Arg.Any<Expression<Func<Invoice, bool>>>(), Arg.Any<CancellationToken>())
@@ -248,7 +282,7 @@ public class BookingRefundCompletedInvoiceHandlerTests
                 return predicate(originalInvoice) ? originalInvoice : null;
             });
 
-        _bookingRepositoryMock.GetWithTaxesAsync(bookingId, Arg.Any<CancellationToken>())
+        _bookingRepositoryMock.GetWithRefundAsync(bookingId, Arg.Any<CancellationToken>())
             .Returns(booking);
 
         _messagePublisherMock.PublishAsync(Arg.Any<string>(), Arg.Any<object>(), Arg.Any<CancellationToken>())
@@ -260,5 +294,66 @@ public class BookingRefundCompletedInvoiceHandlerTests
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
         await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldCreateCreditNote_WithPartialRefundAmount()
+    {
+        // Arrange: Booking total 150 EUR, refund amount 120 EUR
+        Domain.Bookings.Booking booking =
+            CreateCancelledBookingWithRefund(refundAmount: 120.00m, refundReason: "Cancelled by Guest");
+        Guid bookingId = booking.Id;
+        var domainEvent = new BookingRefundCompletedDomainEvent(bookingId);
+        Invoice originalInvoice = CreateOriginalInvoice(bookingId);
+
+        _invoiceRepositoryMock.GetAsync(Arg.Any<Expression<Func<Invoice, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                Func<Invoice, bool> predicate = callInfo.Arg<Expression<Func<Invoice, bool>>>().Compile();
+                return predicate(originalInvoice) ? originalInvoice : null;
+            });
+
+        _bookingRepositoryMock.GetWithRefundAsync(bookingId, Arg.Any<CancellationToken>())
+            .Returns(booking);
+
+        // Act
+        await _handler.Handle(domainEvent, CancellationToken.None);
+
+        // Assert
+        _invoiceRepositoryMock.Received(1).Add(Arg.Is<Invoice>(i =>
+            i.BookingId == bookingId &&
+            i.OriginalInvoiceId == originalInvoice.Id &&
+            i.TotalAmount == 120.00m &&
+            i.InvoiceType == InvoiceType.CreditNote));
+    }
+
+    [Fact]
+    public async Task Handle_ShouldCalculateProportionalTax_ForPartialRefund()
+    {
+        // Arrange: Booking total 150 EUR, original tax 15 EUR, refund amount 120 EUR (80%)
+        // Expected proportional tax: 15 * (120/150) = 12.00 EUR
+        Domain.Bookings.Booking booking = CreateCancelledBookingWithRefund(refundAmount: 120.00m);
+        Guid bookingId = booking.Id;
+        var domainEvent = new BookingRefundCompletedDomainEvent(bookingId);
+        Invoice originalInvoice = CreateOriginalInvoice(bookingId);
+
+        _invoiceRepositoryMock.GetAsync(Arg.Any<Expression<Func<Invoice, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                Func<Invoice, bool> predicate = callInfo.Arg<Expression<Func<Invoice, bool>>>().Compile();
+                return predicate(originalInvoice) ? originalInvoice : null;
+            });
+
+        _bookingRepositoryMock.GetWithRefundAsync(bookingId, Arg.Any<CancellationToken>())
+            .Returns(booking);
+
+        // Act
+        await _handler.Handle(domainEvent, CancellationToken.None);
+
+        // Assert
+        _invoiceRepositoryMock.Received(1).Add(Arg.Is<Invoice>(i =>
+            i.BookingId == bookingId &&
+            i.TaxAmount == 12.00m &&
+            i.TotalAmount == 120.00m));
     }
 }

@@ -31,7 +31,6 @@ internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
             .HasConversion(currency => currency.Code, code => Currency.FromCode(code)));
 
 
-
         builder.OwnsOne(booking => booking.ExtraGuestCharge, extraGuestChargeBuilder =>
         {
             extraGuestChargeBuilder.Property(money => money.Amount)
@@ -75,6 +74,7 @@ internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder.Property(booking => booking.ExpiredOnUtc)
             .IsRequired(false);
 
+        // Reasons for cancelling or no-showing a booking
         builder.OwnsMany(booking => booking.Reasons, reasonBuilder =>
         {
             reasonBuilder.ToTable("booking_reasons");
@@ -107,6 +107,7 @@ internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
             .HasDefaultValue("Unpaid")
             .IsRequired();
 
+        // Taxes applied to the booking (calculated when applied)
         builder.OwnsMany(booking => booking.Taxes, taxBuilder =>
         {
             taxBuilder.ToTable("booking_taxes");
@@ -145,6 +146,34 @@ internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
 
             taxBuilder.Property(bt => bt.CreatedOnUtc)
                 .HasColumnName("created_on_utc")
+                .IsRequired();
+        });
+
+        // Refund for cancelled bookings (not all cancellations will have a refund)
+        builder.OwnsOne(booking => booking.Refund, refundBuilder =>
+        {
+            refundBuilder.ToTable("booking_refunds");
+            refundBuilder.WithOwner().HasForeignKey("booking_id");
+            refundBuilder.Property<Guid>("Id").ValueGeneratedNever();
+            refundBuilder.HasKey("Id");
+
+            refundBuilder.Property(r => r.Amount)
+                .HasColumnName("amount")
+                .HasPrecision(18, 4)
+                .IsRequired();
+
+            refundBuilder.Property(r => r.Currency)
+                .HasColumnName("currency")
+                .HasMaxLength(3)
+                .IsRequired();
+
+            refundBuilder.Property(r => r.Reason)
+                .HasColumnName("reason")
+                .HasMaxLength(200)
+                .IsRequired();
+
+            refundBuilder.Property(r => r.InitiatedOnUtc)
+                .HasColumnName("initiated_on_utc")
                 .IsRequired();
         });
     }

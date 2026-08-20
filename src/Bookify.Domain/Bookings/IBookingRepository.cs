@@ -8,6 +8,8 @@ public interface IBookingRepository
 
     Task<Booking?> GetWithTaxesAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<Booking?> GetWithRefundAsync(Guid id, CancellationToken cancellationToken = default);
+
     Task<bool> IsOverlappingAsync(
         Apartment apartment,
         DateRange duration,

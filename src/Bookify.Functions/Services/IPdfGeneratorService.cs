@@ -4,5 +4,5 @@ namespace Bookify.Functions.Services;
 
 internal interface IPdfGeneratorService
 {
-    byte[] Generate(InvoiceDocumentModel model);
+    byte[] Generate(InvoiceDocumentData data);
 }

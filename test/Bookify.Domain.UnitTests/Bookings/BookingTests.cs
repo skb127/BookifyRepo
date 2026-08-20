@@ -722,11 +722,16 @@ public class BookingTests : BaseTest
         booking.Cancel(utcNow, policy, engine, false);
 
         // Act
-        Result result = booking.InitiateRefund(100.0m, "USD", "Guest cancellation");
+        Result result = booking.InitiateRefund(100.0m, "USD", "Guest cancellation", utcNow);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
         booking.PaymentStatus.Should().Be(PaymentStatus.RefundProcessing);
+        booking.Refund.Should().NotBeNull();
+        booking.Refund!.Amount.Should().Be(100.0m);
+        booking.Refund.Currency.Should().Be("USD");
+        booking.Refund.Reason.Should().Be("Guest cancellation");
+        booking.Refund.InitiatedOnUtc.Should().Be(utcNow);
 
         BookingRefundInitiatedDomainEvent domainEvent =
             AssertDomainEventWasPublished<BookingRefundInitiatedDomainEvent>(booking);
@@ -817,7 +822,7 @@ public class BookingTests : BaseTest
         booking.MarkAsPaid("intent_123", utcNow);
 
         // Act
-        Result result = booking.InitiateRefund(100.0m, "USD", "Guest cancellation");
+        Result result = booking.InitiateRefund(100.0m, "USD", "Guest cancellation", utcNow);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -839,11 +844,59 @@ public class BookingTests : BaseTest
         booking.Cancel(utcNow, null, null, false);
 
         // Act
-        Result result = booking.InitiateRefund(100.0m, "USD", "Guest cancellation");
+        Result result = booking.InitiateRefund(100.0m, "USD", "Guest cancellation", utcNow);
 
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(BookingErrors.RefundNotEligible);
+    }
+
+    [Fact]
+    public void InitiateRefund_ShouldCreateBookingRefund_WithPartialAmount()
+    {
+        // Arrange
+        var user = UserData.CreateUser();
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 11, 30, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.MarkAsPaid("intent_123", utcNow);
+        var policy = CancellationPolicy.Create("Policy", 0m, 0.5m, 0.1m, 1m, 24, true, utcNow);
+        var engine = new CancellationPolicyEngine();
+        booking.Cancel(utcNow, policy, engine, false);
+
+        // Act - partial refund (80% = 112 USD of 140 USD)
+        Result result = booking.InitiateRefund(112.0m, "USD", "Guest cancellation", utcNow);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        booking.Refund.Should().NotBeNull();
+        booking.Refund!.Amount.Should().Be(112.0m);
+        booking.Refund.Amount.Should().NotBe(booking.TotalPrice.Amount);
+    }
+
+    [Fact]
+    public void InitiateRefund_ShouldNotCreateRefund_WhenFails()
+    {
+        // Arrange
+        var user = UserData.CreateUser();
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = new(2025, 11, 30, 12, 0, 0, DateTimeKind.Utc);
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+
+        // Act
+        Result result = booking.InitiateRefund(100.0m, "USD", "Guest cancellation", utcNow);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        booking.Refund.Should().BeNull();
     }
 
     [Fact]
@@ -1148,7 +1201,7 @@ public class BookingTests : BaseTest
         var policy = CancellationPolicy.Create("Policy", 0m, 0.5m, 0.1m, 1m, 24, true, utcNow);
         var engine = new CancellationPolicyEngine();
         booking.Cancel(utcNow, policy, engine, false);
-        booking.InitiateRefund(100m, "USD", "Guest requested cancellation");
+        booking.InitiateRefund(100m, "USD", "Guest requested cancellation", utcNow);
 
         // Act
         Result result = booking.CompleteRefund(utcNow);
@@ -1198,7 +1251,7 @@ public class BookingTests : BaseTest
         var policy = CancellationPolicy.Create("Policy", 0m, 0.5m, 0.1m, 1m, 24, true, utcNow);
         var engine = new CancellationPolicyEngine();
         booking.Cancel(utcNow, policy, engine, false);
-        booking.InitiateRefund(100m, "USD", "Guest requested cancellation");
+        booking.InitiateRefund(100m, "USD", "Guest requested cancellation", utcNow);
 
         // Act
         Result result = booking.RevertRefundFailure(utcNow);

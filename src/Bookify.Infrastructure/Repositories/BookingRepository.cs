@@ -28,6 +28,12 @@ internal sealed class BookingRepository : Repository<Booking>, IBookingRepositor
             .Include(booking => booking.Taxes)
             .FirstOrDefaultAsync(booking => booking.Id == id, cancellationToken);
 
+    public async Task<Booking?> GetWithRefundAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await DbContext
+            .Set<Booking>()
+            .Include(booking => booking.Refund)
+            .FirstOrDefaultAsync(booking => booking.Id == id, cancellationToken);
+
     public async Task<bool> IsOverlappingAsync(
         Apartment apartment,
         DateRange duration,

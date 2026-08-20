@@ -1,4 +1,4 @@
-﻿root = true
+root = true
 
 # C# files
 [*.cs]
@@ -298,6 +298,9 @@ dotnet_diagnostic.S2325.severity = none
 
 # Suppress warnings about expensive logging in performance-critical code, as we have determined that the benefits of logging outweigh the performance costs in these cases.
 dotnet_diagnostic.CA1873.severity = none
+
+# CA1054: Uri parameters should not be strings
+dotnet_diagnostic.CA1054.severity = none
 
 # CA1056: Properties should not return strings
 dotnet_diagnostic.CA1056.severity = none

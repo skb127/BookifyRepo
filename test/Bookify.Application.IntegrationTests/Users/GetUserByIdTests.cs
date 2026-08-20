@@ -81,7 +81,7 @@ public class GetUserByIdTests : BaseIntegrationTest
         userResponse.FirstName.Should().Be(UserData.GetUserByIdUserRequest.FirstName);
         userResponse.LastName.Should().Be(UserData.GetUserByIdUserRequest.LastName);
         userResponse.Roles.Should().NotBeEmpty();
-        userResponse.StatusCode.Should().Be('A');
+        userResponse.StatusCode.Should().Be("A");
         userResponse.StatusName.Should().Be("Active");
         userResponse.BanCount.Should().Be(0);
         userResponse.IdentityId.Should().NotBeNullOrWhiteSpace();

@@ -50,22 +50,22 @@ internal sealed class GenerateInvoiceFunction
             return;
         }
 
-        InvoiceDocumentModel? documentData = await _invoiceDataService.GetInvoiceDocumentDataAsync(request.InvoiceId, context.CancellationToken);
+        InvoiceDocumentData? documentData = await _invoiceDataService.GetInvoiceDocumentDataAsync(request.InvoiceId, context.CancellationToken);
         if (documentData is null)
         {
-            _logger.LogWarning("Invoice document data not found for InvoiceId {InvoiceId}.", request.InvoiceId);
-            return;
+            _logger.LogWarning("Invoice document data not found for InvoiceId {InvoiceId}. Throwing exception to trigger retry.", request.InvoiceId);
+            throw new InvalidOperationException($"Invoice document data not found for InvoiceId {request.InvoiceId}.");
         }
 
         try
         {
             byte[] pdfBytes = _pdfGeneratorService.Generate(documentData);
 
-            string blobName = $"{documentData.InvoiceType.ToString().ToLowerInvariant()}_{documentData.InvoiceNumber}.pdf";
+            string blobName = $"{documentData.Document.InvoiceType.ToString().ToLowerInvariant()}_{documentData.Document.InvoiceNumber}.pdf";
             string pdfUrl = await _blobStorageService.UploadAsync(blobName, pdfBytes, "application/pdf", context.CancellationToken);
 
             await _invoiceDataService.MarkInvoiceAsGeneratedAsync(request.InvoiceId, pdfUrl, context.CancellationToken);
-            _logger.LogInformation("Successfully generated invoice {InvoiceNumber} and stored at {PdfUrl}.", documentData.InvoiceNumber, pdfUrl);
+            _logger.LogInformation("Successfully generated invoice {InvoiceNumber} and stored at {PdfUrl}.", documentData.Document.InvoiceNumber, pdfUrl);
         }
         catch (Exception ex)
         {

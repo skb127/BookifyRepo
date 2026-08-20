@@ -16,4 +16,13 @@ internal sealed record InvoiceDocumentModel(
     string ApartmentAddress,
     DateOnly DurationStart,
     DateOnly DurationEnd,
-    int TotalNights);
+    int TotalNights,
+    decimal PriceForPeriod,
+    decimal CleaningFee,
+    decimal AmenitiesUpCharge,
+    decimal ExtraGuestCharge,
+    string? OriginalInvoiceNumber,
+    decimal? OriginalTotalAmount,
+    decimal? OriginalTaxAmount,
+    decimal? RefundAmount,
+    string? RefundReason);

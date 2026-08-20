@@ -46,7 +46,7 @@ internal sealed class BookingRefundCompletedInvoiceHandler : INotificationHandle
         }
         else
         {
-            Booking? booking = await _bookingRepository.GetWithTaxesAsync(notification.BookingId, cancellationToken);
+            Booking? booking = await _bookingRepository.GetWithRefundAsync(notification.BookingId, cancellationToken);
             if (booking is null)
             {
                 return;
@@ -61,11 +61,18 @@ internal sealed class BookingRefundCompletedInvoiceHandler : INotificationHandle
                 return;
             }
 
+            decimal refundAmount = booking.Refund?.Amount ?? booking.TotalPrice.Amount;
+            decimal originalTotalAmount = booking.TotalPrice.Amount;
+            decimal taxProportion = originalTotalAmount > 0
+                ? refundAmount / originalTotalAmount
+                : 1m;
+            decimal proportionalTaxAmount = Math.Round(originalInvoice.TaxAmount * taxProportion, 4);
+
             creditNote = Invoice.CreateCreditNote(
                 booking.Id,
                 originalInvoice.Id,
-                booking.TotalPrice.Amount,
-                originalInvoice.TaxAmount,
+                refundAmount,
+                proportionalTaxAmount,
                 booking.TotalPrice.Currency.Code,
                 _dateTimeProvider.UtcNow);
 

@@ -122,7 +122,7 @@ public class BookingCancelledDomainEventHandlerTests
             
             if (paymentStatus == PaymentStatus.RefundProcessing)
             {
-                booking.InitiateRefund(0m, "USD", "Test");
+                booking.InitiateRefund(0m, "USD", "Test", DateTime.UtcNow);
             }
         }
         else if (paymentStatus == PaymentStatus.Authorized)

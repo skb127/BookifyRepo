@@ -93,7 +93,7 @@ public class FailRefundCommandHandlerTests
         var policy = CancellationPolicy.Create("Policy", 0m, 0.5m, 0.1m, 1m, 24, true, UtcNow);
         var engine = new CancellationPolicyEngine();
         booking.Cancel(UtcNow, policy, engine, false);
-        booking.InitiateRefund(100m, "USD", "Cancellation refund");
+        booking.InitiateRefund(100m, "USD", "Cancellation refund", UtcNow);
 
         var command = new FailRefundCommand(booking.Id, "re_123", "insufficient_funds");
         _bookingRepositoryMock.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>())

@@ -64,7 +64,7 @@ public class CompleteRefundCommandHandlerTests
         var policy = CancellationPolicy.Create("Policy", 0m, 0.5m, 0.1m, 1m, 24, true, UtcNow);
         var engine = new CancellationPolicyEngine();
         booking.Cancel(UtcNow, policy, engine, false);
-        booking.InitiateRefund(100m, "USD", "Cancellation refund");
+        booking.InitiateRefund(100m, "USD", "Cancellation refund", UtcNow);
         booking.CompleteRefund(UtcNow);
 
         var command = new CompleteRefundCommand(booking.Id, "re_123", 100m);
@@ -94,7 +94,7 @@ public class CompleteRefundCommandHandlerTests
         var policy = CancellationPolicy.Create("Policy", 0m, 0.5m, 0.1m, 1m, 24, true, UtcNow);
         var engine = new CancellationPolicyEngine();
         booking.Cancel(UtcNow, policy, engine, false);
-        booking.InitiateRefund(100m, "USD", "Cancellation refund");
+        booking.InitiateRefund(100m, "USD", "Cancellation refund", UtcNow);
 
         var command = new CompleteRefundCommand(booking.Id, "re_123", 100m);
         _bookingRepositoryMock.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>())
