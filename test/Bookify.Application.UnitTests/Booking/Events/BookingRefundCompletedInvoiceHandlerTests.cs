@@ -50,8 +50,7 @@ public class BookingRefundCompletedInvoiceHandlerTests
     }
 
     private static Domain.Bookings.Booking CreateCancelledBookingWithRefund(
-        decimal refundAmount = 150.00m,
-        string refundReason = "Cancelled by Guest")
+        decimal penaltyRate = 0m)
     {
         var apartment = new Apartment(
             Guid.CreateVersion7(),
@@ -80,10 +79,15 @@ public class BookingRefundCompletedInvoiceHandlerTests
 
         booking.MarkAsPaid("intent_test", UtcNow);
 
-        var policy = CancellationPolicy.Create("Standard", 0m, 0m, 0m, 0m, 24, true, UtcNow);
+        var policy = CancellationPolicy.Create("Standard", penaltyRate, penaltyRate, penaltyRate, penaltyRate, 24, true, UtcNow);
         var engine = new CancellationPolicyEngine();
-        booking.Cancel(UtcNow, policy, engine, false);
-        booking.InitiateRefund(refundAmount, "EUR", refundReason, UtcNow);
+        var cancelResult = booking.Cancel(UtcNow, policy, engine, false);
+        
+        if (cancelResult.Value.RefundAmount > 0)
+        {
+            booking.InitiateRefund(cancelResult.Value.RefundAmount, cancelResult.Value.Currency, "Cancellation", UtcNow);
+        }
+        
         booking.CompleteRefund(UtcNow);
 
         return booking;
@@ -125,13 +129,20 @@ public class BookingRefundCompletedInvoiceHandlerTests
         await _handler.Handle(domainEvent, CancellationToken.None);
 
         // Assert
-        _invoiceRepositoryMock.Received(1).Add(Arg.Is<Invoice>(i =>
-            i.BookingId == bookingId &&
-            i.OriginalInvoiceId == originalInvoice.Id &&
-            i.TotalAmount == 150.00m &&
-            i.Currency == "EUR" &&
-            i.InvoiceType == InvoiceType.CreditNote &&
-            i.Status == InvoiceStatus.Pending));
+        var capturedInvoices = _invoiceRepositoryMock.ReceivedCalls()
+            .Where(c => c.GetMethodInfo().Name == "Add")
+            .Select(c => c.GetArguments()[0] as Invoice)
+            .ToList();
+            
+        capturedInvoices.Should().HaveCount(1);
+        var addedInvoice = capturedInvoices[0]!;
+        
+        addedInvoice.BookingId.Should().Be(bookingId);
+        addedInvoice.OriginalInvoiceId.Should().Be(originalInvoice.Id);
+        addedInvoice.TotalAmount.Should().Be(150.00m);
+        addedInvoice.Currency.Should().Be("EUR");
+        addedInvoice.InvoiceType.Should().Be(InvoiceType.CreditNote);
+        addedInvoice.Status.Should().Be(InvoiceStatus.Pending);
 
         await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
 
@@ -299,9 +310,9 @@ public class BookingRefundCompletedInvoiceHandlerTests
     [Fact]
     public async Task Handle_ShouldCreateCreditNote_WithPartialRefundAmount()
     {
-        // Arrange: Booking total 150 EUR, refund amount 120 EUR
+        // Arrange: Booking total 150 EUR, penalty 20% -> refund amount 120 EUR
         Domain.Bookings.Booking booking =
-            CreateCancelledBookingWithRefund(refundAmount: 120.00m, refundReason: "Cancelled by Guest");
+            CreateCancelledBookingWithRefund(penaltyRate: 0.2m);
         Guid bookingId = booking.Id;
         var domainEvent = new BookingRefundCompletedDomainEvent(bookingId);
         Invoice originalInvoice = CreateOriginalInvoice(bookingId);
@@ -320,19 +331,26 @@ public class BookingRefundCompletedInvoiceHandlerTests
         await _handler.Handle(domainEvent, CancellationToken.None);
 
         // Assert
-        _invoiceRepositoryMock.Received(1).Add(Arg.Is<Invoice>(i =>
-            i.BookingId == bookingId &&
-            i.OriginalInvoiceId == originalInvoice.Id &&
-            i.TotalAmount == 120.00m &&
-            i.InvoiceType == InvoiceType.CreditNote));
+        var capturedInvoices = _invoiceRepositoryMock.ReceivedCalls()
+            .Where(c => c.GetMethodInfo().Name == "Add")
+            .Select(c => c.GetArguments()[0] as Invoice)
+            .ToList();
+            
+        capturedInvoices.Should().HaveCount(1);
+        var addedInvoice = capturedInvoices[0]!;
+        
+        addedInvoice.BookingId.Should().Be(bookingId);
+        addedInvoice.OriginalInvoiceId.Should().Be(originalInvoice.Id);
+        addedInvoice.TotalAmount.Should().Be(120.00m);
+        addedInvoice.InvoiceType.Should().Be(InvoiceType.CreditNote);
     }
 
     [Fact]
     public async Task Handle_ShouldCalculateProportionalTax_ForPartialRefund()
     {
-        // Arrange: Booking total 150 EUR, original tax 15 EUR, refund amount 120 EUR (80%)
-        // Expected proportional tax: 15 * (120/150) = 12.00 EUR
-        Domain.Bookings.Booking booking = CreateCancelledBookingWithRefund(refundAmount: 120.00m);
+        // Arrange: Booking total 150 EUR, original tax 15 EUR, penalty 20% -> refund amount 120 EUR (80%)
+        // Expected proportional tax: 15 * (120/165) = 10.91 EUR
+        Domain.Bookings.Booking booking = CreateCancelledBookingWithRefund(penaltyRate: 0.2m);
         Guid bookingId = booking.Id;
         var domainEvent = new BookingRefundCompletedDomainEvent(bookingId);
         Invoice originalInvoice = CreateOriginalInvoice(bookingId);
@@ -351,9 +369,16 @@ public class BookingRefundCompletedInvoiceHandlerTests
         await _handler.Handle(domainEvent, CancellationToken.None);
 
         // Assert
-        _invoiceRepositoryMock.Received(1).Add(Arg.Is<Invoice>(i =>
-            i.BookingId == bookingId &&
-            i.TaxAmount == 12.00m &&
-            i.TotalAmount == 120.00m));
+        var capturedInvoices = _invoiceRepositoryMock.ReceivedCalls()
+            .Where(c => c.GetMethodInfo().Name == "Add")
+            .Select(c => c.GetArguments()[0] as Invoice)
+            .ToList();
+            
+        capturedInvoices.Should().HaveCount(1);
+        var addedInvoice = capturedInvoices[0]!;
+        
+        addedInvoice.BookingId.Should().Be(bookingId);
+        addedInvoice.TaxAmount.Should().Be(10.9091m);
+        addedInvoice.TotalAmount.Should().Be(120.00m);
     }
 }

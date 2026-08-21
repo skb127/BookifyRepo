@@ -61,8 +61,9 @@ internal sealed class BookingRefundCompletedInvoiceHandler : INotificationHandle
                 return;
             }
 
-            decimal refundAmount = booking.Refund?.Amount ?? booking.TotalPrice.Amount;
-            decimal originalTotalAmount = booking.TotalPrice.Amount;
+            decimal originalTotalAmount = booking.TotalPrice.Amount + originalInvoice.TaxAmount;
+            decimal refundAmount = booking.Refund?.Amount ?? originalTotalAmount;
+            
             decimal taxProportion = originalTotalAmount > 0
                 ? refundAmount / originalTotalAmount
                 : 1m;

@@ -72,20 +72,24 @@ internal sealed class InvoiceDataService(IOptions<DatabaseOptions> options) : II
         return new InvoiceDocumentData(document, taxLines);
     }
 
-    public async Task MarkInvoiceAsGeneratedAsync(Guid invoiceId, string pdfUrl,
+    public async Task MarkInvoiceAsGeneratedAsync(Guid invoiceId, string pdfBlobName,
         CancellationToken cancellationToken = default)
     {
         const string sql = """
                            UPDATE invoices
-                           SET status = 1,
-                               pdf_url = @PdfUrl
+                           SET status = @Status,
+                               pdf_blob_name = @PdfBlobName
                            WHERE id = @InvoiceId
                            """;
 
         await using var connection = new NpgsqlConnection(_options.Database);
         await connection.OpenAsync(cancellationToken);
-        var command = new CommandDefinition(sql, new { InvoiceId = invoiceId, PdfUrl = pdfUrl },
-            cancellationToken: cancellationToken);
+        var command = new CommandDefinition(sql, new
+        {
+            InvoiceId = invoiceId,
+            PdfBlobName = pdfBlobName,
+            Status = (int)InvoiceStatus.Generated
+        }, cancellationToken: cancellationToken);
         await connection.ExecuteAsync(command);
     }
 
@@ -93,13 +97,17 @@ internal sealed class InvoiceDataService(IOptions<DatabaseOptions> options) : II
     {
         const string sql = """
                            UPDATE invoices
-                           SET status = 2
+                           SET status = @Status
                            WHERE id = @InvoiceId
                            """;
 
         await using var connection = new NpgsqlConnection(_options.Database);
         await connection.OpenAsync(cancellationToken);
-        var command = new CommandDefinition(sql, new { InvoiceId = invoiceId }, cancellationToken: cancellationToken);
+        var command = new CommandDefinition(sql, new
+        {
+            InvoiceId = invoiceId,
+            Status = (int)InvoiceStatus.Error
+        }, cancellationToken: cancellationToken);
         await connection.ExecuteAsync(command);
     }
 }

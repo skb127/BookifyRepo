@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Reflection;
 using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Messaging;
 using Bookify.Application.Bookings.Events;
@@ -6,6 +7,7 @@ using Bookify.Domain.Abstractions;
 using Bookify.Domain.Bookings;
 using Bookify.Domain.Bookings.Events;
 using Bookify.Domain.Shared;
+using Bookify.Domain.TaxRules;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
@@ -33,7 +35,8 @@ public class BookingPaymentCompletedInvoiceHandlerTests
         _unitOfWorkMock = Substitute.For<IUnitOfWork>();
         _dateTimeProviderMock = Substitute.For<IDateTimeProvider>();
         _messagePublisherMock = Substitute.For<IMessagePublisher>();
-        _queuesOptionsMock = Microsoft.Extensions.Options.Options.Create(new ServiceBusQueuesOptions { InvoiceRequests = "invoice-requests" });
+        _queuesOptionsMock = Microsoft.Extensions.Options.Options.Create(new ServiceBusQueuesOptions
+            { InvoiceRequests = "invoice-requests" });
 
         _dateTimeProviderMock.UtcNow.Returns(UtcNow);
 
@@ -51,6 +54,38 @@ public class BookingPaymentCompletedInvoiceHandlerTests
         var booking = (Domain.Bookings.Booking)Activator.CreateInstance(typeof(Domain.Bookings.Booking), true)!;
         typeof(Domain.Bookings.Booking).GetProperty("Id")!.SetValue(booking, bookingId);
         typeof(Domain.Bookings.Booking).GetProperty("TotalPrice")!.SetValue(booking, new Money(150.00m, Currency.Eur));
+        return booking;
+    }
+
+    private static Domain.Bookings.Booking CreateTestBookingWithTaxes(Guid bookingId, decimal totalPrice,
+        decimal taxAmount)
+    {
+        Domain.Bookings.Booking booking = CreateTestBooking(bookingId);
+        typeof(Domain.Bookings.Booking).GetProperty("TotalPrice")!.SetValue(booking,
+            new Money(totalPrice, Currency.Eur));
+
+        var taxRule = TaxRule.Create(
+            "ES",
+            null,
+            null,
+            TaxRate.Percentage(10m),
+            "VAT",
+            new DateOnly(2026, 1, 1),
+            null,
+            UtcNow);
+
+        var tax = BookingTax.CreateSnapshot(
+            Guid.CreateVersion7(),
+            bookingId,
+            taxRule,
+            new Money(taxAmount, Currency.Eur),
+            UtcNow);
+
+        var taxesList = (List<BookingTax>)typeof(Domain.Bookings.Booking)
+            .GetField("_taxes", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .GetValue(booking)!;
+        taxesList.Add(tax);
+
         return booking;
     }
 
@@ -87,6 +122,35 @@ public class BookingPaymentCompletedInvoiceHandlerTests
                 m.GetType().GetProperty("BookingId")!.GetValue(m)!.Equals(bookingId) &&
                 m.GetType().GetProperty("InvoiceType")!.GetValue(m)!.ToString() == "Invoice"),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldCreateInvoiceWithTotalAmountIncludingTaxes_WhenBookingHasTaxes()
+    {
+        // Arrange
+        Guid bookingId = Guid.CreateVersion7();
+        var domainEvent = new BookingPaymentCompletedDomainEvent(bookingId, "pi_test_123");
+        Domain.Bookings.Booking booking = CreateTestBookingWithTaxes(bookingId, 150.00m, 15.00m);
+
+        _invoiceRepositoryMock.GetAsync(Arg.Any<Expression<Func<Invoice, bool>>>(), Arg.Any<CancellationToken>())
+            .ReturnsNull();
+
+        _bookingRepositoryMock.GetWithTaxesAsync(bookingId, Arg.Any<CancellationToken>())
+            .Returns(booking);
+
+        // Act
+        await _handler.Handle(domainEvent, CancellationToken.None);
+
+        // Assert
+        _invoiceRepositoryMock.Received(1).Add(Arg.Is<Invoice>(i =>
+            i.BookingId == bookingId &&
+            i.TotalAmount == 165.00m &&
+            i.TaxAmount == 15.00m &&
+            i.Currency == "EUR" &&
+            i.InvoiceType == InvoiceType.Invoice &&
+            i.Status == InvoiceStatus.Pending));
+
+        await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]

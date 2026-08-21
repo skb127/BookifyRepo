@@ -10,7 +10,7 @@ public sealed class CancellationPolicyEngine
         DateTime utcNow,
         bool cancelledByHost)
     {
-        decimal totalPrice = booking.TotalPrice.Amount;
+        decimal totalPrice = booking.TotalPrice.Amount + booking.Taxes.Sum(t => t.CalculatedAmount.Amount);
         string currency = booking.TotalPrice.Currency.Code;
 
         // Convert the check-in DateOnly to a DateTime at midnight UTC to calculate elapsed hours.

@@ -38,14 +38,27 @@ internal sealed class QuestPdfGeneratorService : IPdfGeneratorService
                 column.Item().Text(title).FontSize(14).Bold().FontColor(Colors.Grey.Medium);
             });
 
-            row.RelativeItem().Column(column =>
+            row.RelativeItem().AlignRight().MaxWidth(260).Table(table =>
             {
-                column.Item().AlignRight().Text($"Number: {model.InvoiceNumber}").Bold();
-                column.Item().AlignRight().Text($"Date: {model.IssueDate:yyyy-MM-dd}");
-                column.Item().AlignRight().Text($"Booking: {model.BookingId}");
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.ConstantColumn(85);
+                    columns.RelativeColumn();
+                });
+
+                table.Cell().Text("Number:").Bold();
+                table.Cell().AlignRight().Text(model.InvoiceNumber).Bold();
+
+                table.Cell().Text("Date:").FontColor(Colors.Grey.Darken2);
+                table.Cell().AlignRight().Text($"{model.IssueDate:yyyy-MM-dd}");
+
+                table.Cell().Text("Booking:").FontColor(Colors.Grey.Darken2);
+                table.Cell().AlignRight().Text(model.BookingId.ToString()).FontSize(8.5f);
+
                 if (model.InvoiceType == InvoiceType.CreditNote && !string.IsNullOrEmpty(model.OriginalInvoiceNumber))
                 {
-                    column.Item().AlignRight().Text($"Ref. Invoice: {model.OriginalInvoiceNumber}").FontColor(Colors.Grey.Darken1);
+                    table.Cell().Text("Ref. Invoice:").FontColor(Colors.Grey.Darken1);
+                    table.Cell().AlignRight().Text(model.OriginalInvoiceNumber).FontColor(Colors.Grey.Darken1);
                 }
             });
         });
@@ -96,7 +109,6 @@ internal sealed class QuestPdfGeneratorService : IPdfGeneratorService
         decimal subtotal = model.PriceForPeriod + model.CleaningFee + model.AmenitiesUpCharge + model.ExtraGuestCharge;
 
         container.PaddingTop(0.8f, Unit.Centimetre).Column(column =>
-        {
             column.Item().Table(table =>
             {
                 table.ColumnsDefinition(columns =>
@@ -163,30 +175,43 @@ internal sealed class QuestPdfGeneratorService : IPdfGeneratorService
 
                 static IContainer BodyCellStyle(IContainer c) =>
                     c.PaddingVertical(5).BorderBottom(1).BorderColor(Colors.Grey.Lighten2);
-            });
+                    
+                static IContainer SummaryLabelStyle(IContainer c) =>
+                    c.PaddingVertical(5).PaddingRight(10).AlignRight();
+                    
+                static IContainer SummaryValueStyle(IContainer c) =>
+                    c.PaddingVertical(5).AlignRight();
 
-            // Summary section
-            column.Item().PaddingTop(0.5f, Unit.Centimetre).AlignRight().Column(summary =>
-            {
-                summary.Item().Text($"Subtotal: {CurrencyFormatter.Format(subtotal, model.Currency)}");
+                // Add a thicker line before the summary
+                table.Cell().ColumnSpan(4).PaddingTop(5).BorderBottom(1).BorderColor(Colors.Grey.Darken2);
+
+                table.Cell().ColumnSpan(3).Element(SummaryLabelStyle).Text("Subtotal:");
+                table.Cell().Element(SummaryValueStyle).Text(CurrencyFormatter.Format(subtotal, model.Currency));
 
                 if (data.TaxLines.Count > 0)
                 {
                     foreach (TaxLineModel tax in data.TaxLines)
                     {
                         string rateDisplay = tax.TaxType == 0 ? $" ({tax.Rate:P0})" : string.Empty;
-                        summary.Item().Text($"{tax.TaxName}{rateDisplay}: {CurrencyFormatter.Format(tax.Amount, model.Currency)}");
+                        table.Cell().ColumnSpan(3).Element(SummaryLabelStyle).Text($"{tax.TaxName}{rateDisplay}:");
+                        table.Cell().Element(SummaryValueStyle).Text(CurrencyFormatter.Format(tax.Amount, model.Currency));
                     }
                 }
                 else if (model.TaxAmount > 0)
                 {
-                    summary.Item().Text($"Taxes: {CurrencyFormatter.Format(model.TaxAmount, model.Currency)}");
+                    table.Cell().ColumnSpan(3).Element(SummaryLabelStyle).Text("Taxes:");
+                    table.Cell().Element(SummaryValueStyle).Text(CurrencyFormatter.Format(model.TaxAmount, model.Currency));
+                }
+                else
+                {
+                    table.Cell().ColumnSpan(3).Element(SummaryLabelStyle).Text("Taxes (0%):");
+                    table.Cell().Element(SummaryValueStyle).Text(CurrencyFormatter.Format(0m, model.Currency));
                 }
 
-                summary.Item().PaddingTop(4).Text($"Total: {CurrencyFormatter.Format(model.TotalAmount, model.Currency)}")
+                table.Cell().ColumnSpan(3).Element(SummaryLabelStyle).Text("Total:").FontSize(13).Bold().FontColor(Colors.Blue.Darken3);
+                table.Cell().Element(SummaryValueStyle).Text(CurrencyFormatter.Format(model.TotalAmount, model.Currency))
                     .FontSize(13).Bold().FontColor(Colors.Blue.Darken3);
-            });
-        });
+            }));
     }
 
     private static void ComposeCreditNoteContent(IContainer container, InvoiceDocumentData data)
@@ -257,6 +282,14 @@ internal sealed class QuestPdfGeneratorService : IPdfGeneratorService
                         r.RelativeItem().AlignRight().Text(CurrencyFormatter.Format(origTax, model.Currency));
                     });
                 }
+                else
+                {
+                    orig.Item().Row(r =>
+                    {
+                        r.RelativeItem().Text("Taxes (0%)");
+                        r.RelativeItem().AlignRight().Text(CurrencyFormatter.Format(0m, model.Currency));
+                    });
+                }
 
                 orig.Item().PaddingTop(4).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
                 orig.Item().PaddingTop(4).Row(r =>
@@ -267,30 +300,48 @@ internal sealed class QuestPdfGeneratorService : IPdfGeneratorService
             });
 
             // Refund Settlement Summary
-            column.Item().PaddingTop(0.5f, Unit.Centimetre).AlignRight().Column(summary =>
+            column.Item().PaddingTop(0.5f, Unit.Centimetre).AlignRight().MaxWidth(300).Table(table =>
             {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.RelativeColumn();
+                    columns.ConstantColumn(85);
+                });
+                
+                static IContainer SummaryLabelStyle(IContainer c) =>
+                    c.PaddingVertical(5).PaddingRight(10).AlignRight();
+                    
+                static IContainer SummaryValueStyle(IContainer c) =>
+                    c.PaddingVertical(5).AlignRight();
+
                 if (penaltyAmount > 0 && penaltyPercentage > 0)
                 {
-                    summary.Item().Text($"Cancellation fee ({penaltyPercentage:0}%): -{CurrencyFormatter.Format(penaltyAmount, model.Currency)}")
-                        .FontColor(Colors.Red.Darken2);
+                    table.Cell().Element(SummaryLabelStyle).Text($"Cancellation fee ({penaltyPercentage:0}%):").FontColor(Colors.Red.Darken2);
+                    table.Cell().Element(SummaryValueStyle).Text($"-{CurrencyFormatter.Format(penaltyAmount, model.Currency)}").FontColor(Colors.Red.Darken2);
                 }
                 else
                 {
-                    summary.Item().Text("Full refund applied (100%)").FontColor(Colors.Green.Darken2);
+                    table.Cell().ColumnSpan(2).Element(SummaryLabelStyle).Text("Full refund applied (100%)").FontColor(Colors.Green.Darken2);
                 }
 
-                summary.Item().PaddingTop(4).Text($"Credit Amount: -{CurrencyFormatter.Format(model.TotalAmount, model.Currency)}")
+                table.Cell().Element(SummaryLabelStyle).Text("Credit Amount:").FontSize(13).Bold().FontColor(Colors.Blue.Darken3);
+                table.Cell().Element(SummaryValueStyle).Text($"-{CurrencyFormatter.Format(model.TotalAmount, model.Currency)}")
                     .FontSize(13).Bold().FontColor(Colors.Blue.Darken3);
             });
         });
     }
 
     private static void ComposeFooter(IContainer container) =>
-        container.AlignBottom().AlignCenter().Text(x =>
+        container.AlignBottom().Column(column =>
         {
-            x.Span("Thank you for choosing Bookify. Page ");
-            x.CurrentPageNumber();
-            x.Span(" of ");
-            x.TotalPages();
+            column.Item().AlignCenter().Text("Thank you for choosing Bookify.").FontSize(9).FontColor(Colors.Grey.Darken1);
+            column.Item().AlignRight().Text(x =>
+            {
+                x.DefaultTextStyle(s => s.FontSize(9).FontColor(Colors.Grey.Darken1));
+                x.Span("Page ");
+                x.CurrentPageNumber();
+                x.Span(" of ");
+                x.TotalPages();
+            });
         });
 }

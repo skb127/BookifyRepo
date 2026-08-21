@@ -62,10 +62,10 @@ internal sealed class GenerateInvoiceFunction
             byte[] pdfBytes = _pdfGeneratorService.Generate(documentData);
 
             string blobName = $"{documentData.Document.InvoiceType.ToString().ToLowerInvariant()}_{documentData.Document.InvoiceNumber}.pdf";
-            string pdfUrl = await _blobStorageService.UploadAsync(blobName, pdfBytes, "application/pdf", context.CancellationToken);
+            await _blobStorageService.UploadAsync(blobName, pdfBytes, "application/pdf", context.CancellationToken);
 
-            await _invoiceDataService.MarkInvoiceAsGeneratedAsync(request.InvoiceId, pdfUrl, context.CancellationToken);
-            _logger.LogInformation("Successfully generated invoice {InvoiceNumber} and stored at {PdfUrl}.", documentData.Document.InvoiceNumber, pdfUrl);
+            await _invoiceDataService.MarkInvoiceAsGeneratedAsync(request.InvoiceId, blobName, context.CancellationToken);
+            _logger.LogInformation("Successfully generated invoice {InvoiceNumber} with blob name {BlobName}.", documentData.Document.InvoiceNumber, blobName);
         }
         catch (Exception ex)
         {

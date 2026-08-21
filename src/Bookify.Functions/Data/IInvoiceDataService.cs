@@ -6,7 +6,7 @@ internal interface IInvoiceDataService
 {
     Task<InvoiceDocumentData?> GetInvoiceDocumentDataAsync(Guid invoiceId, CancellationToken cancellationToken = default);
 
-    Task MarkInvoiceAsGeneratedAsync(Guid invoiceId, string pdfUrl, CancellationToken cancellationToken = default);
+    Task MarkInvoiceAsGeneratedAsync(Guid invoiceId, string pdfBlobName, CancellationToken cancellationToken = default);
 
     Task MarkInvoiceAsErrorAsync(Guid invoiceId, CancellationToken cancellationToken = default);
 }

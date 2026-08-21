@@ -43,7 +43,7 @@ public sealed class Invoice : Entity
     public decimal TotalAmount { get; private set; }
     public decimal TaxAmount { get; private set; }
     public string Currency { get; private set; } = null!;
-    public string? PdfUrl { get; private set; }
+    public string? PdfBlobName { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
 
     public static Invoice CreateForBooking(
@@ -85,10 +85,10 @@ public sealed class Invoice : Entity
             currency,
             createdOnUtc: utcNow);
 
-    public void MarkAsGenerated(string pdfUrl)
+    public void MarkAsGenerated(string pdfBlobName)
     {
         Status = InvoiceStatus.Generated;
-        PdfUrl = pdfUrl;
+        PdfBlobName = pdfBlobName;
     }
 
     public void MarkAsError() => Status = InvoiceStatus.Error;

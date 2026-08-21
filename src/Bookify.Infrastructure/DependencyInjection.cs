@@ -1,19 +1,23 @@
 using Asp.Versioning;
+using Azure.Messaging.ServiceBus;
 using Bookify.Application.Abstractions.Authentication;
 using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Email;
 using Bookify.Application.Abstractions.Identity;
-using Bookify.Application.Abstractions.Security;
+using Bookify.Application.Abstractions.Messaging;
+using Bookify.Application.Abstractions.Payments;
 using Bookify.Application.Abstractions.Scheduling;
+using Bookify.Application.Abstractions.Security;
+using Bookify.Application.Abstractions.Storage;
 using Bookify.Application.Options;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
+using Bookify.Domain.CancellationPolicies;
 using Bookify.Domain.Reviews;
 using Bookify.Domain.TaxRules;
-using Bookify.Domain.CancellationPolicies;
 using Bookify.Domain.Users;
 using Bookify.Infrastructure.Authentication;
 using Bookify.Infrastructure.Authorization;
@@ -23,19 +27,16 @@ using Bookify.Infrastructure.Clock;
 using Bookify.Infrastructure.Data;
 using Bookify.Infrastructure.Email;
 using Bookify.Infrastructure.Identity;
+using Bookify.Infrastructure.Messaging;
 using Bookify.Infrastructure.Outbox;
+using Bookify.Infrastructure.Payments;
 using Bookify.Infrastructure.RateLimiting;
 using Bookify.Infrastructure.Repositories;
-using Bookify.Infrastructure.Security;
 using Bookify.Infrastructure.Scheduling;
+using Bookify.Infrastructure.Security;
+using Bookify.Infrastructure.Storage;
 using Dapper;
 using MailKit.Net.Smtp;
-using Bookify.Application.Abstractions.Payments;
-using Bookify.Infrastructure.Payments;
-using Stripe;
-using Azure.Messaging.ServiceBus;
-using Bookify.Application.Abstractions.Messaging;
-using Bookify.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -47,6 +48,7 @@ using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Polly;
 using Quartz;
+using Stripe;
 using AuthenticationOptions = Bookify.Infrastructure.Authentication.AuthenticationOptions;
 using AuthenticationService = Bookify.Infrastructure.Authentication.AuthenticationService;
 using IAuthenticationService = Bookify.Application.Abstractions.Authentication.IAuthenticationService;
@@ -86,6 +88,8 @@ public static class DependencyInjection
         AddStripe(services, configuration);
 
         AddServiceBus(services, configuration);
+
+        AddStorage(services, configuration);
 
         AddOptions(services, configuration);
 
@@ -489,5 +493,13 @@ public static class DependencyInjection
         services.AddSingleton<ServiceBusEventConsumer>();
         services.AddHostedService(sp => sp.GetRequiredService<ServiceBusEventConsumer>());
         services.AddSingleton<IEventBusConsumer>(sp => sp.GetRequiredService<ServiceBusEventConsumer>());
+    }
+
+    private static void AddStorage(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<InvoicesBlobStorageOptions>(
+            configuration.GetSection(InvoicesBlobStorageOptions.SectionName));
+
+        services.AddSingleton<IInvoiceFileService, AzureInvoiceFileService>();
     }
 }

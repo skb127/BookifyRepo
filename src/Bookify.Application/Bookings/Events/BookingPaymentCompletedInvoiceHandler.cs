@@ -53,10 +53,11 @@ internal sealed class BookingPaymentCompletedInvoiceHandler : INotificationHandl
             }
 
             decimal taxAmount = booking.Taxes.Sum(t => t.CalculatedAmount.Amount);
+            decimal totalAmount = booking.TotalPrice.Amount + taxAmount;
 
             invoice = Invoice.CreateForBooking(
                 booking.Id,
-                booking.TotalPrice.Amount,
+                totalAmount,
                 taxAmount,
                 booking.TotalPrice.Currency.Code,
                 _dateTimeProvider.UtcNow);

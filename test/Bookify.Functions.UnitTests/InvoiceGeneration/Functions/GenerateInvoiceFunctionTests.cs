@@ -84,7 +84,7 @@ public class GenerateInvoiceFunctionTests
         InvoiceDocumentModel documentModel = CreateSampleDocumentModel(invoiceId);
         var documentData = new InvoiceDocumentData(documentModel, []);
         byte[] pdfBytes = [1, 2, 3, 4, 5];
-        const string expectedBlobUrl = "https://storage.blob.core.windows.net/invoices/invoice_INV-2026-0001.pdf";
+        const string expectedBlobName = "invoice_INV-2026-0001.pdf";
 
         _invoiceDataServiceMock.GetInvoiceDocumentDataAsync(invoiceId, Arg.Any<CancellationToken>())
             .Returns(documentData);
@@ -92,9 +92,9 @@ public class GenerateInvoiceFunctionTests
         _pdfGeneratorServiceMock.Generate(documentData)
             .Returns(pdfBytes);
 
-        _blobStorageServiceMock.UploadAsync("invoice_INV-2026-0001.pdf", pdfBytes, "application/pdf",
+        _blobStorageServiceMock.UploadAsync(expectedBlobName, pdfBytes, "application/pdf",
                 Arg.Any<CancellationToken>())
-            .Returns(expectedBlobUrl);
+            .Returns("https://storage.blob.core.windows.net/invoices/" + expectedBlobName);
 
         // Act
         await _function.Run(messageBody, _contextMock);
@@ -102,10 +102,10 @@ public class GenerateInvoiceFunctionTests
         // Assert
         await _invoiceDataServiceMock.Received(1).GetInvoiceDocumentDataAsync(invoiceId, Arg.Any<CancellationToken>());
         _pdfGeneratorServiceMock.Received(1).Generate(documentData);
-        await _blobStorageServiceMock.Received(1).UploadAsync("invoice_INV-2026-0001.pdf", pdfBytes, "application/pdf",
+        await _blobStorageServiceMock.Received(1).UploadAsync(expectedBlobName, pdfBytes, "application/pdf",
             Arg.Any<CancellationToken>());
         await _invoiceDataServiceMock.Received(1)
-            .MarkInvoiceAsGeneratedAsync(invoiceId, expectedBlobUrl, Arg.Any<CancellationToken>());
+            .MarkInvoiceAsGeneratedAsync(invoiceId, expectedBlobName, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -261,14 +261,14 @@ public class GenerateInvoiceFunctionTests
         };
         var documentData = new InvoiceDocumentData(documentModel, taxLines);
         byte[] pdfBytes = [10, 20, 30, 40];
-        const string expectedBlobUrl = "https://storage.blob.core.windows.net/invoices/creditnote_INV-2026-0001.pdf";
+        const string expectedBlobName = "creditnote_INV-2026-0001.pdf";
 
         _invoiceDataServiceMock.GetInvoiceDocumentDataAsync(invoiceId, Arg.Any<CancellationToken>())
             .Returns(documentData);
         _pdfGeneratorServiceMock.Generate(documentData).Returns(pdfBytes);
         _blobStorageServiceMock.UploadAsync(Arg.Any<string>(), Arg.Any<byte[]>(), Arg.Any<string>(),
                 Arg.Any<CancellationToken>())
-            .Returns(expectedBlobUrl);
+            .Returns("https://storage.blob.core.windows.net/invoices/" + expectedBlobName);
 
         // Act
         await _function.Run(messageBody, _contextMock);
@@ -276,11 +276,11 @@ public class GenerateInvoiceFunctionTests
         // Assert
         _pdfGeneratorServiceMock.Received(1).Generate(documentData);
         await _blobStorageServiceMock.Received(1).UploadAsync(
-            "creditnote_INV-2026-0001.pdf",
+            expectedBlobName,
             pdfBytes,
             "application/pdf",
             Arg.Any<CancellationToken>());
         await _invoiceDataServiceMock.Received(1)
-            .MarkInvoiceAsGeneratedAsync(invoiceId, expectedBlobUrl, Arg.Any<CancellationToken>());
+            .MarkInvoiceAsGeneratedAsync(invoiceId, expectedBlobName, Arg.Any<CancellationToken>());
     }
 }
