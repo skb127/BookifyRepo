@@ -1,6 +1,8 @@
+using Bookify.Domain.Abstractions;
+
 namespace Bookify.Application.Abstractions.Storage;
 
 public interface IInvoiceFileService
 {
-    Uri GenerateDownloadUrl(string blobName);
+    Result<Uri> GenerateDownloadUrl(string blobName);
 }

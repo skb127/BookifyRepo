@@ -1,4 +1,3 @@
-#pragma warning disable
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -32,7 +31,7 @@ public class WriteOperationsRateLimitTests : RateLimitIntegrationTest
         var request3 = new LoginUserRequest("invalid@test.com", "Invalid123!");
         var exceededResponse = await HttpClient.PostAsJsonAsync("api/v1/users/login", request3);
         exceededResponse.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
-        
+
         var problemDetails = await exceededResponse.Content.ReadFromJsonAsync<ProblemDetails>();
         problemDetails.Should().NotBeNull();
         problemDetails.Status.Should().Be(StatusCodes.Status429TooManyRequests);
@@ -42,14 +41,15 @@ public class WriteOperationsRateLimitTests : RateLimitIntegrationTest
     public async Task WriteOperations_ShouldReturnTooManyRequests_WhenLimitExceeded_ForAuthenticatedUser()
     {
         // Limit is 2 req per 10s per User
-        string accessToken = await GetAccessTokenAsync(RateLimitUserData.WriteOpsUser.Email, RateLimitUserData.WriteOpsUser.Password);
+        string accessToken = await GetAccessTokenAsync(RateLimitUserData.WriteOpsUser.Email,
+            RateLimitUserData.WriteOpsUser.Password);
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
         var updateRequest = new UpdateUserProfileRequest(
             RateLimitUserData.WriteOpsUser.FirstName,
             RateLimitUserData.WriteOpsUser.LastName,
             "123456789",
-            (DateOnly)RateLimitUserData.WriteOpsUser.DateOfBirth,
+            (DateOnly)RateLimitUserData.WriteOpsUser.DateOfBirth!,
             RateLimitUserData.WriteOpsUser.Password);
 
         // First 2 requests should be accepted
@@ -62,7 +62,7 @@ public class WriteOperationsRateLimitTests : RateLimitIntegrationTest
         // 3rd request should fail
         var exceededResponse = await HttpClient.PutAsJsonAsync("api/v1/users/profile", updateRequest);
         exceededResponse.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
-        
+
         var problemDetails = await exceededResponse.Content.ReadFromJsonAsync<ProblemDetails>();
         problemDetails.Should().NotBeNull();
         problemDetails.Status.Should().Be(StatusCodes.Status429TooManyRequests);

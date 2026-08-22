@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Bookify.Api.Controllers.Apartments.Requests;
-using Bookify.Api.Controllers.Bookings;
+using Bookify.Api.Controllers.Bookings.Requests;
 using Bookify.Application.Bookings.GetBooking;
 using Bookify.Application.IntegrationTests.Apartments;
 using Bookify.Application.IntegrationTests.Infrastructure;

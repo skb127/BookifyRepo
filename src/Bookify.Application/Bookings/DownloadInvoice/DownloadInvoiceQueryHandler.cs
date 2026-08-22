@@ -66,9 +66,7 @@ internal sealed class DownloadInvoiceQueryHandler : IQueryHandler<DownloadInvoic
             return Result.Failure<Uri>(InvoiceErrors.NotFound);
         }
 
-        Uri downloadUrl = _invoiceFileService.GenerateDownloadUrl(invoice.PdfBlobName);
-
-        return Result.Success(downloadUrl);
+        return _invoiceFileService.GenerateDownloadUrl(invoice.PdfBlobName);
     }
 
     private sealed record InvoiceRecord(string? PdfBlobName, int Status);

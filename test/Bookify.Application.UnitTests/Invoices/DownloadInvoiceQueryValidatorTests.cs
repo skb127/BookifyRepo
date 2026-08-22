@@ -1,7 +1,7 @@
 using Bookify.Application.Bookings.DownloadInvoice;
 using FluentValidation.TestHelper;
 
-namespace Bookify.Application.UnitTests.Booking;
+namespace Bookify.Application.UnitTests.Invoices;
 
 public class DownloadInvoiceQueryValidatorTests
 {

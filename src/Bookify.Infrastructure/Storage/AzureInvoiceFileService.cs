@@ -1,6 +1,8 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Sas;
 using Bookify.Application.Abstractions.Storage;
+using Bookify.Domain.Abstractions;
+using Bookify.Domain.Bookings;
 using Microsoft.Extensions.Options;
 
 namespace Bookify.Infrastructure.Storage;
@@ -16,14 +18,13 @@ internal sealed class AzureInvoiceFileService : IInvoiceFileService
         _containerClient = new BlobContainerClient(_options.ConnectionString, _options.ContainerName);
     }
 
-    public Uri GenerateDownloadUrl(string blobName)
+    public Result<Uri> GenerateDownloadUrl(string blobName)
     {
         BlobClient blobClient = _containerClient.GetBlobClient(blobName);
 
         if (!blobClient.CanGenerateSasUri)
         {
-            throw new InvalidOperationException(
-                "BlobClient cannot generate SAS URI. Please ensure connection string contains shared key credentials.");
+            return Result.Failure<Uri>(InvoiceErrors.DownloadUrlGenerationFailed);
         }
 
         var sasBuilder = new BlobSasBuilder
@@ -37,6 +38,6 @@ internal sealed class AzureInvoiceFileService : IInvoiceFileService
 
         sasBuilder.SetPermissions(BlobSasPermissions.Read);
 
-        return blobClient.GenerateSasUri(sasBuilder);
+        return Result.Success(blobClient.GenerateSasUri(sasBuilder));
     }
 }

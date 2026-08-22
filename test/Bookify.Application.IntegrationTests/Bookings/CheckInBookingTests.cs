@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Bookify.Api.Controllers.Bookings.Requests;
 using Bookify.Application.Abstractions.Email.Models;
 using Bookify.Application.Bookings.GetBooking;
 using Bookify.Application.IntegrationTests.Infrastructure;
@@ -85,7 +86,8 @@ public class CheckInBookingTests : BaseIntegrationTest
         // Update Duration in database so that it starts today and ends in 5 days
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var dbBooking = await DbContext.Set<Booking>().FirstAsync(b => b.Id == bookingId);
-        typeof(Booking).GetProperty(nameof(Booking.Duration))!.SetValue(dbBooking, DateRange.Create(today, today.AddDays(5)));
+        typeof(Booking).GetProperty(nameof(Booking.Duration))!.SetValue(dbBooking,
+            DateRange.Create(today, today.AddDays(5)));
         await DbContext.SaveChangesAsync();
 
         // 1. Confirm the booking first
@@ -148,7 +150,7 @@ public class CheckInBookingTests : BaseIntegrationTest
         confirmResponse.EnsureSuccessStatusCode();
 
         // 2. Act - Check In the confirmed booking with GuestCheckInDate
-        var request = new Api.Controllers.Bookings.CheckInBookingRequest(newCheckInDate);
+        var request = new CheckInBookingRequest(newCheckInDate);
         HttpResponseMessage checkInResponse = await HttpClient.PutAsJsonAsync(
             new Uri($"api/v1/bookings/{bookingId}/check-in", UriKind.Relative),
             request);

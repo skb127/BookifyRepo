@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Bookify.Api.Controllers.Bookings;
+using Bookify.Api.Controllers.Bookings.Requests;
 using Bookify.Application.Abstractions.Email.Models;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Domain.Bookings;
@@ -93,7 +93,7 @@ public class CancelBookingTests : BaseIntegrationTest
     public async Task CancelBooking_ShouldSucceed_WhenBookingIsConfirmed()
     {
         // Arrange
-        var (_, _, bookingId, accessToken, guestEmail, hostEmail) = 
+        var (_, _, bookingId, accessToken, guestEmail, hostEmail) =
             await BookingTestHelpers.SetupReservedBookingWithHostAsync(this);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -123,15 +123,18 @@ public class CancelBookingTests : BaseIntegrationTest
         bookingDetails.Status.Should().Be((int)BookingStatus.Cancelled);
 
         // Verify Email was Sent to guest
-        EmailMessage cancellationEmail = await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled", since: since);
+        EmailMessage cancellationEmail =
+            await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled", since: since);
         cancellationEmail.Subject.Should().Be("Booking Cancelled");
 
         // Verify Email was Sent to host
-        EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
+        EmailMessage hostCancellationEmail =
+            await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
         hostCancellationEmail.Subject.Should().Be("Booking Cancelled by Guest");
 
         // Verify Stripe refund was initiated: 950.0m USD total, early guest penalty is 10% (95.0m), refund is 90% (855.0m)
-        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r => r.PaymentIntentId == $"intent_{bookingId}" && r.Amount == 855.0m && r.Currency == "USD");
+        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r =>
+            r.PaymentIntentId == $"intent_{bookingId}" && r.Amount == 855.0m && r.Currency == "USD");
 
         // Verify host balances
         await using var connection = DbContext.Database.GetDbConnection();
@@ -150,7 +153,7 @@ public class CancelBookingTests : BaseIntegrationTest
     public async Task CancelBooking_ShouldSucceedSilently_WhenBookingIsUnpaid()
     {
         // Arrange - Setup a booking in PendingPayment (Unpaid)
-        var (_, _, bookingId, accessToken, guestEmail, hostEmail) = 
+        var (_, _, bookingId, accessToken, guestEmail, hostEmail) =
             await BookingTestHelpers.SetupPendingPaymentBookingWithHostAsync(this);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -175,15 +178,17 @@ public class CancelBookingTests : BaseIntegrationTest
 
         // Verify NO Cancellation Email was Sent to guest or host
         await Task.Delay(2000); // Wait briefly to make sure outbox processor has run or not sent
-        _mockEmailService.GetEmailTo(guestEmail, "Booking Cancelled", since).Should().BeNull("An unpaid booking cancellation must not send a cancellation email");
-        _mockEmailService.GetEmailTo(hostEmail, "Booking Cancelled by Guest", since).Should().BeNull("An unpaid booking cancellation must not send a cancellation email to the host");
+        _mockEmailService.GetEmailTo(guestEmail, "Booking Cancelled", since).Should()
+            .BeNull("An unpaid booking cancellation must not send a cancellation email");
+        _mockEmailService.GetEmailTo(hostEmail, "Booking Cancelled by Guest", since).Should()
+            .BeNull("An unpaid booking cancellation must not send a cancellation email to the host");
     }
 
     [Fact]
     public async Task CancelBooking_ShouldFail_WhenHostCancelsBookingInPendingPaymentStatus()
     {
         // Arrange - Setup a booking in PendingPayment (Unpaid)
-        var (_, _, bookingId, _, _, hostEmail) = 
+        var (_, _, bookingId, _, _, hostEmail) =
             await BookingTestHelpers.SetupPendingPaymentBookingWithHostAsync(this);
 
         string password = "Password123!";
@@ -206,7 +211,7 @@ public class CancelBookingTests : BaseIntegrationTest
     public async Task CancelBooking_ShouldSucceedAndReleaseAuthorization_WhenBookingIsAuthorized()
     {
         // Arrange
-        var (_, _, bookingId, accessToken, guestEmail, hostEmail) = 
+        var (_, _, bookingId, accessToken, guestEmail, hostEmail) =
             await BookingTestHelpers.SetupReservedBookingWithHostAsync(this);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -230,11 +235,13 @@ public class CancelBookingTests : BaseIntegrationTest
         bookingDetails.Status.Should().Be((int)BookingStatus.Cancelled);
 
         // Verify Email was Sent to guest (since it was authorized and cancelled)
-        EmailMessage cancellationEmail = await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled", since: since);
+        EmailMessage cancellationEmail =
+            await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled", since: since);
         cancellationEmail.Subject.Should().Be("Booking Cancelled");
 
         // Verify Email was Sent to host
-        EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
+        EmailMessage hostCancellationEmail =
+            await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
         hostCancellationEmail.Subject.Should().Be("Booking Cancelled by Guest");
 
         // Verify Stripe cancellation was initiated
@@ -252,7 +259,7 @@ public class CancelBookingTests : BaseIntegrationTest
     public async Task CancelBooking_ShouldSucceedAndInitiateRefund_WhenGuestCancelsPaidBooking()
     {
         // Arrange - Setup a confirmed paid booking (starts in 2027, so it's early cancellation)
-        var (_, _, bookingId, accessToken, guestEmail, hostEmail) = 
+        var (_, _, bookingId, accessToken, guestEmail, hostEmail) =
             await BookingTestHelpers.SetupConfirmedPaidBookingWithHostAsync(this);
 
         HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -279,25 +286,32 @@ public class CancelBookingTests : BaseIntegrationTest
                 isRefundProcessing = true;
                 break;
             }
+
             await Task.Delay(500);
         }
 
-        isRefundProcessing.Should().BeTrue("The outbox processor should transition payment status to RefundProcessing after initiating the refund");
+        isRefundProcessing.Should()
+            .BeTrue(
+                "The outbox processor should transition payment status to RefundProcessing after initiating the refund");
 
         // Verify Email was Sent to guest
-        EmailMessage cancellationEmail = await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled", since: since);
+        EmailMessage cancellationEmail =
+            await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled", since: since);
         cancellationEmail.Subject.Should().Be("Booking Cancelled");
 
         // Verify Email was Sent to host
-        EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
+        EmailMessage hostCancellationEmail =
+            await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
         hostCancellationEmail.Subject.Should().Be("Booking Cancelled by Guest");
 
         // Verify Stripe refund was initiated: 950.0m USD total, early guest penalty is 10% (95.0m), refund is 90% (855.0m)
         string adminAccessToken = await GetAdminTokenAsync();
-        var transactions = await BookingTestHelpers.GetBookingTransactionsViaApiAsync(this, bookingId, adminAccessToken);
+        var transactions =
+            await BookingTestHelpers.GetBookingTransactionsViaApiAsync(this, bookingId, adminAccessToken);
         var stripePaymentIntentId = transactions.Count > 0 ? transactions[0].StripePaymentIntentId : null;
 
-        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r => r.PaymentIntentId == stripePaymentIntentId && r.Amount == 855.0m && r.Currency == "USD");
+        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r =>
+            r.PaymentIntentId == stripePaymentIntentId && r.Amount == 855.0m && r.Currency == "USD");
 
         await using var connection = DbContext.Database.GetDbConnection();
 
@@ -317,7 +331,7 @@ public class CancelBookingTests : BaseIntegrationTest
     public async Task CancelBooking_ShouldSucceedAndApplyHostPenalty_WhenHostCancelsPaidBooking()
     {
         // Arrange - Setup a confirmed paid booking (early cancellation)
-        var (_, _, bookingId, guestToken, guestEmail, hostEmail) = 
+        var (_, _, bookingId, guestToken, guestEmail, hostEmail) =
             await BookingTestHelpers.SetupConfirmedPaidBookingWithHostAsync(this);
 
         // Authenticate as Host
@@ -358,15 +372,20 @@ public class CancelBookingTests : BaseIntegrationTest
                 isRefundProcessing = true;
                 break;
             }
+
             await Task.Delay(500);
         }
 
-        isRefundProcessing.Should().BeTrue("The outbox processor should transition payment status to RefundProcessing after initiating the refund");
+        isRefundProcessing.Should()
+            .BeTrue(
+                "The outbox processor should transition payment status to RefundProcessing after initiating the refund");
 
-        EmailMessage guestEmailMsg = await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled by Host", since: since);
+        EmailMessage guestEmailMsg =
+            await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled by Host", since: since);
         guestEmailMsg.Subject.Should().Be("Booking Cancelled by Host");
 
-        EmailMessage hostEmailMsg = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled - Penalty Applied", since: since);
+        EmailMessage hostEmailMsg =
+            await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled - Penalty Applied", since: since);
         hostEmailMsg.Subject.Should().Be("Booking Cancelled - Penalty Applied");
 
         // Verify Stripe refund was initiated: 950.0m USD total, host cancels early so guest is fully refunded (950.0m)
@@ -374,7 +393,8 @@ public class CancelBookingTests : BaseIntegrationTest
         var transactions = await BookingTestHelpers.GetBookingTransactionsViaApiAsync(this, bookingId, adminTokenForTx);
         var stripePaymentIntentId = transactions.Count > 0 ? transactions[0].StripePaymentIntentId : null;
 
-        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r => r.PaymentIntentId == stripePaymentIntentId && r.Amount == 950.0m && r.Currency == "USD");
+        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r =>
+            r.PaymentIntentId == stripePaymentIntentId && r.Amount == 950.0m && r.Currency == "USD");
 
         // Verify guest penalty is 0
         var guestPenalty = await connection.QuerySingleOrDefaultAsync<decimal>(
@@ -388,7 +408,7 @@ public class CancelBookingTests : BaseIntegrationTest
     {
         // Arrange - Setup a confirmed paid booking starting TOMORROW (so it's a late cancellation)
         var password = "Password123!";
-        var (apartmentId, guestToken, guestEmail, hostEmail) = 
+        var (apartmentId, guestToken, guestEmail, hostEmail) =
             await BookingTestHelpers.SetupApartmentAndGuestWithHostAsync(this, password);
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -450,14 +470,17 @@ public class CancelBookingTests : BaseIntegrationTest
 
 
         // Verify Emails were Sent
-        EmailMessage guestCancellationEmail = await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled by Host", since: since);
+        EmailMessage guestCancellationEmail =
+            await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled by Host", since: since);
         guestCancellationEmail.Subject.Should().Be("Booking Cancelled by Host");
 
-        EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled - Penalty Applied", since: since);
+        EmailMessage hostCancellationEmail =
+            await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled - Penalty Applied", since: since);
         hostCancellationEmail.Subject.Should().Be("Booking Cancelled - Penalty Applied");
 
         // Verify Stripe refund was initiated: guest gets 100% refund of 450.0m USD
-        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r => r.PaymentIntentId == $"intent_{bookingId}" && r.Amount == 450.0m && r.Currency == "USD");
+        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r =>
+            r.PaymentIntentId == $"intent_{bookingId}" && r.Amount == 450.0m && r.Currency == "USD");
 
         // Verify guest penalty is 0
         var guestPenalty = await connection.QuerySingleOrDefaultAsync<decimal>(
@@ -470,7 +493,7 @@ public class CancelBookingTests : BaseIntegrationTest
     public async Task CancelBooking_ShouldReturnForbidden_WhenUnauthorizedUserCancelsBooking()
     {
         // Arrange - Setup a confirmed paid booking (Guest A, Host B)
-        var (_, _, bookingId, _, _, _) = 
+        var (_, _, bookingId, _, _, _) =
             await BookingTestHelpers.SetupConfirmedPaidBookingWithHostAsync(this);
 
         // Create Guest C (unauthorized user)
@@ -505,7 +528,7 @@ public class CancelBookingTests : BaseIntegrationTest
     {
         // Arrange - Setup a confirmed paid booking starting TOMORROW (so it's a late cancellation)
         var password = "Password123!";
-        var (apartmentId, guestToken, guestEmail, hostEmail) = 
+        var (apartmentId, guestToken, guestEmail, hostEmail) =
             await BookingTestHelpers.SetupApartmentAndGuestWithHostAsync(this, password);
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -562,14 +585,17 @@ public class CancelBookingTests : BaseIntegrationTest
         guestPenalty.Should().Be(225.0m);
 
         // Verify Emails were Sent
-        EmailMessage guestCancellationEmail = await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled", since: since);
+        EmailMessage guestCancellationEmail =
+            await _mockEmailService.WaitForEmailToAsync(guestEmail, "Booking Cancelled", since: since);
         guestCancellationEmail.Subject.Should().Be("Booking Cancelled");
 
-        EmailMessage hostCancellationEmail = await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
+        EmailMessage hostCancellationEmail =
+            await _mockEmailService.WaitForEmailToAsync(hostEmail, "Booking Cancelled by Guest", since: since);
         hostCancellationEmail.Subject.Should().Be("Booking Cancelled by Guest");
 
         // Verify Stripe refund was initiated: guest gets 50% refund (225.0m)
-        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r => r.PaymentIntentId == $"intent_{bookingId}" && r.Amount == 225.0m && r.Currency == "USD");
+        _mockPaymentGateway.RefundRequests.Should().ContainSingle(r =>
+            r.PaymentIntentId == $"intent_{bookingId}" && r.Amount == 225.0m && r.Currency == "USD");
 
         // Verify host penalty/compensation is 0
         var hostCompensationCount = await connection.QuerySingleAsync<int>(
@@ -610,7 +636,8 @@ public class CancelBookingTests : BaseIntegrationTest
 
         // Shift the booking dates to the past in the database so it has already started
         var dbBooking = await DbContext.Set<Booking>().FirstAsync(b => b.Id == bookingId);
-        typeof(Booking).GetProperty(nameof(Booking.Duration))!.SetValue(dbBooking, DateRange.Create(today.AddDays(-2), today.AddDays(5)));
+        typeof(Booking).GetProperty(nameof(Booking.Duration))!.SetValue(dbBooking,
+            DateRange.Create(today.AddDays(-2), today.AddDays(5)));
         await DbContext.SaveChangesAsync();
 
         // Confirm payment (which marks as Paid and Confirmed for instant booking)

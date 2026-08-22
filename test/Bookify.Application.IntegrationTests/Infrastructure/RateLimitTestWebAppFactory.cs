@@ -1,4 +1,3 @@
-#pragma warning disable
 using System.Net.Http.Json;
 using System.Threading.RateLimiting;
 using Bookify.Api.Controllers.Users.Requests;
@@ -40,7 +39,8 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
             new FileInfo(".files/bookify-realm-export.json"),
             new FileInfo("/opt/keycloak/data/import/realm.json"))
         .WithCommand("--import-realm")
-        .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(r => r.ForPath("/realms/bookify").ForPort(8080)))
+        .WithWaitStrategy(Wait.ForUnixContainer()
+            .UntilHttpRequestIsSucceeded(r => r.ForPath("/realms/bookify").ForPort(8080)))
         .Build();
 
     private readonly ServiceBusContainer _serviceBusContainer = new ServiceBusBuilder()
@@ -52,16 +52,18 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        ArgumentNullException.ThrowIfNull(builder);
+
         builder.UseSetting("ConnectionStrings:ServiceBus", _serviceBusContainer.GetConnectionString());
 
         builder.ConfigureTestServices(services =>
         {
             // Re-configure DbContext
-            services.RemoveAll(typeof(DbContextOptions<Bookify.Infrastructure.ApplicationDbContext>));
+            services.RemoveAll<DbContextOptions<Bookify.Infrastructure.ApplicationDbContext>>();
             services.AddDbContext<Bookify.Infrastructure.ApplicationDbContext>(options =>
                 options.UseNpgsql(_dbContainer.GetConnectionString()).UseSnakeCaseNamingConvention());
 
-            services.RemoveAll(typeof(Bookify.Application.Abstractions.Data.ISqlConnectionFactory));
+            services.RemoveAll<Bookify.Application.Abstractions.Data.ISqlConnectionFactory>();
 
             services.AddSingleton<Bookify.Application.Abstractions.Data.ISqlConnectionFactory>(_ =>
                 new Bookify.Infrastructure.Data.SqlConnectionFactory(_dbContainer.GetConnectionString()));
@@ -84,7 +86,7 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
             });
 
             // Re-configure Redis
-            services.RemoveAll(typeof(Microsoft.Extensions.Caching.StackExchangeRedis.RedisCacheOptions));
+            services.RemoveAll<Microsoft.Extensions.Caching.StackExchangeRedis.RedisCacheOptions>();
             services.AddStackExchangeRedisCache(redisCacheOptions =>
                 redisCacheOptions.Configuration = _redisContainer.GetConnectionString());
 
@@ -116,9 +118,7 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
                         return RateLimitPartition.GetNoLimiter("bypass");
                     }
 
-                    string key = ctx.User.Identity?.IsAuthenticated == true ? ctx.User.GetIdentityId() :
-                                 ctx.Request.Headers.TryGetValue("X-Test-IP", out var ip) ? ip.ToString() :
-                                 ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                    string key = GetClientKey(ctx);
                     return RateLimitPartition.GetFixedWindowLimiter(key, _ =>
                         new FixedWindowRateLimiterOptions
                             { PermitLimit = 2, Window = TimeSpan.FromSeconds(15), QueueLimit = 0 });
@@ -131,9 +131,7 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
                         return RateLimitPartition.GetNoLimiter("bypass");
                     }
 
-                    string key = ctx.User.Identity?.IsAuthenticated == true ? ctx.User.GetIdentityId() :
-                                 ctx.Request.Headers.TryGetValue("X-Test-IP", out var ip) ? ip.ToString() :
-                                 ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                    string key = GetClientKey(ctx);
                     return RateLimitPartition.GetSlidingWindowLimiter(key, _ =>
                         new SlidingWindowRateLimiterOptions
                         {
@@ -148,8 +146,7 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
                         return RateLimitPartition.GetNoLimiter("bypass");
                     }
 
-                    string key = ctx.Request.Headers.TryGetValue("X-Test-IP", out var ip) ? ip.ToString() :
-                                 ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                    string key = GetClientKey(ctx);
                     return RateLimitPartition.GetFixedWindowLimiter(key, _ =>
                         new FixedWindowRateLimiterOptions
                             { PermitLimit = 2, Window = TimeSpan.FromSeconds(15), QueueLimit = 0 });
@@ -162,9 +159,7 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
                         return RateLimitPartition.GetNoLimiter("bypass");
                     }
 
-                    string key = ctx.User.Identity?.IsAuthenticated == true ? ctx.User.GetIdentityId() :
-                                 ctx.Request.Headers.TryGetValue("X-Test-IP", out var ip) ? ip.ToString() :
-                                 ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                    string key = GetClientKey(ctx);
                     return RateLimitPartition.GetSlidingWindowLimiter(key, _ =>
                         new SlidingWindowRateLimiterOptions
                             { PermitLimit = 3, Window = TimeSpan.FromSeconds(15), SegmentsPerWindow = 2 });
@@ -227,14 +222,15 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
     }
 
     private async Task RegisterTestUsersAsync()
-    {   
+    {
         async Task Register(RegisterUserRequest request)
         {
             using HttpClient client = CreateClient();
             client.DefaultRequestHeaders.Add("X-Test-Bypass-RateLimit", "true");
             client.DefaultRequestHeaders.Add("X-Turnstile-Token", "XXXX.DUMMY.TOKEN.XXXX");
 
-            HttpResponseMessage response = await client.PostAsJsonAsync("api/v1/users/register/guest", request).ConfigureAwait(false);
+            HttpResponseMessage response =
+                await client.PostAsJsonAsync("api/v1/users/register/guest", request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
         }
 
@@ -242,6 +238,21 @@ public class RateLimitTestWebAppFactory : WebApplicationFactory<Program>, IAsync
         await Register(RateLimitUserData.SearchUser).ConfigureAwait(false);
         await Register(RateLimitUserData.GlobalLimiterUserA).ConfigureAwait(false);
         await Register(RateLimitUserData.GlobalLimiterUserB).ConfigureAwait(false);
+    }
+
+    private static string GetClientKey(HttpContext context)
+    {
+        if (context.User.Identity?.IsAuthenticated == true)
+        {
+            return context.User.GetIdentityId();
+        }
+
+        if (context.Request.Headers.TryGetValue("X-Test-IP", out var ip))
+        {
+            return ip.ToString();
+        }
+
+        return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     }
 }
 

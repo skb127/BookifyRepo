@@ -1,6 +1,6 @@
 using Bookify.Domain.Bookings;
 
-namespace Bookify.Api.Controllers.Bookings;
+namespace Bookify.Api.Controllers.Bookings.Requests;
 
 public sealed record CheckOutBookingRequest(
     ReasonType? Type = null,

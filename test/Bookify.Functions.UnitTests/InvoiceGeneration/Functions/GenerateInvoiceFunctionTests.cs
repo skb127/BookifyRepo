@@ -63,6 +63,9 @@ public class GenerateInvoiceFunctionTests
             CleaningFee: 20.00m,
             AmenitiesUpCharge: 10.00m,
             ExtraGuestCharge: 10.00m,
+            GuestCount: 6,
+            BaseGuests: 1,
+            ExtraGuestFee: 2.00m,
             OriginalInvoiceNumber: invoiceType == InvoiceType.CreditNote ? "INV-2026-0001" : null,
             OriginalTotalAmount: invoiceType == InvoiceType.CreditNote ? 200.00m : null,
             OriginalTaxAmount: invoiceType == InvoiceType.CreditNote ? 20.00m : null,
@@ -101,7 +104,12 @@ public class GenerateInvoiceFunctionTests
 
         // Assert
         await _invoiceDataServiceMock.Received(1).GetInvoiceDocumentDataAsync(invoiceId, Arg.Any<CancellationToken>());
-        _pdfGeneratorServiceMock.Received(1).Generate(documentData);
+        _pdfGeneratorServiceMock.Received(1).Generate(Arg.Is<InvoiceDocumentData>(d =>
+            d.Document == documentModel &&
+            d.Document.ExtraGuestCharge == 10.00m &&
+            d.Document.ExtraGuestFee == 2.00m &&
+            d.Document.GuestCount == 6 &&
+            d.Document.BaseGuests == 1));
         await _blobStorageServiceMock.Received(1).UploadAsync(expectedBlobName, pdfBytes, "application/pdf",
             Arg.Any<CancellationToken>());
         await _invoiceDataServiceMock.Received(1)
@@ -282,5 +290,45 @@ public class GenerateInvoiceFunctionTests
             Arg.Any<CancellationToken>());
         await _invoiceDataServiceMock.Received(1)
             .MarkInvoiceAsGeneratedAsync(invoiceId, expectedBlobName, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Run_ShouldPassDocumentWithExtraGuestFeeDetails_ToPdfGenerator()
+    {
+        // Arrange
+        Guid invoiceId = Guid.NewGuid();
+        var message = new InvoiceRequestMessage
+        {
+            InvoiceId = invoiceId,
+            BookingId = Guid.NewGuid(),
+            InvoiceType = InvoiceType.Invoice
+        };
+        string messageBody = JsonSerializer.Serialize(message);
+        InvoiceDocumentModel documentModel = CreateSampleDocumentModel(invoiceId) with
+        {
+            ExtraGuestFee = 47.256m,
+            GuestCount = 6,
+            BaseGuests = 1,
+            ExtraGuestCharge = 1181.40m
+        };
+        var documentData = new InvoiceDocumentData(documentModel, []);
+        byte[] pdfBytes = [10, 20, 30];
+        const string expectedBlobName = "invoice_INV-2026-0001.pdf";
+
+        _invoiceDataServiceMock.GetInvoiceDocumentDataAsync(invoiceId, Arg.Any<CancellationToken>())
+            .Returns(documentData);
+        _pdfGeneratorServiceMock.Generate(documentData).Returns(pdfBytes);
+        _blobStorageServiceMock.UploadAsync(expectedBlobName, pdfBytes, "application/pdf", Arg.Any<CancellationToken>())
+            .Returns("https://storage.blob.core.windows.net/invoices/" + expectedBlobName);
+
+        // Act
+        await _function.Run(messageBody, _contextMock);
+
+        // Assert
+        _pdfGeneratorServiceMock.Received(1).Generate(Arg.Is<InvoiceDocumentData>(d =>
+            d.Document.ExtraGuestFee == 47.256m &&
+            d.Document.GuestCount == 6 &&
+            d.Document.BaseGuests == 1 &&
+            d.Document.ExtraGuestCharge == 1181.40m));
     }
 }
