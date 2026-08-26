@@ -22,7 +22,7 @@ namespace Bookify.Api.FunctionalTests.Infrastructure;
 public class FunctionalTestWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
-        .WithImage("postgres:latest")
+        .WithImage("postgres:17")
         .WithDatabase("bookify")
         .WithUsername("postgres")
         .WithPassword("postgrespw")

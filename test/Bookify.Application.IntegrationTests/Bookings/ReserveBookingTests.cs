@@ -279,14 +279,17 @@ public class ReserveBookingTests : BaseIntegrationTest
         HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, hostToken);
 
-        var now = DateTime.UtcNow;
-        var today = DateOnly.FromDateTime(now);
+        // Freeze time at 10:00 AM UTC today.
+        // With CheckInCutOffHours = 3 → cutOffLimit = today midnight+1day - 3h = today 21:00 UTC.
+        // 10:00 < 21:00 → passes cutoff check. Deterministic regardless of real wall clock.
+        var frozenNow = DateTime.UtcNow.Date.AddHours(10); // today at 10:00 AM UTC
+        DateTimeProvider.SetUtcNow(frozenNow);
 
-        // With InstantBooking = false and CheckInCutOffHours = 0, cutOffLimit is midnight (24:00) at the end of today,
-        // ensuring utcNow <= cutOffLimit evaluates to true at any time of day (00:00 to 23:59 UTC) while exercising non-instant cutoff logic.
+        var today = DateOnly.FromDateTime(frozenNow);
+
         var aptData = ApartmentData.ValidCreateApartmentRequest with
         {
-            CheckInCutOffHours = 0,
+            CheckInCutOffHours = 3,
             InstantBooking = false
         };
         HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
@@ -302,7 +305,7 @@ public class ReserveBookingTests : BaseIntegrationTest
         HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, guestToken);
 
-        var endDate = today.AddDays(3); // meets the 1 days min nights (or 3, we reserve 3 to be safe)
+        var endDate = today.AddDays(3);
         var request = new ReserveBookingRequest(apartmentId, today, endDate)
         {
             ApartmentId = apartmentId,
@@ -331,13 +334,19 @@ public class ReserveBookingTests : BaseIntegrationTest
         HttpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, hostToken);
 
-        var now = DateTime.UtcNow;
-        var today = DateOnly.FromDateTime(now);
-        // Cut-off limit hour of the day must be before current UTC hour so that utcNow > cutOffLimit
-        var targetCutOffHour = Math.Max(0, now.Hour - 2);
-        var cutOffHours = 24 - targetCutOffHour;
+        // Freeze time at 22:00 UTC today.
+        // With CheckInCutOffHours = 3 → cutOffLimit = today midnight+1day - 3h = today 21:00 UTC.
+        // 22:00 > 21:00 → fails cutoff check → CheckInTooSoon.
+        var frozenNow = DateTime.UtcNow.Date.AddHours(22); // today 22:00 UTC
+        DateTimeProvider.SetUtcNow(frozenNow);
 
-        var aptData = ApartmentData.ValidCreateApartmentRequest with { CheckInCutOffHours = cutOffHours };
+        var today = DateOnly.FromDateTime(frozenNow);
+
+        var aptData = ApartmentData.ValidCreateApartmentRequest with
+        {
+            CheckInCutOffHours = 3,
+            InstantBooking = false
+        };
         HttpResponseMessage aptResponse = await HttpClient.PostAsJsonAsync("api/v1/apartments", aptData);
         aptResponse.EnsureSuccessStatusCode();
         var apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>();
