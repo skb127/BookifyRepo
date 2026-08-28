@@ -98,7 +98,7 @@ public class ConfirmBookingCommandHandlerTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         booking.Status.Should().Be(BookingStatus.Confirmed);
-        booking.PaymentStatus.Should().Be(PaymentStatus.Paid);
+        booking.PaymentStatus.Should().Be(PaymentStatus.Authorized);
 
         await _jobSchedulerMock.Received(1).CancelExpireHostApprovalAsync(booking.Id, Arg.Any<CancellationToken>());
         await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());

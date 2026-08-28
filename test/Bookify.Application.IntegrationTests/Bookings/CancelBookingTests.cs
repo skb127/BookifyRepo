@@ -106,6 +106,19 @@ public class CancelBookingTests : BaseIntegrationTest
             null);
         confirmResponse.EnsureSuccessStatusCode();
 
+        // Wait for outbox handler to capture payment and mark PaymentStatus as Paid
+        await PollingHelper.WaitUntilAsync(
+            action: async () =>
+            {
+                DbContext.ChangeTracker.Clear();
+                return await DbContext.Set<Booking>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b => b.Id == bookingId);
+            },
+            isReady: b => b is not null && b.PaymentStatus == PaymentStatus.Paid,
+            timeout: TimeSpan.FromSeconds(15),
+            interval: TimeSpan.FromMilliseconds(200));
+
         DateTime since = DateTime.UtcNow;
 
         // Act - Cancel the confirmed booking
@@ -177,11 +190,8 @@ public class CancelBookingTests : BaseIntegrationTest
         bookingDetails.Status.Should().Be((int)BookingStatus.Cancelled);
 
         // Verify NO Cancellation Email was Sent to guest or host
-        await Task.Delay(2000); // Wait briefly to make sure outbox processor has run or not sent
-        _mockEmailService.GetEmailTo(guestEmail, "Booking Cancelled", since).Should()
-            .BeNull("An unpaid booking cancellation must not send a cancellation email");
-        _mockEmailService.GetEmailTo(hostEmail, "Booking Cancelled by Guest", since).Should()
-            .BeNull("An unpaid booking cancellation must not send a cancellation email to the host");
+        await _mockEmailService.EnsureNoEmailToAsync(guestEmail, "Booking Cancelled", durationMs: 2000, since: since);
+        await _mockEmailService.EnsureNoEmailToAsync(hostEmail, "Booking Cancelled by Guest", durationMs: 2000, since: since);
     }
 
     [Fact]

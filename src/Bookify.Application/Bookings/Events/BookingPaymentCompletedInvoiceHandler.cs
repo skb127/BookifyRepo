@@ -8,7 +8,8 @@ using Microsoft.Extensions.Options;
 
 namespace Bookify.Application.Bookings.Events;
 
-internal sealed class BookingPaymentCompletedInvoiceHandler : INotificationHandler<BookingPaymentCompletedDomainEvent>
+internal sealed class BookingPaymentCompletedInvoiceHandler : 
+    INotificationHandler<BookingPaymentCompletedDomainEvent>
 {
     private readonly IBookingRepository _bookingRepository;
     private readonly IInvoiceRepository _invoiceRepository;

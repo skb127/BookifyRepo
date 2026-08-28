@@ -15,7 +15,8 @@ namespace Bookify.Application.IntegrationTests.Infrastructure;
 [Collection("IntegrationTests")]
 public abstract class BaseIntegrationTest
 {
-    private readonly IServiceScope _scope; // To allow resolving scoped services
+    private readonly IServiceScope _scope;
+    public IntegrationTestWebAppFactory Factory { get; }
     public ISender Sender { get; } // To send commands/queries via MediatR
     public ApplicationDbContext DbContext { get; }  // To interact with the database
     public HttpClient HttpClient { get; } // To make HTTP requests to the test server
@@ -26,6 +27,7 @@ public abstract class BaseIntegrationTest
     {
         ArgumentNullException.ThrowIfNull(factory);
 
+        Factory = factory;
         factory.MockEmailService.Clear();
         factory.MockPaymentGateway.Clear();
         factory.MockStripeCustomerService.Clear();
@@ -85,7 +87,7 @@ public abstract class BaseIntegrationTest
         await cacheService.RemoveAsync($"auth:permissions-{identityId}").ConfigureAwait(false);
     }
 
-    protected async Task<string> GetAdminTokenAsync(string password = "Password123!")
+    public async Task<string> GetAdminTokenAsync(string password = "Password123!")
     {
         var adminEmail = $"admin_{Guid.CreateVersion7()}@test.com";
         var registerAdminCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(

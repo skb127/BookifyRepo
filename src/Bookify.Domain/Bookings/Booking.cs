@@ -166,12 +166,21 @@ public sealed class Booking : Entity
         ConfirmedOnUtc = utcNow;
         ExpiresAt = null;
 
-        if (PaymentStatus == PaymentStatus.Authorized)
+        RaiseDomainEvent(new BookingConfirmedDomainEvent(Id));
+
+        return Result.Success();
+    }
+
+    public Result CompletePayment(string stripePaymentIntentId)
+    {
+        if (PaymentStatus == PaymentStatus.Paid)
         {
-            PaymentStatus = PaymentStatus.Paid;
+            return Result.Success();
         }
 
-        RaiseDomainEvent(new BookingConfirmedDomainEvent(Id));
+        PaymentStatus = PaymentStatus.Paid;
+
+        RaiseDomainEvent(new BookingPaymentCompletedDomainEvent(Id, stripePaymentIntentId));
 
         return Result.Success();
     }

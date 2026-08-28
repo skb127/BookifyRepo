@@ -1,11 +1,14 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Bookify.Api.Controllers.Apartments.Requests;
 using Bookify.Api.Controllers.Bookings.Requests;
+using Bookify.Api.Controllers.TaxRules;
 using Bookify.Application.IntegrationTests.Apartments;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Application.Users.RegisterGuest;
 using Bookify.Application.Users.RegisterHost;
 using Bookify.Domain.Bookings;
+using Bookify.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 
@@ -685,5 +688,250 @@ internal static class BookingTestHelpers
         string guestToken = await test.GetAccessToken(guestEmail, password).ConfigureAwait(false);
 
         return (apartmentId, guestToken, guestEmail, hostEmail);
+    }
+
+    // Helper 17: Sets up tax rule, host, apartment, and guest with a reserved booking
+    public static async Task<(Guid apartmentId, Guid bookingId, string guestToken, string guestEmail, string hostToken, string hostEmail, string adminToken)>
+        SetupInvoiceTestDataAsync(
+            BaseIntegrationTest test,
+            CreateApartmentRequest? apartmentRequest = null,
+            int guestCount = 2,
+            DateOnly? startDate = null,
+            DateOnly? endDate = null,
+            string password = "Password123!")
+    {
+        startDate ??= new DateOnly(2027, 1, 1);
+        endDate ??= new DateOnly(2027, 1, 10);
+        string uniqueLocation = $"Madrid_{Guid.CreateVersion7():N}";
+        var baseRequest = apartmentRequest ?? ApartmentData.InvoiceTestApartmentRequest;
+        apartmentRequest = baseRequest with
+        {
+            Address = baseRequest.Address with
+            {
+                City = uniqueLocation,
+                State = uniqueLocation
+            }
+        };
+
+        // 1. Create admin and ensure tax rule for ES/uniqueLocation/uniqueLocation (21% IVA)
+        string adminToken = await test.GetAdminTokenAsync(password).ConfigureAwait(false);
+        test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme, adminToken);
+
+        var taxRuleRequest = new CreateTaxRuleRequest(
+            "ES",
+            uniqueLocation,
+            uniqueLocation,
+            0.21m,
+            1, // Percentage
+            "IVA España " + Guid.CreateVersion7(),
+            new DateOnly(2026, 1, 1),
+            null)
+        {
+            RateValue = 0.21m,
+            RateType = 1,
+            EffectiveFrom = new DateOnly(2026, 1, 1)
+        };
+
+        HttpResponseMessage taxRuleResponse = await test.HttpClient.PostAsJsonAsync(
+            new Uri("api/v1/tax-rules", UriKind.Relative), taxRuleRequest).ConfigureAwait(false);
+        taxRuleResponse.EnsureSuccessStatusCode();
+
+        // 2. Create Host and Apartment
+        var hostEmail = $"host_{Guid.CreateVersion7()}@test.com";
+        var registerHostCommand = new RegisterHostCommand(
+            hostEmail, "Host", "User", password, new DateOnly(1990, 1, 1), "+34612345678");
+        await test.Sender.Send(registerHostCommand).ConfigureAwait(false);
+
+        string hostToken = await test.GetAccessToken(hostEmail, password).ConfigureAwait(false);
+        test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme, hostToken);
+
+        HttpResponseMessage aptResponse = await test.HttpClient.PostAsJsonAsync(
+            new Uri("api/v1/apartments", UriKind.Relative), apartmentRequest).ConfigureAwait(false);
+        aptResponse.EnsureSuccessStatusCode();
+        Guid apartmentId = await aptResponse.Content.ReadFromJsonAsync<Guid>().ConfigureAwait(false);
+
+        // 3. Create Guest and Reserve Booking
+        var guestEmail = $"guest_{Guid.CreateVersion7()}@test.com";
+        var registerGuestCommand = new RegisterGuestCommand(
+            guestEmail, "Guest", "User", password, new DateOnly(1995, 5, 5));
+        await test.Sender.Send(registerGuestCommand).ConfigureAwait(false);
+
+        string guestToken = await test.GetAccessToken(guestEmail, password).ConfigureAwait(false);
+        test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme, guestToken);
+
+        var reserveRequest = new ReserveBookingRequest(
+            apartmentId,
+            startDate.Value,
+            endDate.Value,
+            guestCount)
+        {
+            ApartmentId = apartmentId,
+            StartDate = startDate.Value,
+            EndDate = endDate.Value
+        };
+
+        HttpResponseMessage reserveResponse = await test.HttpClient.PostAsJsonAsync(
+            new Uri("api/v1/bookings", UriKind.Relative), reserveRequest).ConfigureAwait(false);
+        reserveResponse.EnsureSuccessStatusCode();
+        Guid bookingId = await reserveResponse.Content.ReadFromJsonAsync<Guid>().ConfigureAwait(false);
+
+        return (apartmentId, bookingId, guestToken, guestEmail, hostToken, hostEmail, adminToken);
+    }
+
+    // Helper 18: Sets up an end-to-end booking with a generated Invoice PDF (Status == Generated)
+    public static async Task<(Guid apartmentId, Guid bookingId, Guid invoiceId, string guestToken, string guestEmail, string hostToken, string hostEmail, string adminToken)>
+        SetupBookingWithGeneratedInvoiceAsync(
+            BaseIntegrationTest test,
+            CreateApartmentRequest? apartmentRequest = null,
+            int guestCount = 2,
+            DateOnly? startDate = null,
+            DateOnly? endDate = null,
+            string password = "Password123!")
+    {
+        apartmentRequest ??= ApartmentData.InvoiceTestInstantApartmentRequest;
+        bool isInstant = apartmentRequest.InstantBooking;
+
+        var setup = await SetupInvoiceTestDataAsync(test, apartmentRequest, guestCount, startDate, endDate, password).ConfigureAwait(false);
+
+        // Publish checkout.session.completed event via Service Bus MessagePublisher
+        var webhookEvent = new StripeWebhookEvent
+        {
+            EventType = "checkout.session.completed",
+            BookingId = setup.bookingId,
+            SessionId = $"session_{setup.bookingId}",
+            PaymentIntentId = $"intent_{setup.bookingId}",
+            IsInstant = isInstant
+        };
+
+        await test.MessagePublisher.PublishAsync("stripe-events", webhookEvent).ConfigureAwait(false);
+
+        if (!isInstant)
+        {
+            // Wait until booking is in Reserved status (Authorized payment)
+            await PollingHelper.WaitUntilAsync(
+                action: async () =>
+                {
+                    test.DbContext.ChangeTracker.Clear();
+                    return await test.DbContext.Set<Booking>()
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(b => b.Id == setup.bookingId).ConfigureAwait(false);
+                },
+                isReady: b => b is not null && b.Status == BookingStatus.Reserved,
+                timeout: TimeSpan.FromSeconds(15),
+                interval: TimeSpan.FromMilliseconds(300)).ConfigureAwait(false);
+
+            // Host confirms the booking
+            test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                JwtBearerDefaults.AuthenticationScheme, setup.hostToken);
+
+            HttpResponseMessage confirmResponse = await test.HttpClient.PutAsync(
+                new Uri($"api/v1/bookings/{setup.bookingId}/confirmation", UriKind.Relative), null).ConfigureAwait(false);
+            confirmResponse.EnsureSuccessStatusCode();
+        }
+
+        // Wait for the invoice to be generated by the background Function
+        Invoice? invoice;
+        try
+        {
+            invoice = await PollingHelper.WaitUntilAsync(
+                action: async () =>
+                {
+                    test.DbContext.ChangeTracker.Clear();
+                    return await test.DbContext.Set<Invoice>()
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(i =>
+                            i.BookingId == setup.bookingId &&
+                            i.InvoiceType == InvoiceType.Invoice &&
+                            i.Status == InvoiceStatus.Generated).ConfigureAwait(false);
+                },
+                isReady: inv => inv is not null,
+                timeout: TimeSpan.FromSeconds(30),
+                interval: TimeSpan.FromMilliseconds(500)).ConfigureAwait(false);
+        }
+        catch (TimeoutException ex)
+        {
+            var logs = await test.Factory.GetFunctionLogsAsync().ConfigureAwait(false);
+            test.DbContext.ChangeTracker.Clear();
+            var dbInvoices = await test.DbContext.Set<Invoice>().AsNoTracking().Where(i => i.BookingId == setup.bookingId).ToListAsync().ConfigureAwait(false);
+            string invoiceSummary = string.Join(", ", dbInvoices.Select(i => $"[Id={i.Id}, Type={i.InvoiceType}, Status={i.Status}, Blob={i.PdfBlobName}]"));
+            throw new TimeoutException($"Invoice generation timed out for booking {setup.bookingId}. Existing invoices in DB: ({invoiceSummary}). Function Logs:\nSTDOUT:\n{logs.Stdout}\nSTDERR:\n{logs.Stderr}", ex);
+        }
+
+        return (setup.apartmentId, setup.bookingId, invoice!.Id, setup.guestToken, setup.guestEmail, setup.hostToken, setup.hostEmail, setup.adminToken);
+    }
+
+    // Helper 19: Sets up an end-to-end booking with a generated Credit Note (Status == Generated)
+    public static async Task<(Guid apartmentId, Guid bookingId, Guid invoiceId, Guid creditNoteId, string guestToken, string guestEmail, string hostToken, string hostEmail, string adminToken)>
+        SetupBookingWithCreditNoteAsync(
+            BaseIntegrationTest test,
+            bool cancelledByHost = true,
+            CreateApartmentRequest? apartmentRequest = null,
+            int guestCount = 2,
+            DateOnly? startDate = null,
+            DateOnly? endDate = null,
+            string password = "Password123!")
+    {
+        var setup = await SetupBookingWithGeneratedInvoiceAsync(test, apartmentRequest, guestCount, startDate, endDate, password).ConfigureAwait(false);
+
+        // Cancel booking via HTTP
+        string cancellationToken = cancelledByHost ? setup.hostToken : setup.guestToken;
+        test.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            JwtBearerDefaults.AuthenticationScheme, cancellationToken);
+
+        HttpResponseMessage cancelResponse = await test.HttpClient.PutAsync(
+            new Uri($"api/v1/bookings/{setup.bookingId}/cancellation", UriKind.Relative), null).ConfigureAwait(false);
+        cancelResponse.EnsureSuccessStatusCode();
+
+        // Wait until booking reaches RefundProcessing
+        Booking booking = await PollingHelper.WaitUntilAsync(
+            action: async () =>
+            {
+                test.DbContext.ChangeTracker.Clear();
+                return await test.DbContext.Set<Booking>()
+                    .Include(b => b.Refund)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b =>
+                        b.Id == setup.bookingId &&
+                        b.PaymentStatus == PaymentStatus.RefundProcessing).ConfigureAwait(false);
+            },
+            isReady: b => b is not null && b.Refund is not null,
+            timeout: TimeSpan.FromSeconds(30),
+            interval: TimeSpan.FromMilliseconds(500)).ConfigureAwait(false)
+            ?? throw new TimeoutException($"Booking {setup.bookingId} did not reach RefundProcessing within the timeout period.");
+
+        decimal refundAmount = booking.Refund!.Amount;
+
+        // Publish charge.refunded event via Service Bus MessagePublisher
+        var refundWebhookEvent = new StripeWebhookEvent
+        {
+            EventType = "charge.refunded",
+            BookingId = setup.bookingId,
+            RefundId = $"ref_{Guid.CreateVersion7()}",
+            Amount = refundAmount
+        };
+
+        await test.MessagePublisher.PublishAsync("stripe-events", refundWebhookEvent).ConfigureAwait(false);
+
+        // Wait until CreditNote reaches Generated
+        Invoice creditNote = await PollingHelper.WaitUntilAsync(
+            action: async () =>
+            {
+                test.DbContext.ChangeTracker.Clear();
+                return await test.DbContext.Set<Invoice>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(i =>
+                        i.BookingId == setup.bookingId &&
+                        i.InvoiceType == InvoiceType.CreditNote &&
+                        i.Status == InvoiceStatus.Generated).ConfigureAwait(false);
+            },
+            isReady: inv => inv is not null,
+            timeout: TimeSpan.FromSeconds(30),
+            interval: TimeSpan.FromMilliseconds(500)).ConfigureAwait(false)
+            ?? throw new TimeoutException($"Credit note for booking {setup.bookingId} was not generated within the timeout period.");
+
+        return (setup.apartmentId, setup.bookingId, setup.invoiceId, creditNote.Id, setup.guestToken, setup.guestEmail, setup.hostToken, setup.hostEmail, setup.adminToken);
     }
 }

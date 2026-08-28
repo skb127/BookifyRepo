@@ -8,6 +8,7 @@ using Bookify.Domain.Bookings;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.Application.IntegrationTests.Bookings;
 
@@ -125,6 +126,19 @@ public class GetCancellationPreviewTests : BaseIntegrationTest
             new Uri($"api/v1/bookings/{bookingId}/confirmation", UriKind.Relative),
             null);
         confirmResponse.EnsureSuccessStatusCode();
+
+        // Wait for outbox handler to capture payment and mark PaymentStatus as Paid
+        await PollingHelper.WaitUntilAsync(
+            action: async () =>
+            {
+                DbContext.ChangeTracker.Clear();
+                return await DbContext.Set<Booking>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b => b.Id == bookingId);
+            },
+            isReady: b => b is not null && b.PaymentStatus == PaymentStatus.Paid,
+            timeout: TimeSpan.FromSeconds(15),
+            interval: TimeSpan.FromMilliseconds(200));
 
         // Act
         var response = await HttpClient.GetAsync(

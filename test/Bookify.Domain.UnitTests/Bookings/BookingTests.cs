@@ -90,12 +90,61 @@ public class BookingTests : BaseTest
         // Assert
         result.IsSuccess.Should().BeTrue();
         booking.Status.Should().Be(BookingStatus.Confirmed);
-        booking.PaymentStatus.Should().Be(PaymentStatus.Paid);
+        booking.PaymentStatus.Should().Be(PaymentStatus.Authorized);
         booking.ConfirmedOnUtc.Should().Be(utcNow);
 
         BookingConfirmedDomainEvent domainEvent = AssertDomainEventWasPublished<BookingConfirmedDomainEvent>(booking);
 
         domainEvent.BookingId.Should().Be(booking.Id);
+    }
+
+    [Fact]
+    public void CompletePayment_ShouldSetPaymentStatusToPaid_AndRaiseBookingPaymentCompletedDomainEvent_WhenStatusIsConfirmed()
+    {
+        // Arrange
+        var user = UserData.CreateUser();
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = DateTime.UtcNow;
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.AuthorizePayment("session-id", "intent-id");
+        booking.Confirm(utcNow);
+
+        // Act
+        Result result = booking.CompletePayment("intent-id");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        booking.PaymentStatus.Should().Be(PaymentStatus.Paid);
+
+        BookingPaymentCompletedDomainEvent domainEvent = AssertDomainEventWasPublished<BookingPaymentCompletedDomainEvent>(booking);
+        domainEvent.BookingId.Should().Be(booking.Id);
+        domainEvent.StripePaymentIntentId.Should().Be("intent-id");
+    }
+
+    [Fact]
+    public void CompletePayment_ShouldBeIdempotent_WhenPaymentStatusIsAlreadyPaid()
+    {
+        // Arrange
+        var user = UserData.CreateUser();
+        var price = new Money(10.0m, Currency.Usd);
+        var period = DateRange.Create(new DateOnly(2025, 12, 1), new DateOnly(2025, 12, 15));
+        Apartment apartment = ApartmentData.Create(price);
+        var pricingService = new PricingService();
+        DateTime utcNow = DateTime.UtcNow;
+
+        var booking = Booking.Reserve(apartment, user.Id, period, utcNow, pricingService);
+        booking.MarkAsPaid("intent-id", utcNow);
+
+        // Act
+        Result result = booking.CompletePayment("intent-id");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        booking.PaymentStatus.Should().Be(PaymentStatus.Paid);
     }
 
     [Fact]

@@ -1,6 +1,4 @@
-using System.Globalization;
 using System.Net.Http.Json;
-using System.Text.RegularExpressions;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Email;
 using Bookify.Application.Abstractions.Payments;
@@ -80,6 +78,7 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             .Build();
 
         _storageContainer = new AzuriteBuilder()
+            .WithImage("mcr.microsoft.com/azure-storage/azurite:latest")
             .WithNetwork(_network)
             .WithNetworkAliases("storage")
             .Build();
@@ -249,6 +248,8 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             .WithEnvironment("BlobStorage__ContainerName", "invoices")
             .WithEnvironment("ServiceBusConnection", BuildInternalServiceBusConnectionString())
             .WithEnvironment("ConnectionStrings__Database", BuildInternalDbConnectionString())
+            .WithEnvironment("AzureFunctionsJobHost__Logging__Console__IsEnabled", "true")
+            .WithEnvironment("AzureFunctionsJobHost__Logging__LogLevel__Default", "Information")
             .WithPortBinding(80, true)
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilHttpRequestIsSucceeded(r => r.ForPath("/api/health").ForPort(80)))
@@ -284,28 +285,16 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
         await _network.DisposeAsync().ConfigureAwait(false);
     }
 
-    private string BuildInternalAzuriteConnectionString()
+    public async Task<(string Stdout, string Stderr)> GetFunctionLogsAsync()
     {
-        string hostConnectionString = _storageContainer.GetConnectionString();
-        return hostConnectionString
-            .Replace("127.0.0.1", "storage", StringComparison.Ordinal)
-            .Replace("localhost", "storage", StringComparison.Ordinal)
-            .Replace(_storageContainer.GetMappedPublicPort(10000).ToString(CultureInfo.InvariantCulture), "10000",
-                StringComparison.Ordinal)
-            .Replace(_storageContainer.GetMappedPublicPort(10001).ToString(CultureInfo.InvariantCulture), "10001",
-                StringComparison.Ordinal)
-            .Replace(_storageContainer.GetMappedPublicPort(10002).ToString(CultureInfo.InvariantCulture), "10002",
-                StringComparison.Ordinal);
+        return await _functionContainer.GetLogsAsync().ConfigureAwait(false);
     }
 
-    private string BuildInternalServiceBusConnectionString()
-    {
-        string hostConnectionString = _serviceBusContainer.GetConnectionString();
-        return Regex.Replace(
-            hostConnectionString,
-            @"sb://[^;]+",
-            "sb://servicebus-emulator");
-    }
+    private static string BuildInternalAzuriteConnectionString() =>
+        "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://storage:10000/devstoreaccount1;QueueEndpoint=http://storage:10001/devstoreaccount1;TableEndpoint=http://storage:10002/devstoreaccount1;";
+
+    private static string BuildInternalServiceBusConnectionString() =>
+        "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
 
     private static string BuildInternalDbConnectionString() =>
         "Host=bookify-db;Port=5432;Database=bookify;Username=postgres;Password=postgrespw";
