@@ -1,0 +1,13 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "ServiceBusConnection": "Endpoint=sb://localhost:5672;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;",
+    "BlobStorage:ConnectionString": "UseDevelopmentStorage=true",
+    "BlobStorage:ContainerName": "invoices"
+  },
+  "ConnectionStrings": {
+    "Database": "Host=localhost;Port=5432;Database=bookify;Username=postgres;Password=postgrespw;"
+  }
+}

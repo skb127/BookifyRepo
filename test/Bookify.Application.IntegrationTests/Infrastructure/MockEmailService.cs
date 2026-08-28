@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using Bookify.Application.Abstractions.Email;
 using Bookify.Application.Abstractions.Email.Models;
 
@@ -50,47 +49,39 @@ public class MockEmailService : IEmailService
         int timeoutMs = 25_000,
         DateTime? since = null)
     {
-        var stopwatch = Stopwatch.StartNew();
-
-        while (stopwatch.ElapsedMilliseconds < timeoutMs)
-        {
-            EmailMessage? email = GetEmailTo(recipientEmail, subject, since);
-
-            if (email is not null)
-            {
-                return email;
-            }
-
-            await Task.Delay(200).ConfigureAwait(false);
-        }
-
         string subjectFilter = subject is not null ? $" with subject '{subject}'" : "";
         string sinceFilter = since is not null ? $" since {since:O}" : "";
-        throw new TimeoutException(
+        string failureMessage =
             $"No email was sent to '{recipientEmail}'{subjectFilter}{sinceFilter} within {timeoutMs}ms. " +
             $"Emails sent: {Count}. " +
-            "Verify that the Outbox background job is running.");
+            "Verify that the Outbox background job is running.";
+
+        EmailMessage? email = await PollingHelper.WaitUntilAsync(
+            action: () => Task.FromResult(GetEmailTo(recipientEmail, subject, since)),
+            isReady: e => e is not null,
+            timeout: TimeSpan.FromMilliseconds(timeoutMs),
+            interval: TimeSpan.FromMilliseconds(200),
+            failureMessage: failureMessage).ConfigureAwait(false);
+
+        return email!;
     }
 
     /// <summary>
-    /// Polls for <paramref name="durationMs"/> ms and throws if an email to the specified address is received.
+    /// Polls for <paramref name="durationMs"/> ms and throws if an email to the specified address (and optionally subject) is received.
     /// Use this for negative assertions (verifying that no email is sent).
     /// </summary>
-    public async Task EnsureNoEmailToAsync(string recipientEmail, int durationMs = 2_000, DateTime? since = null)
+    public async Task EnsureNoEmailToAsync(
+        string recipientEmail,
+        string? subject = null,
+        int durationMs = 2_000,
+        DateTime? since = null)
     {
-        var stopwatch = Stopwatch.StartNew();
-
-        while (stopwatch.ElapsedMilliseconds < durationMs)
-        {
-            EmailMessage? email = GetEmailTo(recipientEmail, since: since);
-
-            if (email is not null)
-            {
-                throw new InvalidOperationException(
-                    $"Unexpected email was sent to '{recipientEmail}'. Subject: '{email.Subject}'.");
-            }
-
-            await Task.Delay(200).ConfigureAwait(false);
-        }
+        string subjectFilter = subject is not null ? $" with subject '{subject}'" : "";
+        await PollingHelper.EnsureNeverAsync(
+            action: () => Task.FromResult(GetEmailTo(recipientEmail, subject, since)),
+            isUnexpected: e => e is not null,
+            duration: TimeSpan.FromMilliseconds(durationMs),
+            interval: TimeSpan.FromMilliseconds(200),
+            failureMessage: e => $"Unexpected email{subjectFilter} was sent to '{recipientEmail}'. Subject: '{e?.Subject}'.").ConfigureAwait(false);
     }
 }

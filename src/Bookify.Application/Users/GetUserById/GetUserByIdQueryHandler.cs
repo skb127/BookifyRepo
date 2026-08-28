@@ -35,45 +35,37 @@ internal sealed class GetUserByIdQueryHandler
                                u.deleted_at AS DeletedAt,
                                u.deletion_scheduled_at AS DeletionScheduledAt,
                                u.last_modified_on AS LastModifiedOn,
-                               u.ban_count AS BanCount,
-                               r.name AS RoleName
+                               u.ban_count AS BanCount
                            FROM users u
-                           LEFT JOIN role_user ru ON u.id = ru.users_id
-                           LEFT JOIN roles r ON ru.roles_id = r.id
-                           WHERE u.id = @UserId
+                           WHERE u.id = @UserId;
+
+                           SELECT r.name
+                           FROM role_user ru
+                           INNER JOIN roles r ON ru.roles_id = r.id
+                           WHERE ru.users_id = @UserId;
                            """;
 
-        AdminUserResponse? userResponse = null;
-        List<string> roles = [];
-
-        await connection.QueryAsync<AdminUserResponse, string, AdminUserResponse>(
+        await using SqlMapper.GridReader multi = await connection.QueryMultipleAsync(
             sql,
-            (user, roleName) =>
-            {
-                userResponse ??= user;
+            new { request.UserId });
 
-                if (!string.IsNullOrEmpty(roleName))
-                {
-                    roles.Add(roleName);
-                }
-
-                return user;
-            },
-            new
-            {
-                request.UserId
-            },
-            splitOn: "RoleName");
+        AdminUserResponse? userResponse = await multi.ReadFirstOrDefaultAsync<AdminUserResponse>();
 
         if (userResponse is null)
         {
             return Result.Failure<AdminUserResponse>(UserErrors.NotFound);
         }
 
+        IEnumerable<string> roles = await multi.ReadAsync<string>();
+
+        char statusCodeChar = !string.IsNullOrEmpty(userResponse.StatusCode)
+            ? userResponse.StatusCode[0]
+            : 'U';
+
         return userResponse with
         {
-            StatusName = UserStatus.FromCode(userResponse.StatusCode).Name,
-            Roles = roles
+            StatusName = UserStatus.FromCode(statusCodeChar).Name,
+            Roles = roles.ToList()
         };
     }
 }

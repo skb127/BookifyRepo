@@ -33,9 +33,7 @@ public sealed class User : Entity
     public string IdentityId { get; private set; } = "";
     public UserStatus Status { get; private set; } = UserStatus.None;
     public DateTime? LastModifiedOn { get; private set; }
-#pragma warning disable S1144
     public DateTime? DeletedAt { get; private set; }
-#pragma warning restore S1144
     public DateTime? LastRecoveryRequestAt { get; private set; }
     public DateTime? PasswordChangedAt { get; private set; }
     public DateTime? PasswordResetAt { get; private set; }

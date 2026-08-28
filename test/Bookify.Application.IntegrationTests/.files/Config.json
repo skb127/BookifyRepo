@@ -13,6 +13,13 @@
               "MaxDeliveryCount": 3,
               "DefaultMessageTimeToLive": "PT1H"
             }
+          },
+          {
+            "Name": "invoice-requests",
+            "Properties": {
+              "MaxDeliveryCount": 3,
+              "DefaultMessageTimeToLive": "PT1H"
+            }
           }
         ]
       }

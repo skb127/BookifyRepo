@@ -45,6 +45,7 @@ internal sealed class CompleteBookingsBatchCommandHandler : ICommandHandler<Comp
         const string sql = """
                            UPDATE bookings
                            SET status = @Status,
+                               status_literal = @StatusLiteral,
                                completed_on_utc = @CompletedOnUtc
                            WHERE id = ANY(@BookingIds)
                            """;
@@ -54,6 +55,7 @@ internal sealed class CompleteBookingsBatchCommandHandler : ICommandHandler<Comp
             new
             {
                 Status = (int)BookingStatus.Completed,
+                StatusLiteral = nameof(BookingStatus.Completed),
                 CompletedOnUtc = _dateTimeProvider.UtcNow,
                 BookingIds = bookingIds
             },
@@ -68,9 +70,9 @@ internal sealed class CompleteBookingsBatchCommandHandler : ICommandHandler<Comp
         }).ToList();
 
         const string insertOutboxSql = """
-            INSERT INTO outbox_messages (id, occurred_on_utc, type, content)
-            VALUES (@Id, @OccurredOnUtc, @Type, @Content::jsonb)
-            """;
+                                       INSERT INTO outbox_messages (id, occurred_on_utc, type, content)
+                                       VALUES (@Id, @OccurredOnUtc, @Type, @Content::jsonb)
+                                       """;
 
         await connection.ExecuteAsync(insertOutboxSql, outboxMessages, transaction: transaction);
 

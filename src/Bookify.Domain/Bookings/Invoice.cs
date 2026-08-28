@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Bookify.Domain.Abstractions;
 
 namespace Bookify.Domain.Bookings;
@@ -44,9 +43,7 @@ public sealed class Invoice : Entity
     public decimal TotalAmount { get; private set; }
     public decimal TaxAmount { get; private set; }
     public string Currency { get; private set; } = null!;
-
-    [SuppressMessage("Design", "CA1056:Uri properties should not be strings", Justification = "PDF URLs are stored as strings in the database and handled as strings.")]
-    public string? PdfUrl { get; private set; }
+    public string? PdfBlobName { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
 
     public static Invoice CreateForBooking(
@@ -88,12 +85,10 @@ public sealed class Invoice : Entity
             currency,
             createdOnUtc: utcNow);
 
-    public void MarkAsGenerated(
-        [SuppressMessage("Design", "CA1054:Uri parameters should not be strings", Justification = "PDF URLs are handled as strings.")]
-        string pdfUrl)
+    public void MarkAsGenerated(string pdfBlobName)
     {
         Status = InvoiceStatus.Generated;
-        PdfUrl = pdfUrl;
+        PdfBlobName = pdfBlobName;
     }
 
     public void MarkAsError() => Status = InvoiceStatus.Error;

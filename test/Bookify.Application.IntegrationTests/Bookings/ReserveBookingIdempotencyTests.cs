@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Bookify.Api.Controllers.Bookings;
+using Bookify.Api.Controllers.Bookings.Requests;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Domain.Bookings;
 using FluentAssertions;

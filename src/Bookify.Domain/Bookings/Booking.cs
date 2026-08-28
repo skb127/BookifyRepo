@@ -72,6 +72,8 @@ public sealed class Booking : Entity
     private readonly List<BookingTax> _taxes = [];
     public IReadOnlyList<BookingTax> Taxes => _taxes.AsReadOnly();
 
+    public BookingRefund? Refund { get; private set; }
+
     public void AddTax(BookingTax tax) => _taxes.Add(tax);
 
     // Factory Method
@@ -138,7 +140,7 @@ public sealed class Booking : Entity
         return Result.Success();
     }
 
-    public Result InitiateRefund(decimal refundAmount, string currency, string reason)
+    public Result InitiateRefund(decimal refundAmount, string currency, string reason, DateTime utcNow)
     {
         if (Status != BookingStatus.Cancelled || PaymentStatus != PaymentStatus.Paid)
         {
@@ -146,6 +148,7 @@ public sealed class Booking : Entity
         }
 
         PaymentStatus = PaymentStatus.RefundProcessing;
+        Refund = BookingRefund.Create(refundAmount, currency, reason, utcNow);
 
         RaiseDomainEvent(new BookingRefundInitiatedDomainEvent(Id, refundAmount, currency, reason));
 
@@ -163,12 +166,21 @@ public sealed class Booking : Entity
         ConfirmedOnUtc = utcNow;
         ExpiresAt = null;
 
-        if (PaymentStatus == PaymentStatus.Authorized)
+        RaiseDomainEvent(new BookingConfirmedDomainEvent(Id));
+
+        return Result.Success();
+    }
+
+    public Result CompletePayment(string stripePaymentIntentId)
+    {
+        if (PaymentStatus == PaymentStatus.Paid)
         {
-            PaymentStatus = PaymentStatus.Paid;
+            return Result.Success();
         }
 
-        RaiseDomainEvent(new BookingConfirmedDomainEvent(Id));
+        PaymentStatus = PaymentStatus.Paid;
+
+        RaiseDomainEvent(new BookingPaymentCompletedDomainEvent(Id, stripePaymentIntentId));
 
         return Result.Success();
     }
@@ -427,6 +439,8 @@ public sealed class Booking : Entity
         }
 
         PaymentStatus = PaymentStatus.Refunded;
+
+        RaiseDomainEvent(new BookingRefundCompletedDomainEvent(Id));
 
         return Result.Success();
     }

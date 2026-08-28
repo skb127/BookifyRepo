@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using Bookify.Api.Controllers.Users.Requests;
 using Bookify.Application.Abstractions.Caching;
+using Bookify.Application.Abstractions.Messaging;
 using Bookify.Application.Users;
 using Bookify.Domain.Users;
 using Bookify.Infrastructure;
@@ -14,23 +15,30 @@ namespace Bookify.Application.IntegrationTests.Infrastructure;
 [Collection("IntegrationTests")]
 public abstract class BaseIntegrationTest
 {
-    private readonly IServiceScope _scope; // To allow resolving scoped services
+    private readonly IServiceScope _scope;
+    public IntegrationTestWebAppFactory Factory { get; }
     public ISender Sender { get; } // To send commands/queries via MediatR
     public ApplicationDbContext DbContext { get; }  // To interact with the database
     public HttpClient HttpClient { get; } // To make HTTP requests to the test server
+    public IMessagePublisher MessagePublisher { get; } // To publish messages to queues
+    public TestDateTimeProvider DateTimeProvider { get; } // To control time in tests
 
     protected BaseIntegrationTest(IntegrationTestWebAppFactory factory)
     {
         ArgumentNullException.ThrowIfNull(factory);
 
+        Factory = factory;
         factory.MockEmailService.Clear();
         factory.MockPaymentGateway.Clear();
         factory.MockStripeCustomerService.Clear();
+        factory.TestDateTimeProvider.Reset();
 
         _scope = factory.Services.CreateScope();
 
         Sender = _scope.ServiceProvider.GetRequiredService<ISender>();
         DbContext = _scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        MessagePublisher = _scope.ServiceProvider.GetRequiredService<IMessagePublisher>();
+        DateTimeProvider = factory.TestDateTimeProvider;
         HttpClient = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             BaseAddress = new Uri("https://localhost")
@@ -79,7 +87,7 @@ public abstract class BaseIntegrationTest
         await cacheService.RemoveAsync($"auth:permissions-{identityId}").ConfigureAwait(false);
     }
 
-    protected async Task<string> GetAdminTokenAsync(string password = "Password123!")
+    public async Task<string> GetAdminTokenAsync(string password = "Password123!")
     {
         var adminEmail = $"admin_{Guid.CreateVersion7()}@test.com";
         var registerAdminCommand = new Bookify.Application.Users.RegisterGuest.RegisterGuestCommand(

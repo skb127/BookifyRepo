@@ -1,4 +1,3 @@
-#pragma warning disable
 using System.Net;
 using System.Net.Http.Json;
 using Bookify.Application.IntegrationTests.Infrastructure;
@@ -21,12 +20,12 @@ public class HealthCheckRateLimitTests : RateLimitIntegrationTest
         // First 2 requests should be accepted
         for (int i = 0; i < 2; i++)
         {
-            var response = await HttpClient.GetAsync("/health");
+            var response = await HttpClient.GetAsync(new Uri("/health", UriKind.Relative));
             response.StatusCode.Should().NotBe(HttpStatusCode.TooManyRequests);
         }
 
         // 3rd request should fail with 429
-        var exceededResponse = await HttpClient.GetAsync("/health");
+        var exceededResponse = await HttpClient.GetAsync(new Uri("/health", UriKind.Relative));
         exceededResponse.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
 
         var problemDetails = await exceededResponse.Content.ReadFromJsonAsync<ProblemDetails>();
@@ -38,7 +37,7 @@ public class HealthCheckRateLimitTests : RateLimitIntegrationTest
         await Task.Delay(16000);
 
         // Should be able to request again
-        var resetResponse = await HttpClient.GetAsync("/health");
+        var resetResponse = await HttpClient.GetAsync(new Uri("/health", UriKind.Relative));
         resetResponse.StatusCode.Should().NotBe(HttpStatusCode.TooManyRequests);
     }
 }

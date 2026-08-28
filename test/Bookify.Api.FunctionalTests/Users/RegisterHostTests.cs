@@ -6,9 +6,7 @@ using FluentAssertions;
 
 namespace Bookify.Api.FunctionalTests.Users;
 
-#pragma warning disable CA1515
 public class RegisterHostTests : BaseFunctionalTest
-#pragma warning restore CA1515
 {
     public RegisterHostTests(FunctionalTestWebAppFactory factory) : base(factory)
     {
@@ -18,7 +16,8 @@ public class RegisterHostTests : BaseFunctionalTest
     public async Task RegisterHost_ShouldReturnOk_WhenRequestIsValid()
     {
         // Arrange
-        var request = new RegisterHostRequest("host_func@test.com", "Host", "User", "ClaveSegura123?", new DateOnly(1990, 1, 1), "+34612345678");
+        var request = new RegisterHostRequest("host_func@test.com", "Host", "User", "ClaveSegura123?",
+            new DateOnly(1990, 1, 1), "+34612345678");
 
         // Act
         HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/users/register/host", request);
@@ -44,7 +43,8 @@ public class RegisterHostTests : BaseFunctionalTest
         string lastName,
         string password)
     {
-        var request = new RegisterHostRequest(email, firstName, lastName, password, new DateOnly(1990, 1, 1), "+34612345678");
+        var request = new RegisterHostRequest(email, firstName, lastName, password, new DateOnly(1990, 1, 1),
+            "+34612345678");
 
         // Act
         HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/users/register/host", request);

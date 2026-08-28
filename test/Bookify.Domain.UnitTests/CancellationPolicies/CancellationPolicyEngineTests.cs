@@ -117,4 +117,43 @@ public class CancellationPolicyEngineTests
         result.Currency.Should().Be("USD");
         result.RequiresRefund.Should().BeTrue();
     }
+
+    [Fact]
+    public void CalculatePenalty_ShouldIncludeTaxesInRefundAndPenalty_WhenBookingHasTaxes()
+    {
+        // Arrange
+        // TotalPrice: 200 USD. Tax: 20 USD -> Total transaction = 220 USD.
+        // Late cancellation (50% penalty):
+        // Guest Penalty = 50% of 220 = 110 USD.
+        // Refund Amount = 220 - 110 = 110 USD.
+        var taxRule = Bookify.Domain.TaxRules.TaxRule.Create(
+            "US",
+            null,
+            null,
+            Bookify.Domain.TaxRules.TaxRate.Percentage(10m),
+            "State Tax",
+            new DateOnly(2025, 1, 1),
+            null,
+            DateTime.UtcNow);
+
+        var bookingTax = BookingTax.CreateSnapshot(
+            Guid.CreateVersion7(),
+            _booking.Id,
+            taxRule,
+            new Money(20.00m, Currency.Usd),
+            DateTime.UtcNow);
+
+        _booking.AddTax(bookingTax);
+
+        DateTime utcNow = new(2025, 1, 9, 12, 0, 0, DateTimeKind.Utc); // 12h before (late)
+
+        // Act
+        PenaltyResult result = _engine.CalculatePenalty(_booking, _policy, utcNow, cancelledByHost: false);
+
+        // Assert
+        result.GuestPenaltyAmount.Should().Be(110.00m);
+        result.RefundAmount.Should().Be(110.00m);
+        result.Currency.Should().Be("USD");
+        result.RequiresRefund.Should().BeTrue();
+    }
 }

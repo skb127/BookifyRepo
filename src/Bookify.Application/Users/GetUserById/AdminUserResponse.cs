@@ -10,7 +10,7 @@ public sealed record AdminUserResponse
     public string? PhoneNumber { get; init; }
     public string IdentityId { get; init; } = string.Empty;
     public string? StripeCustomerId { get; init; }
-    public char StatusCode { get; init; }
+    public string StatusCode { get; init; } = string.Empty;
     public string StatusName { get; init; } = string.Empty;
     public DateTime? DeletedAt { get; init; }
     public DateTime? DeletionScheduledAt { get; init; }

@@ -1,4 +1,5 @@
 using Azure.Messaging.ServiceBus;
+using Bookify.Application.Abstractions.Messaging;
 using Bookify.Application.IntegrationTests.Infrastructure;
 using Bookify.Application.IntegrationTests.Bookings;
 using Bookify.Application.Bookings.GetBooking;
@@ -29,6 +30,7 @@ public class ServiceBusEventConsumerTests : BaseIntegrationTest
         string guestToken = setupResult.guestToken;
 
         var options = _factory.Services.GetRequiredService<IOptions<ServiceBusOptions>>().Value;
+        var queuesOptions = _factory.Services.GetRequiredService<IOptions<ServiceBusQueuesOptions>>().Value;
 
         var sessionId = $"session_{Guid.NewGuid()}";
         var paymentIntentId = $"intent_{Guid.NewGuid()}";
@@ -52,7 +54,7 @@ public class ServiceBusEventConsumerTests : BaseIntegrationTest
         var client = new ServiceBusClient(options.ConnectionString);
         try
         {
-            var sender = client.CreateSender(options.QueueName);
+            var sender = client.CreateSender(queuesOptions.StripeEvents);
             await sender.SendMessageAsync(message);
         }
         finally
@@ -95,6 +97,7 @@ public class ServiceBusEventConsumerTests : BaseIntegrationTest
         string guestToken = setupResult.guestToken;
 
         var options = _factory.Services.GetRequiredService<IOptions<ServiceBusOptions>>().Value;
+        var queuesOptions = _factory.Services.GetRequiredService<IOptions<ServiceBusQueuesOptions>>().Value;
 
         var sessionId = $"session_{Guid.NewGuid()}";
 
@@ -115,7 +118,7 @@ public class ServiceBusEventConsumerTests : BaseIntegrationTest
         var client = new ServiceBusClient(options.ConnectionString);
         try
         {
-            var sender = client.CreateSender(options.QueueName);
+            var sender = client.CreateSender(queuesOptions.StripeEvents);
             await sender.SendMessageAsync(message);
         }
         finally
@@ -157,6 +160,7 @@ public class ServiceBusEventConsumerTests : BaseIntegrationTest
         string guestToken = setupResult.guestToken;
 
         var options = _factory.Services.GetRequiredService<IOptions<ServiceBusOptions>>().Value;
+        var queuesOptions = _factory.Services.GetRequiredService<IOptions<ServiceBusQueuesOptions>>().Value;
 
         var refundId = $"refund_{Guid.NewGuid()}";
 
@@ -178,7 +182,7 @@ public class ServiceBusEventConsumerTests : BaseIntegrationTest
         var client = new ServiceBusClient(options.ConnectionString);
         try
         {
-            var sender = client.CreateSender(options.QueueName);
+            var sender = client.CreateSender(queuesOptions.StripeEvents);
             await sender.SendMessageAsync(message);
         }
         finally
@@ -220,6 +224,7 @@ public class ServiceBusEventConsumerTests : BaseIntegrationTest
         string guestToken = setupResult.guestToken;
 
         var options = _factory.Services.GetRequiredService<IOptions<ServiceBusOptions>>().Value;
+        var queuesOptions = _factory.Services.GetRequiredService<IOptions<ServiceBusQueuesOptions>>().Value;
 
         var refundId = $"refund_{Guid.NewGuid()}";
 
@@ -241,7 +246,7 @@ public class ServiceBusEventConsumerTests : BaseIntegrationTest
         var client = new ServiceBusClient(options.ConnectionString);
         try
         {
-            var sender = client.CreateSender(options.QueueName);
+            var sender = client.CreateSender(queuesOptions.StripeEvents);
             await sender.SendMessageAsync(message);
         }
         finally

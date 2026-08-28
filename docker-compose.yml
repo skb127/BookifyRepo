@@ -100,5 +100,32 @@ services:
         aliases:
           - "sb-emulator"
 
+  bookify-storage:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: Bookify.Storage
+    command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --location /data --skipApiVersionCheck"
+    volumes:
+      - ./.containers/storage:/data
+    ports:
+      - "10000:10000"
+
+  bookify-function:
+    image: ${DOCKER_REGISTRY-}bookifyfunctions
+    container_name: Bookify.Functions
+    build:
+      context: .
+      dockerfile: src/Bookify.Functions/Dockerfile
+    environment:
+      - FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
+      - AzureWebJobsStorage=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://bookify-storage:10000/devstoreaccount1;QueueEndpoint=http://bookify-storage:10001/devstoreaccount1;TableEndpoint=http://bookify-storage:10002/devstoreaccount1;
+      - BlobStorage__ConnectionString=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://bookify-storage:10000/devstoreaccount1;QueueEndpoint=http://bookify-storage:10001/devstoreaccount1;TableEndpoint=http://bookify-storage:10002/devstoreaccount1;
+      - BlobStorage__ContainerName=invoices
+      - ServiceBusConnection=Endpoint=sb://bookify-asb-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      - ConnectionStrings__Database=Host=bookify-db;Port=5432;Database=bookify;Username=postgres;Password=postgres
+    depends_on:
+      - bookify-asb-emulator
+      - bookify-db
+      - bookify-storage
+
 networks:
   sb-emulator:

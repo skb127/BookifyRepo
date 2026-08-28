@@ -254,10 +254,10 @@ namespace Bookify.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("original_invoice_id");
 
-                    b.Property<string>("PdfUrl")
+                    b.Property<string>("PdfBlobName")
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
-                        .HasColumnName("pdf_url");
+                        .HasColumnName("pdf_blob_name");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer")
@@ -1365,6 +1365,51 @@ namespace Bookify.Infrastructure.Migrations
                                 .HasConstraintName("fk_booking_reasons_bookings_booking_id");
                         });
 
+                    b.OwnsOne("Bookify.Domain.Bookings.BookingRefund", "Refund", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<decimal>("Amount")
+                                .HasPrecision(18, 4)
+                                .HasColumnType("numeric(18,4)")
+                                .HasColumnName("amount");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character varying(3)")
+                                .HasColumnName("currency");
+
+                            b1.Property<DateTime>("InitiatedOnUtc")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("initiated_on_utc");
+
+                            b1.Property<string>("Reason")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("reason");
+
+                            b1.Property<Guid>("booking_id")
+                                .HasColumnType("uuid")
+                                .HasColumnName("booking_id");
+
+                            b1.HasKey("Id")
+                                .HasName("pk_booking_refunds");
+
+                            b1.HasIndex("booking_id")
+                                .IsUnique()
+                                .HasDatabaseName("ix_booking_refunds_booking_id");
+
+                            b1.ToTable("booking_refunds", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("booking_id")
+                                .HasConstraintName("fk_booking_refunds_bookings_booking_id");
+                        });
+
                     b.OwnsMany("Bookify.Domain.Bookings.BookingTax", "Taxes", b1 =>
                         {
                             b1.Property<Guid>("Id")
@@ -1460,6 +1505,8 @@ namespace Bookify.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Reasons");
+
+                    b.Navigation("Refund");
 
                     b.Navigation("Taxes");
 

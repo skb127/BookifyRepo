@@ -6,9 +6,7 @@ using FluentAssertions;
 
 namespace Bookify.Api.FunctionalTests.Users;
 
-#pragma warning disable CA1515
 public class RegisterUsersTests : BaseFunctionalTest
-#pragma warning restore CA1515
 {
     public RegisterUsersTests(FunctionalTestWebAppFactory factory) : base(factory)
     {
@@ -18,7 +16,8 @@ public class RegisterUsersTests : BaseFunctionalTest
     public async Task Register_OldEndpoint_ShouldReturn410Gone()
     {
         // Arrange
-        var request = new RegisterUserRequest("user@test.com", "name", "lastname", "ClaveSegura123?", new DateOnly(2000, 1, 1));
+        var request = new RegisterUserRequest("user@test.com", "name", "lastname", "ClaveSegura123?",
+            new DateOnly(2000, 1, 1));
 
         // Act: POST api/v1/users/register (obsolete)
         HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/v1/users/register", request);

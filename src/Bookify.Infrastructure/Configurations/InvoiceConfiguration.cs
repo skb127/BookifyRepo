@@ -40,7 +40,7 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
             .HasMaxLength(3)
             .IsRequired();
 
-        builder.Property(i => i.PdfUrl)
+        builder.Property(i => i.PdfBlobName)
             .HasMaxLength(2048)
             .IsRequired(false);
 

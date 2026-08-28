@@ -225,6 +225,7 @@ public class BookingConfirmedDomainEventHandlerTests
         await _paymentGatewayMock.Received(1).CapturePaymentIntentAsync("intent-id", Arg.Any<CancellationToken>());
         await _unitOfWorkMock.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         transaction.ProviderStatus.Should().Be("paid");
+        booking.PaymentStatus.Should().Be(PaymentStatus.Paid);
     }
 
     [Fact]
@@ -300,6 +301,34 @@ public class BookingConfirmedDomainEventHandlerTests
         // Act & Assert
         Func<Task> act = async () => await _handler.Handle(domainEvent, CancellationToken.None);
         await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Transaction not found for paid booking *");
+            .WithMessage("Transaction not found for booking *");
+    }
+
+    [Fact]
+    public async Task Handle_ShouldThrowException_WhenStripePaymentIntentIdIsMissing()
+    {
+        // Arrange
+        var user = CreateUser();
+        var booking = CreateBooking(user.Id, markAsPaid: true);
+        var domainEvent = new BookingConfirmedDomainEvent(booking.Id);
+        var transaction = Transaction.Create(
+            booking.Id,
+            "session-id",
+            string.Empty,
+            "https://checkout.stripe.com/test",
+            new Money(1000.00m, Currency.Usd),
+            "authorized",
+            DateTime.UtcNow);
+
+        _bookingRepositoryMock.GetByIdAsync(domainEvent.BookingId, Arg.Any<CancellationToken>())
+            .Returns(booking);
+
+        _transactionRepositoryMock.GetByBookingIdAsync(booking.Id, Arg.Any<CancellationToken>())
+            .Returns(transaction);
+
+        // Act & Assert
+        Func<Task> act = async () => await _handler.Handle(domainEvent, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("StripePaymentIntentId is missing in transaction for booking *");
     }
 }

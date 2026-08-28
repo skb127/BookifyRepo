@@ -22,6 +22,18 @@ internal sealed class BookingRepository : Repository<Booking>, IBookingRepositor
         : base(dbContext) =>
         _dateTimeProvider = dateTimeProvider;
 
+    public async Task<Booking?> GetWithTaxesAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await DbContext
+            .Set<Booking>()
+            .Include(booking => booking.Taxes)
+            .FirstOrDefaultAsync(booking => booking.Id == id, cancellationToken);
+
+    public async Task<Booking?> GetWithRefundAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await DbContext
+            .Set<Booking>()
+            .Include(booking => booking.Refund)
+            .FirstOrDefaultAsync(booking => booking.Id == id, cancellationToken);
+
     public async Task<bool> IsOverlappingAsync(
         Apartment apartment,
         DateRange duration,
@@ -63,13 +75,10 @@ internal sealed class BookingRepository : Repository<Booking>, IBookingRepositor
 
     public async Task<bool> HasActiveBookingsAsHostAsync(Guid hostId, CancellationToken cancellationToken = default) =>
         await DbContext
-            .Set<Booking>()
-            .Join(
-                DbContext.Set<Apartment>(),
-                booking => booking.ApartmentId,
-                apartment => apartment.Id,
-                (booking, apartment) => new { booking, apartment })
+            .Set<Apartment>()
+            .Where(apartment => apartment.OwnerId == hostId)
             .AnyAsync(
-                x => x.apartment.OwnerId == hostId && ActiveStatuses.Contains(x.booking.Status),
+                apartment => DbContext.Set<Booking>().Any(
+                    booking => booking.ApartmentId == apartment.Id && ActiveStatuses.Contains(booking.Status)),
                 cancellationToken);
 }

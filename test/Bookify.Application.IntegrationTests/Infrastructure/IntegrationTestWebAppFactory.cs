@@ -9,6 +9,7 @@ using Bookify.Infrastructure;
 using Bookify.Infrastructure.Authentication;
 using Bookify.Infrastructure.Data;
 using Bookify.Infrastructure.Outbox;
+using Bookify.Infrastructure.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -18,22 +19,23 @@ using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Quartz;
+using Testcontainers.Azurite;
 using Testcontainers.Keycloak;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
 using Testcontainers.ServiceBus;
 using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
+using DotNet.Testcontainers.Images;
+using DotNet.Testcontainers.Networks;
 
 namespace Bookify.Application.IntegrationTests.Infrastructure;
 
 public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
-        .WithImage("postgres:17")
-        .WithDatabase("bookify")
-        .WithUsername("postgres")
-        .WithPassword("postgrespw")
-        .Build();
+    private readonly INetwork _network = new NetworkBuilder().Build();
+
+    private readonly PostgreSqlContainer _dbContainer;
 
     private readonly RedisContainer _redisContainer = new RedisBuilder()
         .WithImage("redis:latest")
@@ -48,18 +50,48 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             .UntilHttpRequestIsSucceeded(r => r.ForPath("/realms/bookify").ForPort(8080)))
         .Build();
 
-    private readonly ServiceBusContainer _serviceBusContainer = new ServiceBusBuilder()
-        .WithAcceptLicenseAgreement(true)
-        .WithResourceMapping(
-            new FileInfo(".files/Config.json"),
-            "/ServiceBus_Emulator/ConfigFiles")
-        .Build();
+    private readonly ServiceBusContainer _serviceBusContainer;
+
+    private readonly AzuriteContainer _storageContainer;
+
+    private IFutureDockerImage _functionImage = default!;
+    private IContainer _functionContainer = default!;
+
+    public IntegrationTestWebAppFactory()
+    {
+        _dbContainer = new PostgreSqlBuilder()
+            .WithImage("postgres:17")
+            .WithDatabase("bookify")
+            .WithUsername("postgres")
+            .WithPassword("postgrespw")
+            .WithNetwork(_network)
+            .WithNetworkAliases("bookify-db")
+            .Build();
+
+        _serviceBusContainer = new ServiceBusBuilder()
+            .WithAcceptLicenseAgreement(true)
+            .WithResourceMapping(
+                new FileInfo(".files/Config.json"),
+                "/ServiceBus_Emulator/ConfigFiles")
+            .WithNetwork(_network)
+            .WithNetworkAliases("servicebus-emulator")
+            .Build();
+
+        _storageContainer = new AzuriteBuilder()
+            .WithImage("mcr.microsoft.com/azure-storage/azurite:latest")
+            .WithNetwork(_network)
+            .WithNetworkAliases("storage")
+            .Build();
+    }
 
     public MockEmailService MockEmailService { get; } = new();
 
     public MockPaymentGateway MockPaymentGateway { get; } = new();
 
     public MockStripeCustomerService MockStripeCustomerService { get; } = new();
+
+    public TestDateTimeProvider TestDateTimeProvider { get; } = new();
+
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -152,6 +184,9 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
 
             services.AddSingleton<IEmailService>(MockEmailService);
 
+            services.RemoveAll<Bookify.Application.Abstractions.Clock.IDateTimeProvider>();
+            services.AddSingleton<Bookify.Application.Abstractions.Clock.IDateTimeProvider>(TestDateTimeProvider);
+
             // Bypass RateLimiting for all old integration tests
             services
                 .RemoveAll<Microsoft.Extensions.Options.IConfigureOptions<
@@ -175,15 +210,52 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
                 options.BaseUrl = new Uri("https://challenges.cloudflare.com/turnstile/v0/");
                 options.SecretKey = "1x0000000000000000000000000000000AA";
             });
+
+            services.Configure<InvoicesBlobStorageOptions>(options =>
+            {
+                options.ConnectionString = _storageContainer.GetConnectionString();
+                options.ContainerName = "invoices";
+            });
         });
     }
 
     public async Task InitializeAsync()
     {
-        await _dbContainer.StartAsync().ConfigureAwait(false);
-        await _redisContainer.StartAsync().ConfigureAwait(false);
-        await _keycloakContainer.StartAsync().ConfigureAwait(false);
-        await _serviceBusContainer.StartAsync().ConfigureAwait(false);
+        await _network.CreateAsync().ConfigureAwait(false);
+
+        _functionImage = new ImageFromDockerfileBuilder()
+            .WithDockerfileDirectory(CommonDirectoryPath.GetSolutionDirectory().DirectoryPath)
+            .WithDockerfile(Path.Combine("src", "Bookify.Functions", "Dockerfile"))
+            .WithName("bookify-functions:test")
+            .WithCleanUp(false)
+            .Build();
+
+        await Task.WhenAll(
+            _dbContainer.StartAsync(),
+            _redisContainer.StartAsync(),
+            _keycloakContainer.StartAsync(),
+            _serviceBusContainer.StartAsync(),
+            _storageContainer.StartAsync(),
+            _functionImage.CreateAsync()).ConfigureAwait(false);
+
+        _functionContainer = new ContainerBuilder()
+            .WithImage(_functionImage)
+            .WithNetwork(_network)
+            .WithNetworkAliases("bookify-function")
+            .WithEnvironment("FUNCTIONS_WORKER_RUNTIME", "dotnet-isolated")
+            .WithEnvironment("AzureWebJobsStorage", BuildInternalAzuriteConnectionString())
+            .WithEnvironment("BlobStorage__ConnectionString", BuildInternalAzuriteConnectionString())
+            .WithEnvironment("BlobStorage__ContainerName", "invoices")
+            .WithEnvironment("ServiceBusConnection", BuildInternalServiceBusConnectionString())
+            .WithEnvironment("ConnectionStrings__Database", BuildInternalDbConnectionString())
+            .WithEnvironment("AzureFunctionsJobHost__Logging__Console__IsEnabled", "true")
+            .WithEnvironment("AzureFunctionsJobHost__Logging__LogLevel__Default", "Information")
+            .WithPortBinding(80, true)
+            .WithWaitStrategy(Wait.ForUnixContainer()
+                .UntilHttpRequestIsSucceeded(r => r.ForPath("/api/health").ForPort(80)))
+            .Build();
+
+        await _functionContainer.StartAsync().ConfigureAwait(false);
 
         await InitializeTestUserAsync().ConfigureAwait(false);
     }
@@ -193,16 +265,39 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
     {
         await base.DisposeAsync().ConfigureAwait(false);
 
-        await _dbContainer.StopAsync().ConfigureAwait(false);
-        await _redisContainer.StopAsync().ConfigureAwait(false);
-        await _keycloakContainer.StopAsync().ConfigureAwait(false);
-        await _serviceBusContainer.StopAsync().ConfigureAwait(false);
+        await Task.WhenAll(
+            _functionContainer.StopAsync(),
+            _storageContainer.StopAsync(),
+            _dbContainer.StopAsync(),
+            _redisContainer.StopAsync(),
+            _keycloakContainer.StopAsync(),
+            _serviceBusContainer.StopAsync()).ConfigureAwait(false);
 
-        await _dbContainer.DisposeAsync().ConfigureAwait(false);
-        await _redisContainer.DisposeAsync().ConfigureAwait(false);
-        await _keycloakContainer.DisposeAsync().ConfigureAwait(false);
-        await _serviceBusContainer.DisposeAsync().ConfigureAwait(false);
+        await Task.WhenAll(
+            _functionContainer.DisposeAsync().AsTask(),
+            _functionImage.DisposeAsync().AsTask(),
+            _storageContainer.DisposeAsync().AsTask(),
+            _dbContainer.DisposeAsync().AsTask(),
+            _redisContainer.DisposeAsync().AsTask(),
+            _keycloakContainer.DisposeAsync().AsTask(),
+            _serviceBusContainer.DisposeAsync().AsTask()).ConfigureAwait(false);
+
+        await _network.DisposeAsync().ConfigureAwait(false);
     }
+
+    public async Task<(string Stdout, string Stderr)> GetFunctionLogsAsync()
+    {
+        return await _functionContainer.GetLogsAsync().ConfigureAwait(false);
+    }
+
+    private static string BuildInternalAzuriteConnectionString() =>
+        "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://storage:10000/devstoreaccount1;QueueEndpoint=http://storage:10001/devstoreaccount1;TableEndpoint=http://storage:10002/devstoreaccount1;";
+
+    private static string BuildInternalServiceBusConnectionString() =>
+        "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
+
+    private static string BuildInternalDbConnectionString() =>
+        "Host=bookify-db;Port=5432;Database=bookify;Username=postgres;Password=postgrespw";
 
     /// <summary>
     /// Initialize a test user in the Keycloak server

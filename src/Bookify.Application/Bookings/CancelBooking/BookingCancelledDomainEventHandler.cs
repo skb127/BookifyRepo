@@ -138,7 +138,8 @@ internal sealed class BookingCancelledDomainEventHandler : INotificationHandler<
                 Result initiateRefundResult = booking.InitiateRefund(
                     notification.RefundAmount.Value,
                     notification.Currency ?? "USD",
-                    refundReason);
+                    refundReason,
+                    _dateTimeProvider.UtcNow);
 
                 if (initiateRefundResult.IsSuccess)
                 {

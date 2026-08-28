@@ -1,8 +1,10 @@
 using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Exceptions;
 using Bookify.Domain.Abstractions;
+using Bookify.Domain.Bookings;
 using Bookify.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Bookify.Application.Abstractions.Serialization;
 
 namespace Bookify.Infrastructure;
@@ -26,6 +28,7 @@ public sealed class ApplicationDbContext : DbContext, IUnitOfWork
     {
         try
         {
+            UpdateBookingStatusLiterals();
             AddDomainEventsAsOutboxMessage(); // Make sure to add/load domain events as outbox messages and add then to the change tracker before saving changes
 
             int result = await base.SaveChangesAsync(cancellationToken); // When we call SaveChangesAsync, EF Core is going to go through the change tracker and persist all the changes (including the outbox messages) in a single transaction
@@ -36,6 +39,16 @@ public sealed class ApplicationDbContext : DbContext, IUnitOfWork
         catch (DbUpdateConcurrencyException ex)
         {
             throw new ConcurrencyException("Concurrency exception occured.", ex);
+        }
+    }
+
+    private void UpdateBookingStatusLiterals()
+    {
+        foreach (EntityEntry<Booking> entry in ChangeTracker.Entries<Booking>()
+            .Where(e => e.State is EntityState.Added or EntityState.Modified))
+        {
+            entry.Property("status_literal").CurrentValue = entry.Entity.Status.ToString();
+            entry.Property("payment_status_literal").CurrentValue = entry.Entity.PaymentStatus.ToString();
         }
     }
 

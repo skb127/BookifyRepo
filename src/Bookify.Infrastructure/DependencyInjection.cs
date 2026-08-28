@@ -1,19 +1,23 @@
 using Asp.Versioning;
+using Azure.Messaging.ServiceBus;
 using Bookify.Application.Abstractions.Authentication;
 using Bookify.Application.Abstractions.Caching;
 using Bookify.Application.Abstractions.Clock;
 using Bookify.Application.Abstractions.Data;
 using Bookify.Application.Abstractions.Email;
 using Bookify.Application.Abstractions.Identity;
-using Bookify.Application.Abstractions.Security;
+using Bookify.Application.Abstractions.Messaging;
+using Bookify.Application.Abstractions.Payments;
 using Bookify.Application.Abstractions.Scheduling;
+using Bookify.Application.Abstractions.Security;
+using Bookify.Application.Abstractions.Storage;
 using Bookify.Application.Options;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Apartments;
 using Bookify.Domain.Bookings;
+using Bookify.Domain.CancellationPolicies;
 using Bookify.Domain.Reviews;
 using Bookify.Domain.TaxRules;
-using Bookify.Domain.CancellationPolicies;
 using Bookify.Domain.Users;
 using Bookify.Infrastructure.Authentication;
 using Bookify.Infrastructure.Authorization;
@@ -23,18 +27,16 @@ using Bookify.Infrastructure.Clock;
 using Bookify.Infrastructure.Data;
 using Bookify.Infrastructure.Email;
 using Bookify.Infrastructure.Identity;
+using Bookify.Infrastructure.Messaging;
 using Bookify.Infrastructure.Outbox;
+using Bookify.Infrastructure.Payments;
 using Bookify.Infrastructure.RateLimiting;
 using Bookify.Infrastructure.Repositories;
-using Bookify.Infrastructure.Security;
 using Bookify.Infrastructure.Scheduling;
+using Bookify.Infrastructure.Security;
+using Bookify.Infrastructure.Storage;
 using Dapper;
 using MailKit.Net.Smtp;
-using Bookify.Application.Abstractions.Payments;
-using Bookify.Infrastructure.Payments;
-using Stripe;
-using Bookify.Application.Abstractions.Messaging;
-using Bookify.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -46,6 +48,7 @@ using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Polly;
 using Quartz;
+using Stripe;
 using AuthenticationOptions = Bookify.Infrastructure.Authentication.AuthenticationOptions;
 using AuthenticationService = Bookify.Infrastructure.Authentication.AuthenticationService;
 using IAuthenticationService = Bookify.Application.Abstractions.Authentication.IAuthenticationService;
@@ -85,6 +88,8 @@ public static class DependencyInjection
         AddStripe(services, configuration);
 
         AddServiceBus(services, configuration);
+
+        AddStorage(services, configuration);
 
         AddOptions(services, configuration);
 
@@ -158,9 +163,9 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(
-                connectionString,
-                npgsqlOptions => npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
-            .UseSnakeCaseNamingConvention());
+                    connectionString,
+                    npgsqlOptions => npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+                .UseSnakeCaseNamingConvention());
 
         services.AddScoped<IUserRepository, UserRepository>();
 
@@ -216,7 +221,7 @@ public static class DependencyInjection
             .AddUrlGroup(new Uri(configuration["Keycloak:BaseUrl"]!), HttpMethod.Get, "keycloak")
             .AddAzureServiceBusQueue(
                 configuration.GetConnectionString("ServiceBus")!,
-                configuration["ServiceBus:QueueName"]!,
+                configuration["ServiceBus:Queues:StripeEvents"]!,
                 name: "azure-service-bus");
 
     private static void AddApiVersioning(IServiceCollection services) =>
@@ -272,7 +277,8 @@ public static class DependencyInjection
         services.ConfigureOptions<CompleteBookingsJobSetup>(); // Configure the Quartz job to complete bookings
         services.ConfigureOptions<ExpireCheckoutSessionJobSetup>(); // Register ExpireCheckoutSessionJob durably
         services.ConfigureOptions<ExpireHostApprovalJobSetup>(); // Register ExpireHostApprovalJob durably
-        services.ConfigureOptions<Users.FinalizeAccountDeletionJobSetup>(); // Register FinalizeAccountDeletionJob durably
+        services
+            .ConfigureOptions<Users.FinalizeAccountDeletionJobSetup>(); // Register FinalizeAccountDeletionJob durably
 
         AddEmailNotificationResiliencePipeline(services);
     }
@@ -447,7 +453,7 @@ public static class DependencyInjection
         services.Configure<StripeOptions>(configuration.GetSection("Stripe"));
 
         services.AddHttpClient("Stripe")
-                .AddStandardResilienceHandler();
+            .AddStandardResilienceHandler();
 
         services.AddTransient<IStripeClient, StripeClient>(s =>
         {
@@ -469,13 +475,31 @@ public static class DependencyInjection
     private static void AddServiceBus(IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<ServiceBusOptions>(options =>
+            options.ConnectionString = configuration.GetConnectionString("ServiceBus") ?? string.Empty);
+
+        services.Configure<ServiceBusQueuesOptions>(
+            configuration.GetSection(ServiceBusQueuesOptions.SectionName));
+
+        services.AddSingleton<ServiceBusClient>(_ =>
         {
-            options.ConnectionString = configuration.GetConnectionString("ServiceBus") ?? string.Empty;
-            options.QueueName = configuration["ServiceBus:QueueName"] ?? "stripe-events";
+            string connectionString = configuration.GetConnectionString("ServiceBus") ?? string.Empty;
+            return string.IsNullOrWhiteSpace(connectionString)
+                ? null!
+                : new ServiceBusClient(connectionString);
         });
+
+        services.AddSingleton<IMessagePublisher, ServiceBusMessagePublisher>();
 
         services.AddSingleton<ServiceBusEventConsumer>();
         services.AddHostedService(sp => sp.GetRequiredService<ServiceBusEventConsumer>());
         services.AddSingleton<IEventBusConsumer>(sp => sp.GetRequiredService<ServiceBusEventConsumer>());
+    }
+
+    private static void AddStorage(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<InvoicesBlobStorageOptions>(
+            configuration.GetSection(InvoicesBlobStorageOptions.SectionName));
+
+        services.AddSingleton<IInvoiceFileService, AzureInvoiceFileService>();
     }
 }

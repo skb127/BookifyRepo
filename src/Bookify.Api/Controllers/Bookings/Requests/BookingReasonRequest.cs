@@ -1,6 +1,6 @@
 using Bookify.Domain.Bookings;
 
-namespace Bookify.Api.Controllers.Bookings;
+namespace Bookify.Api.Controllers.Bookings.Requests;
 
 /// <summary>
 /// Represents the request payload for providing an optional booking reason.

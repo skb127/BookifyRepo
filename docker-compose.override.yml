@@ -14,3 +14,9 @@ services:
       - ${HOME}/.microsoft/usersecrets:/home/app/.microsoft/usersecrets:ro
       - ${HOME}/.microsoft/usersecrets:/root/.microsoft/usersecrets:ro
       - ${HOME}/.aspnet/https:/https:ro
+  bookify-function:
+    environment:
+      - AzureFunctionsJobHost__logging__logLevel__default=Information
+      - AzureFunctionsJobHost__logging__logLevel__Host.Triggers.ServiceBus=Debug
+      - AzureFunctionsJobHost__logging__logLevel__Function.GenerateInvoiceFunction=Debug
+      - AzureFunctionsJobHost__logging__console__isEnabled=true

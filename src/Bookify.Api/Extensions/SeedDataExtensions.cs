@@ -94,14 +94,19 @@ internal static class SeedDataExtensions
                 LastBookedOn = DateTime.MinValue,
                 CancellationPolicyId = faker.Random.Bool() ? strictPolicy.Id : defaultPolicy.Id,
                 MinimumNights = faker.Random.Int(1, 5),
-                CheckInCutOffHours = faker.Random.Int(0, 24)
+                CheckInCutOffHours = faker.Random.Int(0, 24),
+                BaseGuests = faker.Random.Int(1, 4),
+                MaxGuests = faker.Random.Int(4, 10),
+                ExtraGuestFeeAmount = faker.Random.Decimal(0, 50),
+                ExtraGuestFeeCurrency = "USD",
+                InstantBooking = faker.Random.Bool()
             });
         }
 
         const string sql = """
             INSERT INTO public.apartments
-            (id, owner_id, "name", description, address_country, address_state, address_zip_code, address_city, address_street, price_amount, price_currency, cleaning_fee_amount, cleaning_fee_currency, amenities, last_booked_on_utc, cancellation_policy_id, minimum_nights, check_in_cut_off_hours)
-            VALUES(@Id, @OwnerId, @Name, @Description, @Country, @State, @ZipCode, @City, @Street, @PriceAmount, @PriceCurrency, @CleaningFeeAmount, @CleaningFeeCurrency, @Amenities, @LastBookedOn, @CancellationPolicyId, @MinimumNights, @CheckInCutOffHours);
+            (id, owner_id, "name", description, address_country, address_state, address_zip_code, address_city, address_street, price_amount, price_currency, cleaning_fee_amount, cleaning_fee_currency, amenities, last_booked_on_utc, cancellation_policy_id, minimum_nights, check_in_cut_off_hours, base_guests, max_guests, extra_guest_fee_amount, extra_guest_fee_currency, instant_booking)
+            VALUES(@Id, @OwnerId, @Name, @Description, @Country, @State, @ZipCode, @City, @Street, @PriceAmount, @PriceCurrency, @CleaningFeeAmount, @CleaningFeeCurrency, @Amenities, @LastBookedOn, @CancellationPolicyId, @MinimumNights, @CheckInCutOffHours, @BaseGuests, @MaxGuests, @ExtraGuestFeeAmount, @ExtraGuestFeeCurrency, @InstantBooking);
             """;
 
         connection.Execute(sql, apartments);

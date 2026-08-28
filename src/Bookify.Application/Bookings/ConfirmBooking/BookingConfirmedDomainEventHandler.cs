@@ -56,45 +56,49 @@ internal sealed class BookingConfirmedDomainEventHandler : INotificationHandler<
 
         if (booking is null)
         {
-            _logger.LogWarning("Booking {BookingId} not found during confirmation event handling.", notification.BookingId);
+            _logger.LogWarning("Booking {BookingId} not found during confirmation event handling.",
+                notification.BookingId);
             return;
         }
 
-        if (booking.PaymentStatus == PaymentStatus.Paid)
+        if (booking.PaymentStatus == PaymentStatus.Authorized || booking.PaymentStatus == PaymentStatus.Paid)
         {
             Transaction? transaction = await _transactionRepository.GetByBookingIdAsync(booking.Id, cancellationToken);
             if (transaction is null)
             {
-                _logger.LogError("Transaction not found for paid booking {BookingId}.", booking.Id);
-                throw new InvalidOperationException($"Transaction not found for paid booking {booking.Id}");
+                _logger.LogError("Transaction not found for booking {BookingId}.", booking.Id);
+                throw new InvalidOperationException($"Transaction not found for booking {booking.Id}");
             }
 
             if (transaction.ProviderStatus != "paid")
             {
-                if (!string.IsNullOrEmpty(transaction.StripePaymentIntentId))
+                if (string.IsNullOrEmpty(transaction.StripePaymentIntentId))
                 {
-                    _logger.LogInformation("Capturing payment intent {PaymentIntentId} for booking {BookingId}.",
-                        transaction.StripePaymentIntentId, booking.Id);
+                    _logger.LogError("StripePaymentIntentId is missing in transaction for booking {BookingId}.", booking.Id);
+                    throw new InvalidOperationException($"StripePaymentIntentId is missing in transaction for booking {booking.Id}");
+                }
 
-                    bool captured = await _paymentGateway.CapturePaymentIntentAsync(transaction.StripePaymentIntentId, cancellationToken);
-                    if (captured)
-                    {
-                        transaction.UpdateStatus("paid", transaction.StripePaymentIntentId, _dateTimeProvider.UtcNow);
-                        await _unitOfWork.SaveChangesAsync(cancellationToken);
-                        _logger.LogInformation("Successfully captured payment intent {PaymentIntentId} for booking {BookingId}.",
-                            transaction.StripePaymentIntentId, booking.Id);
-                    }
-                    else
-                    {
-                        _logger.LogError("Failed to capture payment intent {PaymentIntentId} for booking {BookingId}.",
-                            transaction.StripePaymentIntentId, booking.Id);
-                        throw new InvalidOperationException($"Failed to capture payment intent {transaction.StripePaymentIntentId} for booking {booking.Id}");
-                    }
+                _logger.LogInformation("Capturing payment intent {PaymentIntentId} for booking {BookingId}.",
+                    transaction.StripePaymentIntentId, booking.Id);
+
+                bool captured =
+                    await _paymentGateway.CapturePaymentIntentAsync(transaction.StripePaymentIntentId,
+                        cancellationToken);
+                if (captured)
+                {
+                    transaction.UpdateStatus("paid", transaction.StripePaymentIntentId, _dateTimeProvider.UtcNow);
+                    booking.CompletePayment(transaction.StripePaymentIntentId);
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    _logger.LogInformation(
+                        "Successfully captured payment intent {PaymentIntentId} for booking {BookingId}.",
+                        transaction.StripePaymentIntentId, booking.Id);
                 }
                 else
                 {
-                    _logger.LogWarning("StripePaymentIntentId is missing in transaction for paid booking {BookingId}. Skipping Stripe capture.",
-                        booking.Id);
+                    _logger.LogError("Failed to capture payment intent {PaymentIntentId} for booking {BookingId}.",
+                        transaction.StripePaymentIntentId, booking.Id);
+                    throw new InvalidOperationException(
+                        $"Failed to capture payment intent {transaction.StripePaymentIntentId} for booking {booking.Id}");
                 }
             }
         }
@@ -103,7 +107,8 @@ internal sealed class BookingConfirmedDomainEventHandler : INotificationHandler<
 
         if (user is null)
         {
-            _logger.LogWarning("User {UserId} not found for booking {BookingId} during confirmation email sending.", booking.UserId, booking.Id);
+            _logger.LogWarning("User {UserId} not found for booking {BookingId} during confirmation email sending.",
+                booking.UserId, booking.Id);
             return;
         }
 

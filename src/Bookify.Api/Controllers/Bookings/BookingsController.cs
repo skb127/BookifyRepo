@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Bookify.Api.Controllers.Bookings.Requests;
 using Bookify.Application.Bookings.CancelBooking;
 using Bookify.Application.Bookings.CheckInBooking;
 using Bookify.Application.Bookings.CheckOutBooking;

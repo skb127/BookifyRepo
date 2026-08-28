@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Bookify.Domain.Abstractions;
 using Bookify.Domain.Shared;
 
@@ -34,14 +33,12 @@ public sealed class Transaction : Entity
     public string StripeSessionId { get; private set; } = null!;
     public string? StripePaymentIntentId { get; private set; }
 
-    [SuppressMessage("Design", "CA1056:Uri properties should not be strings", Justification = "Stripe session URLs are handled as strings in the domain and database.")]
     public string CheckoutSessionUrl { get; private set; } = null!;
     public Money Amount { get; private set; } = null!;
     public string ProviderStatus { get; private set; } = null!;
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
-    [SuppressMessage("Design", "CA1054:Uri parameters should not be strings", Justification = "Stripe session URLs are handled as strings in the domain and database.")]
     public static Transaction Create(
         Guid bookingId,
         string stripeSessionId,
